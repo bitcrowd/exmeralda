@@ -1,0 +1,94 @@
+name: Elixir CI
+
+on:
+  pull_request:
+    branches: ["main"]
+
+env:
+  MIX_ENV: test
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Run tests & linter
+    services:
+      db:
+        image: postgres:17.4
+        ports: ['5432:5432']
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .tool-versions
+
+      - name: Cache deps
+        uses: actions/cache@v3
+        env:
+          cache-name: deps-cache
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ env.cache-name }}-
+
+      - name: Install deps
+        run: mix deps.get
+
+      - name: Cache build
+        uses: actions/cache@v3
+        env:
+          cache-name: compiled-build-cache
+        with:
+          path: _build
+          key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-${{ env.cache-name }}-
+            ${{ runner.os }}-mix-
+
+      - name: Compile with warnings as errors
+        run: mix compile --warnings-as-errors
+
+      - name: Cache node deps
+        uses: actions/cache@v3
+        env:
+          cache-name: node-package--cache
+
+        with:
+          path: assets/.node_modules
+          key: ${{ runner.os }}-node-${{ env.cache-name }}-${{hashFiles('assets/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-${{ env.cache-name }}-
+
+      - name: Setup assets
+        run: mix assets.setup
+
+      - name: Check code formatting
+        run: mix format --check-formatted
+
+      - name: Check for unused dependencies
+        run: mix deps.unlock --check-unused
+
+      - name: Analyze code
+        run: mix credo suggest --ignore todo
+
+      - name: Build assets
+        run: mix assets.build
+
+      - name: Run tests
+        run: mix test
