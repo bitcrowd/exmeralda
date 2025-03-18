@@ -9,7 +9,12 @@ import Config
 
 config :exmeralda,
   ecto_repos: [Exmeralda.Repo],
-  generators: [timestamp_type: :utc_datetime, binary_id: true]
+  generators: [timestamp_type: :utc_datetime_usec, binary_id: true]
+
+config :exmeralda,
+       Exmeralda.Repo,
+       migration_primary_key: [type: :binary_id],
+       migration_timestamps: [type: :utc_datetime_usec]
 
 # Configures the endpoint
 config :exmeralda, ExmeraldaWeb.Endpoint,
