@@ -1,13 +1,11 @@
 defmodule ExmeraldaWeb.AuthController do
   use ExmeraldaWeb, :controller
 
-  alias Assent.Strategy.Github
-
   def request(conn, _params) do
     {:ok, %{url: url, session_params: session_params}} =
       conn
       |> config()
-      |> Github.authorize_url()
+      |> strategy().authorize_url()
 
     conn
     |> put_session(:session_params, session_params)
@@ -20,23 +18,28 @@ defmodule ExmeraldaWeb.AuthController do
     conn
     |> config()
     |> Keyword.put(:session_params, session_params)
-    |> Github.callback(params)
+    |> strategy().callback(params)
     |> case do
-      {:ok, %{user: user_info} = ret} ->
+      {:ok, %{user: user_info}} ->
+          dbg(user_info)
         conn
         |> put_session(:user, user_info)
-        |> put_flash(:info, "Signed in successfully! #{inspect(ret)}")
+        |> put_flash(:info, "Signed in successfully!")
         |> redirect(to: "/")
 
-      {:error, reason} ->
+      {:error, _} ->
         conn
-        |> put_flash(:error, gettext("Authentication failed"))
+        |> put_flash(:error, gettext("Authentication failed!"))
         |> redirect(to: "/")
     end
   end
 
   defp config(conn) do
-    Application.fetch_env!(:exmeralda, :github)
+    Application.get_env(:exmeralda, strategy(), [])
     |> Keyword.put(:redirect_uri, url(conn, ~p"/auth/github/callback"))
+  end
+
+  defp strategy do
+    Application.fetch_env!(:exmeralda, :auth_strategy)
   end
 end
