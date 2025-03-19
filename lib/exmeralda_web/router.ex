@@ -17,7 +17,8 @@ defmodule ExmeraldaWeb.Router do
   scope "/", ExmeraldaWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", ChatLive.Index, :new
+    live "/chats/:id", ChatLive.Index, :show
   end
 
   # Other scopes may use custom stacks.

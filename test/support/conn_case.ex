@@ -28,6 +28,7 @@ defmodule ExmeraldaWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import ExmeraldaWeb.ConnCase
+      import Exmeralda.Factory
     end
   end
 
