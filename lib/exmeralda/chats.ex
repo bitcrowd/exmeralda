@@ -1,4 +1,4 @@
-defmodule Exmeralda.Chat do
+defmodule Exmeralda.Chats do
   @moduledoc """
   The Chats context.
   """
@@ -6,7 +6,7 @@ defmodule Exmeralda.Chat do
   import Ecto.Query, warn: false
   alias Exmeralda.Repo
 
-  alias Exmeralda.Chat.Session
+  alias Exmeralda.Chats.Session
 
   @doc """
   Returns the list of chat_sessions.

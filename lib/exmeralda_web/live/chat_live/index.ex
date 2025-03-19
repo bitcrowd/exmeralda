@@ -1,11 +1,11 @@
 defmodule ExmeraldaWeb.ChatLive.Index do
   use ExmeraldaWeb, :live_view
 
-  alias Exmeralda.Chat
+  alias Exmeralda.Chats
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, stream(socket, :sessions, Chat.list_sessions(), at: -1)}
+    {:ok, stream(socket, :sessions, Chats.list_sessions(), at: -1)}
   end
 
   @impl true
@@ -16,7 +16,7 @@ defmodule ExmeraldaWeb.ChatLive.Index do
   defp apply_action(socket, :show, %{"id" => id}) do
     socket
     |> assign(:page_title, id)
-    |> assign(:session, Chat.get_session!(id))
+    |> assign(:session, Chats.get_session!(id))
   end
 
   defp apply_action(socket, :new, _params) do
@@ -31,8 +31,8 @@ defmodule ExmeraldaWeb.ChatLive.Index do
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    session = Chat.get_session!(id)
-    {:ok, _} = Chat.delete_session(session)
+    session = Chats.get_session!(id)
+    {:ok, _} = Chats.delete_session(session)
 
     {:noreply, stream_delete(socket, :sessions, session)}
   end

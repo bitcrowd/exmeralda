@@ -1,4 +1,4 @@
-defmodule Exmeralda.Chat.Session do
+defmodule Exmeralda.Chats.Session do
   use Exmeralda.Schema
 
   schema "chat_sessions" do

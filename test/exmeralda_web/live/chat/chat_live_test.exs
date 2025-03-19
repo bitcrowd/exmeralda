@@ -2,7 +2,7 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   use ExmeraldaWeb.ConnCase
 
   import Phoenix.LiveViewTest
-  alias Exmeralda.{Repo, Chat.Session}
+  alias Exmeralda.{Repo, Chats.Session}
 
   defp insert_session(_) do
     %{session: insert(:chat_session)}

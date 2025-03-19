@@ -1,7 +1,7 @@
 defmodule ExmeraldaWeb.ChatLive.StartChat do
   use ExmeraldaWeb, :live_component
 
-  alias Exmeralda.Chat
+  alias Exmeralda.Chats
 
   @impl true
   def render(assigns) do
@@ -32,7 +32,7 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
      socket
      |> assign(assigns)
      |> assign_new(:form, fn ->
-       to_form(Chat.session_changeset())
+       to_form(Chats.session_changeset())
      end)}
   end
 
@@ -44,7 +44,7 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
 
   @impl true
   def handle_event("start", _, socket) do
-    case Chat.start_session(%{}) do
+    case Chats.start_session(%{}) do
       {:ok, session} ->
         notify_parent({:start, session})
 
