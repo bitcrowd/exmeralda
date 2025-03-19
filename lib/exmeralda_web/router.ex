@@ -19,6 +19,9 @@ defmodule ExmeraldaWeb.Router do
 
     live "/", ChatLive.Index, :new
     live "/chats/:id", ChatLive.Index, :show
+
+    get "/auth/github", AuthController, :request
+    get "/auth/github/callback", AuthController, :callback
   end
 
   # Other scopes may use custom stacks.
