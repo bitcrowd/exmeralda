@@ -1,11 +1,13 @@
 defmodule ExmeraldaWeb.AuthController do
   use ExmeraldaWeb, :controller
 
+  alias Exmeralda.Accounts
+
   def request(conn, _params) do
+    config = config(conn)
+
     {:ok, %{url: url, session_params: session_params}} =
-      conn
-      |> config()
-      |> strategy().authorize_url()
+      strategy().authorize_url(config)
 
     conn
     |> put_session(:session_params, session_params)
@@ -15,19 +17,27 @@ defmodule ExmeraldaWeb.AuthController do
   def callback(conn, params) do
     session_params = get_session(conn, :session_params)
 
-    conn
-    |> config()
-    |> Keyword.put(:session_params, session_params)
-    |> strategy().callback(params)
-    |> case do
-      {:ok, %{user: user_info}} ->
-          dbg(user_info)
-        conn
-        |> put_session(:user, user_info)
-        |> put_flash(:info, "Signed in successfully!")
-        |> redirect(to: "/")
+    config =
+      conn
+      |> config()
+      |> Keyword.put(:session_params, session_params)
 
-      {:error, _} ->
+    with {:ok, %{user: user}} <- strategy().callback(config, params),
+         {:ok, user} <-
+           Accounts.upsert_user(%{
+             github_id: user["sub"],
+             github_profile: user["profile"],
+             email: user["email"],
+             name: user["name"],
+             avatar_url: user["picture"]
+           }) do
+
+      conn
+      |> put_session(:user_id, user.id)
+      |> put_flash(:info, "Signed in successfully!")
+      |> redirect(to: "/")
+    else
+      _ ->
         conn
         |> put_flash(:error, gettext("Authentication failed!"))
         |> redirect(to: "/")
