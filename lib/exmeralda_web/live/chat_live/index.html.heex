@@ -1,78 +1,41 @@
-<div class="navbar bg-base-100 shadow-sm">
-  <div class="flex-1">
-    <label for="my-drawer">
-      <.icon name="hero-bars-3" class="m-2 lg:hidden" />
-    </label>
-    <a class="btn btn-ghost text-xl" href={~p"/"}>Exmeralda</a>
-  </div>
-  <div class="flex-none">
-    <div class="dropdown dropdown-end">
-      <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
-        <div class="w-10 rounded-full">
-          <img
-            alt="Tailwind CSS Navbar component"
-            src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp"
-          />
-        </div>
-      </div>
-      <ul
-        tabindex="0"
-        class="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
+<.navbar_layout user={@current_user}>
+  <:drawer>
+    <ul class="menu menu-horizontal rounded-box">
+      <li>
+        <.link phx-click={JS.patch(~p"/") |> no_active_chat()}>
+          <.icon name="hero-chat-bubble-bottom-center" />
+          {gettext("New chat")}
+        </.link>
+      </li>
+    </ul>
+    <ul class="list text-base-content w-80" phx-update="stream" id="chats">
+      <li
+        :for={{id, session} <- @streams.sessions}
+        class={[
+          "list-row group cursor-pointer",
+          @live_action == :show && @session.id == session.id && active_chat_class()
+        ]}
+        id={id}
+        phx-click={JS.patch(~p"/chat/#{session}") |> mark_active_chat()}
       >
-        <li><a>Settings</a></li>
-        <li><a>Logout</a></li>
-      </ul>
-    </div>
-  </div>
-</div>
-<div class="drawer lg:drawer-open">
-  <input id="my-drawer" type="checkbox" class="drawer-toggle" />
-  <div class="drawer-side h-[calc(100vh-4rem)]">
-    <label for="my-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
-    <div class="bg-base-200 min-h-full">
-      <ul class="menu menu-horizontal rounded-box">
-        <li>
-          <.link phx-click={JS.patch(~p"/") |> no_active_chat()}>
-            <.icon name="hero-chat-bubble-bottom-center" />
-            {gettext("New chat")}
-          </.link>
-        </li>
-      </ul>
-      <ul class="list text-base-content w-80" phx-update="stream" id="chats">
-        <li
-          :for={{id, session} <- @streams.sessions}
-          class={[
-            "list-row group",
-            @live_action == :show && @session.id == session.id && active_chat_class()
-          ]}
-          id={id}
-          phx-click={JS.patch(~p"/chats/#{session}") |> mark_active_chat()}
+        <.icon name="hero-chat-bubble-bottom-center-text" />
+        <div>
+          <.session_title session={session} />
+        </div>
+        <button
+          phx-click={JS.push("delete", value: %{id: session.id}) |> hide("##{id}")}
+          data-confirm="Are you sure?"
         >
-          <.icon name="hero-chat-bubble-bottom-center-text" />
-          <div>
-            <.session_title session={session} />
-          </div>
-          <button
-            phx-click={JS.push("delete", value: %{id: session.id}) |> hide("##{id}")}
-            data-confirm="Are you sure?"
-          >
-            <.icon name="hero-x-mark" class="hidden group-hover:block" />
-          </button>
-        </li>
-      </ul>
-    </div>
-  </div>
-  <div class="drawer-content">
-    <.live_component
-      :if={@live_action == :new}
-      module={ExmeraldaWeb.ChatLive.StartChat}
-      id="start"
-    />
-    <.live_component
-      :if={@live_action == :show}
-      module={ExmeraldaWeb.ChatLive.Chat}
-      id="current"
-      session={@session}
-    />
-  </div>
-</div>
+          <.icon name="hero-x-mark" class="hidden group-hover:block hover:bg-error" />
+        </button>
+      </li>
+    </ul>
+  </:drawer>
+  <.live_component :if={@live_action == :new} module={ExmeraldaWeb.ChatLive.StartChat} id="start" />
+  <.live_component
+    :if={@live_action == :show}
+    module={ExmeraldaWeb.ChatLive.Chat}
+    id="current"
+    session={@session}
+  />
+</.navbar_layout>

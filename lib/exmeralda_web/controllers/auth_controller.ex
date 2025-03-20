@@ -2,6 +2,7 @@ defmodule ExmeraldaWeb.AuthController do
   use ExmeraldaWeb, :controller
 
   alias Exmeralda.Accounts
+  alias ExmeraldaWeb.UserAuth
 
   def request(conn, _params) do
     config = config(conn)
@@ -31,17 +32,19 @@ defmodule ExmeraldaWeb.AuthController do
              name: user["name"],
              avatar_url: user["picture"]
            }) do
-
       conn
-      |> put_session(:user_id, user.id)
       |> put_flash(:info, "Signed in successfully!")
-      |> redirect(to: "/")
+      |> UserAuth.log_in_user(user)
     else
       _ ->
         conn
         |> put_flash(:error, gettext("Authentication failed!"))
-        |> redirect(to: "/")
+        |> redirect(to: ~p"/")
     end
+  end
+
+  def log_out(conn, _params) do
+    UserAuth.log_out_user(conn)
   end
 
   defp config(conn) do

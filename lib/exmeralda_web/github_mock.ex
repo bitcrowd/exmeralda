@@ -22,7 +22,7 @@ defmodule ExmeraldaWeb.GithubMock do
       "sub" => "123",
       "name" => "Mock User",
       "email" => "test@bitcrowd.io",
-      "picture" => "https://via.placeholder.com/150",
+      "picture" => "https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp",
       "profile" => "http://github.com/bitcrowd"
     }
 

@@ -55,6 +55,8 @@ defmodule ExmeraldaWeb do
       use Phoenix.LiveView,
         layout: {ExmeraldaWeb.Layouts, :app}
 
+      import ExmeraldaWeb.LayoutComponents
+
       unquote(html_helpers())
     end
   end

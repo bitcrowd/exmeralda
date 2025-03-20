@@ -38,5 +38,6 @@ if config_env() == :test do
 end
 
 if config_env() == :prod do
-  config :exmeralda, ExmeraldaWeb.Endpoint, cache_static_manifest: "priv/static/cache_manifest.json"
+  config :exmeralda, ExmeraldaWeb.Endpoint,
+    cache_static_manifest: "priv/static/cache_manifest.json"
 end

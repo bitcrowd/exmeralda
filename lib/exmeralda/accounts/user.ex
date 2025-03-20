@@ -19,4 +19,12 @@ defmodule Exmeralda.Accounts.User do
     |> validate_email(:email)
     |> validate_url(:avatar_url)
   end
+
+  @doc false
+  def email_changeset(user, attrs \\ %{}) do
+    user
+    |> cast(attrs, [:email])
+    |> validate_required(:email)
+    |> validate_email(:email)
+  end
 end

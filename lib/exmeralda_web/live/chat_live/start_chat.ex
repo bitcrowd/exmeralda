@@ -50,7 +50,7 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
 
         {:noreply,
          socket
-         |> push_patch(to: ~p"/chats/#{session.id}")}
+         |> push_patch(to: ~p"/chat/#{session.id}")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}

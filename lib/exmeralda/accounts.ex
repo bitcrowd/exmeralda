@@ -11,7 +11,7 @@ defmodule Exmeralda.Accounts do
   @doc """
   Get a single user.
   """
-  def get_user!(id), do: Repo.get!(User, id)
+  def get_user(id), do: Repo.get(User, id)
 
   @doc """
   Inserts or updates users, depending on the github_id.
@@ -26,5 +26,14 @@ defmodule Exmeralda.Accounts do
       conflict_target: :github_id,
       returning: true
     )
+  end
+
+  def change_user_email(user, params \\ %{}) do
+    User.email_changeset(user, params)
+  end
+
+  def update_user_email(user, params) do
+    change_user_email(user, params)
+    |> Repo.update()
   end
 end
