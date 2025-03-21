@@ -36,15 +36,9 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
      end)}
   end
 
-  # @impl true
-  # def handle_event("validate", %{"session" => session_params}, socket) do
-  #   changeset = Chat.session_changeset(session_params)
-  #   {:noreply, assign(socket, form: to_form(changeset, action: :validate))}
-  # end
-
   @impl true
   def handle_event("start", _, socket) do
-    case Chats.start_session(%{}) do
+    case Chats.start_session(socket.assigns.user, %{}) do
       {:ok, session} ->
         notify_parent({:start, session})
 

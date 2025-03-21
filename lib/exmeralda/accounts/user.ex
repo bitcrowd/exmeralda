@@ -1,12 +1,16 @@
 defmodule Exmeralda.Accounts.User do
   use Exmeralda.Schema
 
+  alias Exmeralda.Chats
+
   schema "users" do
     field :name, :string
     field :email, :string
     field :github_id, :string
     field :github_profile, :string
     field :avatar_url, :string
+
+    has_many :chats, Chats.Session
 
     timestamps()
   end

@@ -4,8 +4,8 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   import Phoenix.LiveViewTest
   alias Exmeralda.{Repo, Chats.Session}
 
-  defp insert_session(_) do
-    %{session: insert(:chat_session)}
+  defp insert_session(%{user: user}) do
+    %{session: insert(:chat_session, user: user)}
   end
 
   defp insert_user(_) do
@@ -13,7 +13,7 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   end
 
   describe "Index" do
-    setup [:insert_session, :insert_user]
+    setup [:insert_user, :insert_session]
 
     test "list the sessions and greet", %{conn: conn, session: session, user: user} do
       {:ok, _index_live, html} =
@@ -22,6 +22,16 @@ defmodule ExmeraldaWeb.ChatLiveTest do
         |> live(~p"/chat/start")
 
       assert html =~ session.id
+      assert html =~ "Just ask Exmeralda"
+    end
+
+    test "does not show other users sessions", %{conn: conn, session: session} do
+      {:ok, _index_live, html} =
+        conn
+        |> log_in_user(insert(:user))
+        |> live(~p"/chat/start")
+
+      refute html =~ session.id
       assert html =~ "Just ask Exmeralda"
     end
 

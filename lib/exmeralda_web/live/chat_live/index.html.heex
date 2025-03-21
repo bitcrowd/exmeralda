@@ -4,7 +4,7 @@
       <li>
         <.link phx-click={JS.patch(~p"/") |> no_active_chat()}>
           <.icon name="hero-chat-bubble-bottom-center" />
-          {gettext("New chat")}
+          {gettext("Start new chat")}
         </.link>
       </li>
     </ul>
@@ -13,7 +13,7 @@
         :for={{id, session} <- @streams.sessions}
         class={[
           "list-row group cursor-pointer",
-          @live_action == :show && @session.id == session.id && active_chat_class()
+          @current_session && @current_session.id == session.id && active_chat_class()
         ]}
         id={id}
         phx-click={JS.patch(~p"/chat/#{session}") |> mark_active_chat()}
@@ -31,11 +31,14 @@
       </li>
     </ul>
   </:drawer>
-  <.live_component :if={@live_action == :new} module={ExmeraldaWeb.ChatLive.StartChat} id="start" />
   <.live_component
-    :if={@live_action == :show}
-    module={ExmeraldaWeb.ChatLive.Chat}
-    id="current"
-    session={@session}
+    module={
+      if @live_action == :new,
+        do: ExmeraldaWeb.ChatLive.StartChat,
+        else: ExmeraldaWeb.ChatLive.Chat
+    }
+    id="chat"
+    user={@current_user}
+    session={@current_session}
   />
 </.navbar_layout>
