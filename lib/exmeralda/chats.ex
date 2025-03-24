@@ -1,4 +1,4 @@
-defmodule Exmeralda.Chat do
+defmodule Exmeralda.Chats do
   @moduledoc """
   The Chats context.
   """
@@ -6,25 +6,36 @@ defmodule Exmeralda.Chat do
   import Ecto.Query, warn: false
   alias Exmeralda.Repo
 
-  alias Exmeralda.Chat.Session
+  alias Exmeralda.Chats.Session
 
   @doc """
-  Returns the list of chat_sessions.
+  Returns the list of chat_sessions of a user.
   """
-  def list_sessions do
-    Repo.all(from s in Session, order_by: [desc: s.inserted_at])
+  def list_sessions(user) do
+    user.id
+    |> session_scope()
+    |> order_by([s], desc: s.inserted_at)
+    |> Repo.all()
   end
 
   @doc """
-  Gets a single session.
+  Gets a single session of a user.
   """
-  def get_session!(id), do: Repo.get!(Session, id)
+  def get_session!(user, id) do
+    user.id
+    |> session_scope()
+    |> Repo.get!(id)
+  end
+
+  defp session_scope(user_id) do
+    from s in Session, where: s.user_id == ^user_id
+  end
 
   @doc """
   Starts a session.
   """
-  def start_session(attrs \\ %{}) do
-    %Session{}
+  def start_session(user, attrs \\ %{}) do
+    %Session{user_id: user.id}
     |> Session.changeset(attrs)
     |> Repo.insert()
   end

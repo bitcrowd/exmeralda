@@ -2,24 +2,44 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   use ExmeraldaWeb.ConnCase
 
   import Phoenix.LiveViewTest
-  alias Exmeralda.{Repo, Chat.Session}
+  alias Exmeralda.{Repo, Chats.Session}
 
-  defp insert_session(_) do
-    %{session: insert(:chat_session)}
+  defp insert_session(%{user: user}) do
+    %{session: insert(:chat_session, user: user)}
+  end
+
+  defp insert_user(_) do
+    %{user: insert(:user)}
   end
 
   describe "Index" do
-    setup [:insert_session]
+    setup [:insert_user, :insert_session]
 
-    test "list the sessions and greet", %{conn: conn, session: session} do
-      {:ok, _index_live, html} = live(conn, ~p"/")
+    test "list the sessions and greet", %{conn: conn, session: session, user: user} do
+      {:ok, _index_live, html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/chat/start")
 
       assert html =~ session.id
       assert html =~ "Just ask Exmeralda"
     end
 
-    test "start new session", %{conn: conn} do
-      {:ok, index_live, _html} = live(conn, ~p"/")
+    test "does not show other users sessions", %{conn: conn, session: session} do
+      {:ok, _index_live, html} =
+        conn
+        |> log_in_user(insert(:user))
+        |> live(~p"/chat/start")
+
+      refute html =~ session.id
+      assert html =~ "Just ask Exmeralda"
+    end
+
+    test "start new session", %{conn: conn, user: user} do
+      {:ok, index_live, _html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/chat/start")
 
       assert index_live |> element("#start-form") |> render_submit()
 
@@ -28,10 +48,19 @@ defmodule ExmeraldaWeb.ChatLiveTest do
       assert Repo.aggregate(Session, :count) == 2
     end
 
-    test "show a session", %{conn: conn, session: session} do
-      {:ok, _show_live, html} = live(conn, ~p"/chats/#{session}")
+    test "show a session", %{conn: conn, session: session, user: user} do
+      {:ok, _show_live, html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/chat/#{session}")
 
       assert html =~ "You underestimate my power!"
+    end
+
+    test "requires authentication", %{conn: conn} do
+      assert {:error,
+              {:redirect, %{to: "/", flash: %{"error" => "You must log in to access this page."}}}} =
+               live(conn, ~p"/chat/start")
     end
   end
 end

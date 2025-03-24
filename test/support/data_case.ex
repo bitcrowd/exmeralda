@@ -24,6 +24,8 @@ defmodule Exmeralda.DataCase do
       import Ecto.Changeset
       import Ecto.Query
       import Exmeralda.DataCase
+      import Exmeralda.Factory
+      import BitcrowdEcto.Assertions
     end
   end
 

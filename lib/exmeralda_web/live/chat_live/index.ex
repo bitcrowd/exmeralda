@@ -1,11 +1,11 @@
 defmodule ExmeraldaWeb.ChatLive.Index do
   use ExmeraldaWeb, :live_view
 
-  alias Exmeralda.Chat
+  alias Exmeralda.Chats
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, stream(socket, :sessions, Chat.list_sessions(), at: -1)}
+    {:ok, stream(socket, :sessions, Chats.list_sessions(socket.assigns.current_user), at: -1)}
   end
 
   @impl true
@@ -16,12 +16,13 @@ defmodule ExmeraldaWeb.ChatLive.Index do
   defp apply_action(socket, :show, %{"id" => id}) do
     socket
     |> assign(:page_title, id)
-    |> assign(:session, Chat.get_session!(id))
+    |> assign(:current_session, Chats.get_session!(socket.assigns.current_user, id))
   end
 
   defp apply_action(socket, :new, _params) do
     socket
-    |> assign(:page_title, "New Session")
+    |> assign(:page_title, gettext("New Session"))
+    |> assign(:current_session, nil)
   end
 
   @impl true
@@ -31,10 +32,16 @@ defmodule ExmeraldaWeb.ChatLive.Index do
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    session = Chat.get_session!(id)
-    {:ok, _} = Chat.delete_session(session)
+    session = Chats.get_session!(socket.assigns.current_user, id)
+    {:ok, _} = Chats.delete_session(session)
 
-    {:noreply, stream_delete(socket, :sessions, session)}
+    socket = stream_delete(socket, :sessions, session)
+
+    if session.id == socket.assigns.current_session.id do
+      {:noreply, push_navigate(socket, to: ~p"/chat/start")}
+    else
+      {:noreply, socket}
+    end
   end
 
   def session_title(assigns) do
