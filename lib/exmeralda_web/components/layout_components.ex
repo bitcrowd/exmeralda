@@ -53,7 +53,7 @@ defmodule ExmeraldaWeb.LayoutComponents do
     ~H"""
     <div class="drawer lg:drawer-open">
       <input id={@drawer_id} type="checkbox" class="drawer-toggle" />
-      <div class={["drawer-side", full_screen_height(assigns)]}>
+      <div class={["drawer-side z-40", full_screen_height(assigns)]}>
         <label for={@drawer_id} aria-label="close sidebar" class="drawer-overlay"></label>
         <div class="bg-base-200 min-h-full">
           {render_slot(@side)}

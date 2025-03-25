@@ -28,7 +28,7 @@ defmodule Exmeralda.Chats do
   end
 
   defp session_scope(user_id) do
-    from s in Session, where: s.user_id == ^user_id
+    from s in Session, where: s.user_id == ^user_id, preload: :library
   end
 
   @doc """

@@ -4,8 +4,12 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   import Phoenix.LiveViewTest
   alias Exmeralda.{Repo, Chats.Session}
 
-  defp insert_session(%{user: user}) do
-    %{session: insert(:chat_session, user: user)}
+  defp insert_library(_) do
+    %{library: insert(:library, name: "ecto")}
+  end
+
+  defp insert_session(%{user: user, library: library}) do
+    %{session: insert(:chat_session, user: user, library: library)}
   end
 
   defp insert_user(_) do
@@ -13,7 +17,7 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   end
 
   describe "Index" do
-    setup [:insert_user, :insert_session]
+    setup [:insert_library, :insert_user, :insert_session]
 
     test "list the sessions and greet", %{conn: conn, session: session, user: user} do
       {:ok, _index_live, html} =
@@ -41,7 +45,12 @@ defmodule ExmeraldaWeb.ChatLiveTest do
         |> log_in_user(user)
         |> live(~p"/chat/start")
 
-      assert index_live |> element("#start-form") |> render_submit()
+      assert index_live
+             |> element("#start-form a", "ecto")
+             |> render_click() =~ "ecto"
+
+      assert element(index_live, "#start-form")
+             |> render_submit()
 
       html = render(index_live)
       assert html =~ "You underestimate my power!"

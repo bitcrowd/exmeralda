@@ -511,4 +511,48 @@ defmodule ExmeraldaWeb.CoreComponents do
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
+
+  @doc """
+  Renders a dropdown.
+  """
+  slot :menu
+  slot :inner_block
+  attr :rest, :global
+
+  def dropdown(assigns) do
+    ~H"""
+    <div class="dropdown w-80" {@rest}>
+      <div tabindex="0" role="button" class="join w-full">
+        <div class="join-item w-5/6 btn btn-soft">
+          {render_slot(@inner_block)}
+        </div>
+        <a class="join-item btn btn-soft btn-primary w-1/6"><.icon name="hero-chevron-down" /></a>
+      </div>
+      <div
+        tabindex="0"
+        class="dropdown-content w-full bg-base-300 border border-primary rounded-box z-1 w-52 p-2 shadow-sm"
+      >
+        {render_slot(@menu)}
+      </div>
+    </div>
+    """
+  end
+
+  attr :name, :string
+  attr :rest, :global
+
+  def search_input(assigns) do
+    ~H"""
+    <label class="input w-full">
+      <.icon name="hero-magnifying-glass" class="h-[1em] opacity-50" />
+      <input
+        type="text"
+        class="grow focus:ring-0"
+        placeholder={gettext("Search...")}
+        name={@name}
+        {@rest}
+      />
+    </label>
+    """
+  end
 end

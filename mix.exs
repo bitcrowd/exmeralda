@@ -24,7 +24,7 @@ defmodule Exmeralda.MixProject do
   end
 
   # Specifies which paths to compile per environment.
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(env) when env in [:dev, :test], do: ["lib", "test/support"]
   defp elixirc_paths(_), do: ["lib"]
 
   # Specifies your project dependencies.
@@ -60,7 +60,7 @@ defmodule Exmeralda.MixProject do
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
       {:credo, "~> 1.7", only: [:dev, :test]},
-      {:ex_machina, "~> 2.8.0", only: :test},
+      {:ex_machina, "~> 2.8.0", only: [:dev, :test]},
       {:assent, "~> 0.3.0"},
       {:req, "~> 0.5"}
     ]
