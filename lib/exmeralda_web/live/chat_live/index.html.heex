@@ -32,11 +32,14 @@
     </ul>
   </:drawer>
   <.live_component
-    module={
-      if @live_action == :new,
-        do: ExmeraldaWeb.ChatLive.StartChat,
-        else: ExmeraldaWeb.ChatLive.Chat
-    }
+    :if={@live_action == :new}
+    module={StartChat}
+    id="start-chat"
+    user={@current_user}
+  />
+  <.live_component
+    :if={@live_action == :show}
+    module={Chat}
     id="chat"
     user={@current_user}
     session={@current_session}

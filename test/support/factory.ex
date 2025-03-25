@@ -3,8 +3,18 @@ defmodule Exmeralda.Factory do
 
   def chat_session_factory do
     %Exmeralda.Chats.Session{
+      title: "A fancy session",
       user: build(:user),
       library: build(:library)
+    }
+  end
+
+  def message_factory do
+    %Exmeralda.Chats.Message{
+      session: build(:chat_session),
+      index: sequence(:gitub_id, & &1),
+      content: "I am a message",
+      role: :user
     }
   end
 

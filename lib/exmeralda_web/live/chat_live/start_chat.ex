@@ -10,13 +10,18 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
     <div class="hero">
       <div class="hero-content flex-col lg:flex-row-reverse">
         <img src={~p"/images/logo.jpeg"} class="max-w-sm rounded-lg shadow-2xl" />
-        <div class="max-w-md">
+        <div class="max-w-md p-7">
           <h1 class="text-5xl font-bold">Just ask Exmeralda</h1>
           <p class="py-6">
-            Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda excepturi exercitationem
-            quasi. In deleniti eaque aut repudiandae et a id nisi.
+            {gettext("Choose a library you want to talk about and ask me anything.")}
           </p>
-          <.simple_form for={@form} id="start-form" phx-target={@myself} phx-submit="start">
+          <.simple_form
+            for={@form}
+            id="start-form"
+            phx-target={@myself}
+            phx-submit="start"
+            phx-change="validate"
+          >
             <input
               type="hidden"
               name={@form[:library_id].name}
@@ -45,6 +50,7 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
               </:menu>
             </.dropdown>
             <div id="close" tabindex="0" />
+            <.input field={@form[:prompt]} placeholder={gettext("What can I help you with?")} />
             <:actions>
               <.button
                 id="submit"
@@ -72,7 +78,7 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
      end)
      |> assign_new(:selected_library, fn -> nil end)
      |> assign_new(:form, fn ->
-       to_form(Chats.session_changeset())
+       to_form(Chats.new_session_changeset())
      end)}
   end
 
@@ -89,6 +95,15 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
     end
+  end
+
+  def handle_event("validate", %{"session" => session_params}, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       :form,
+       to_form(Chats.new_session_changeset(session_params))
+     )}
   end
 
   @impl true
