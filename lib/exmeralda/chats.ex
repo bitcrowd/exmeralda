@@ -62,7 +62,7 @@ defmodule Exmeralda.Chats do
     end
   end
 
-  def continute_session(session, params) do
+  def continue_session(session, params) do
     Multi.new()
     |> Multi.put(:session, session)
     |> Multi.put(:previous_messages, all_messages(session))

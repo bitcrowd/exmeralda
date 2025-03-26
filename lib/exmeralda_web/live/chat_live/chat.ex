@@ -51,7 +51,7 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
   @impl true
   def handle_event("send", %{"message" => message_params}, socket) do
     socket.assigns.session
-    |> Chats.continute_session(message_params)
+    |> Chats.continue_session(message_params)
     |> case do
       {:ok, [message, assistant_message]} ->
         {:noreply,
@@ -116,13 +116,10 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
 
   def message_class(:user), do: "chat-start"
   def message_class(:assistant), do: "chat-end"
-  def message_class(:system), do: "chat-start"
 
   def message_content_class(:user), do: "chat-bubble chat-bubble-primary"
   def message_content_class(:assistant), do: "chat-bubble chat-bubble-neutral"
-  def message_content_class(:system), do: "chat-bubble chat-bubble-accent"
 
   def message_role(:user), do: gettext("You")
   def message_role(:assistant), do: gettext("Assistant")
-  def message_role(:system), do: gettext("System")
 end

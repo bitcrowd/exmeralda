@@ -7,11 +7,8 @@ defmodule Exmeralda.MockLLM do
 
   @impl true
   def call(model, _messages, _tools \\ []) do
-    # Wrap callbacks properly using LangChain.Utils
-    # Simulated response chunks
     chunks = ["This", " is", " a", " streaming", " response"]
 
-    # Stream each delta, firing the callback correctly
     deltas =
       Enum.map(chunks, fn chunk ->
         delta = %MessageDelta{role: :assistant, content: chunk, status: :incomplete}
