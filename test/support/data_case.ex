@@ -18,7 +18,7 @@ defmodule Exmeralda.DataCase do
 
   using do
     quote do
-      alias Exmeralda.Repo
+      use Oban.Testing, repo: Exmeralda.Repo
 
       import Ecto
       import Ecto.Changeset
@@ -26,6 +26,8 @@ defmodule Exmeralda.DataCase do
       import Exmeralda.DataCase
       import Exmeralda.Factory
       import BitcrowdEcto.Assertions
+
+      alias Exmeralda.Repo
     end
   end
 

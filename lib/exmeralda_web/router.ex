@@ -53,6 +53,7 @@ defmodule ExmeraldaWeb.Router do
       on_mount: [{ExmeraldaWeb.UserAuth, :ensure_authenticated}] do
       live "/chat/start", ChatLive.Index, :new
       live "/chat/:id", ChatLive.Index, :show
+      live "/library/new", LibraryLive.Index, :new
       live "/auth/settings", UserLive.Settings, :edit
     end
   end

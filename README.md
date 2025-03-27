@@ -4,10 +4,9 @@
 
 - Erlang & Elixir
 - Node JS
-- Postgres
+- Postgres (with [pgvector](https://github.com/pgvector/pgvector))
 
-You can install all of it with [asdf](https://github.com/asdf-vm/asdf). 
-
+You can install all of it (except pgvector) with [asdf](https://github.com/asdf-vm/asdf). 
 
 To start your Phoenix server:
 

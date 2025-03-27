@@ -1,12 +1,14 @@
 defmodule Exmeralda.Topics.Library do
   use Exmeralda.Schema
 
-  alias Exmeralda.Topics.Dependency
+  alias Exmeralda.Topics.{Dependency, Chunk}
 
   schema "libraries" do
     field :name, :string
     field :version, :string
     embeds_many :dependencies, Dependency
+
+    has_many :chunks, Chunk
 
     timestamps()
   end
@@ -16,8 +18,10 @@ defmodule Exmeralda.Topics.Library do
     library
     |> cast(attrs, [:name, :version])
     |> validate_required([:name, :version])
+    |> validate_format(:name, ~r/^[a-z][a-z0-9_]{1,}[a-z0-9]$/)
     |> validate_version()
     |> cast_embed(:dependencies)
+    |> unique_constraint([:name, :version])
   end
 
   defp validate_version(changeset) do

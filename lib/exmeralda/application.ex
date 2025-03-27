@@ -7,19 +7,21 @@ defmodule Exmeralda.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      ExmeraldaWeb.Telemetry,
-      Exmeralda.Repo,
-      {DNSCluster, query: Application.get_env(:exmeralda, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: Exmeralda.PubSub},
-      # Start the Finch HTTP client for sending emails
-      {Finch, name: Exmeralda.Finch},
-      # Start a worker by calling: Exmeralda.Worker.start_link(arg)
-      # {Exmeralda.Worker, arg},
-      # Start to serve requests, typically the last entry
-      ExmeraldaWeb.Endpoint,
-      {Task.Supervisor, name: Exmeralda.TaskSupervisor}
-    ]
+    children =
+      [
+        ExmeraldaWeb.Telemetry,
+        Exmeralda.Repo,
+        {DNSCluster, query: Application.get_env(:exmeralda, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: Exmeralda.PubSub},
+        # Start the Finch HTTP client for sending emails
+        {Finch, name: Exmeralda.Finch},
+        # Start a worker by calling: Exmeralda.Worker.start_link(arg)
+        # {Exmeralda.Worker, arg},
+        # Start to serve requests, typically the last entry
+        ExmeraldaWeb.Endpoint,
+        {Oban, Application.fetch_env!(:exmeralda, Oban)},
+        {Task.Supervisor, name: Exmeralda.TaskSupervisor}
+      ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
