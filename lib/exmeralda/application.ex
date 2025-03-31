@@ -17,7 +17,8 @@ defmodule Exmeralda.Application do
       # Start a worker by calling: Exmeralda.Worker.start_link(arg)
       # {Exmeralda.Worker, arg},
       # Start to serve requests, typically the last entry
-      ExmeraldaWeb.Endpoint
+      ExmeraldaWeb.Endpoint,
+      {Task.Supervisor, name: Exmeralda.TaskSupervisor}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

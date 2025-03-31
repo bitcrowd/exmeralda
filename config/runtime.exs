@@ -57,3 +57,44 @@ if config_env() == :prod do
     ],
     secret_key_base: secret_key_base
 end
+
+cond do
+  config_env() == :test ->
+    config :exmeralda, :llm, %Exmeralda.MockLLM{}
+
+  System.get_env("GROQ_API_KEY") ->
+    config :exmeralda,
+           :llm,
+           LangChain.ChatModels.ChatOpenAI.new!(%{
+             endpoint: "https://api.groq.com/openai/v1/chat/completions",
+             api_key: System.get_env("GROQ_API_KEY"),
+             model: "qwen-2.5-coder-32b",
+             stream: true
+           })
+
+  true ->
+    config :exmeralda,
+           :llm,
+           LangChain.ChatModels.ChatOllamaAI.new!(%{
+             model: "llama3.2:latest",
+             stream: true
+           })
+end
+
+config :exmeralda,
+       :system_prompt,
+       """
+       You are an expert in Elixir programming with in-depth knowledge of Elixir.
+       Provide accurate information based on the provided context to assist Elixir
+       developers. Include code snippets and examples to illustrate your points.
+       Respond in a professional yet approachable manner.
+       Be concise for straightforward queries, but elaborate when necessary to
+       ensure clarity and understanding. Adapt your responses to the complexity of
+       the question. For basic usage, provide clear examples. For advanced topics,
+       offer detailed explanations and multiple solutions if applicable.
+       Include references to official documentation or reliable sources to support
+       your answers. Ensure information is current, reflecting the latest updates
+       in the library. If the context does not provide enough information, state
+       this in your answer and keep it short. If you are unsure what kind of
+       information the user needs, please ask follow-up questions.
+       """

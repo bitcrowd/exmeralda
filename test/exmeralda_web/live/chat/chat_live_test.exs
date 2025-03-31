@@ -9,7 +9,17 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   end
 
   defp insert_session(%{user: user, library: library}) do
-    %{session: insert(:chat_session, user: user, library: library)}
+    %{
+      session:
+        insert(:chat_session,
+          user: user,
+          library: library,
+          messages: [
+            build(:message, role: :user, index: 0, session: nil),
+            build(:message, role: :assistant, index: 1, session: nil)
+          ]
+        )
+    }
   end
 
   defp insert_user(_) do
@@ -39,7 +49,7 @@ defmodule ExmeraldaWeb.ChatLiveTest do
       assert html =~ "Just ask Exmeralda"
     end
 
-    test "start new session", %{conn: conn, user: user} do
+    test "start new session", %{conn: conn, user: user, library: library} do
       {:ok, index_live, _html} =
         conn
         |> log_in_user(user)
@@ -49,7 +59,12 @@ defmodule ExmeraldaWeb.ChatLiveTest do
              |> element("#start-form a", "ecto")
              |> render_click() =~ "ecto"
 
-      assert element(index_live, "#start-form")
+      assert form(index_live, "#start-form", %{
+               "session" => %{
+                 "prompt" => "You underestimate my power!",
+                 "library_id" => library.id
+               }
+             })
              |> render_submit()
 
       html = render(index_live)
@@ -63,7 +78,7 @@ defmodule ExmeraldaWeb.ChatLiveTest do
         |> log_in_user(user)
         |> live(~p"/chat/#{session}")
 
-      assert html =~ "You underestimate my power!"
+      assert html =~ "I am a message"
     end
 
     test "requires authentication", %{conn: conn} do

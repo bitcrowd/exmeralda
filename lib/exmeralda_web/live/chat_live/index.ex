@@ -2,9 +2,14 @@ defmodule ExmeraldaWeb.ChatLive.Index do
   use ExmeraldaWeb, :live_view
 
   alias Exmeralda.Chats
+  alias ExmeraldaWeb.ChatLive.{Chat, StartChat}
+  alias Phoenix.PubSub
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket),
+      do: PubSub.subscribe(Exmeralda.PubSub, "user-#{socket.assigns.current_user.id}")
+
     {:ok, stream(socket, :sessions, Chats.list_sessions(socket.assigns.current_user), at: -1)}
   end
 
@@ -14,9 +19,11 @@ defmodule ExmeraldaWeb.ChatLive.Index do
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do
+    session = Chats.get_session!(socket.assigns.current_user, id)
+
     socket
-    |> assign(:page_title, id)
-    |> assign(:current_session, Chats.get_session!(socket.assigns.current_user, id))
+    |> assign(:page_title, session.title)
+    |> assign(:current_session, session)
   end
 
   defp apply_action(socket, :new, _params) do
@@ -28,6 +35,16 @@ defmodule ExmeraldaWeb.ChatLive.Index do
   @impl true
   def handle_info({ExmeraldaWeb.ChatLive.StartChat, {:start, session}}, socket) do
     {:noreply, stream_insert(socket, :sessions, session, at: 0)}
+  end
+
+  def handle_info({:session_update, session_id, data}, socket) do
+    current_session = socket.assigns.current_session
+
+    if current_session && current_session.id == session_id do
+      send_update(Chat, id: "chat", session_update: data)
+    end
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -46,7 +63,7 @@ defmodule ExmeraldaWeb.ChatLive.Index do
 
   def session_title(assigns) do
     ~H"""
-    {@session.id}
+    {@session.title}
     <div class="badge badge-info">{@session.library.name}</div>
     """
   end

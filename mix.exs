@@ -62,7 +62,9 @@ defmodule Exmeralda.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test]},
       {:ex_machina, "~> 2.8.0", only: [:dev, :test]},
       {:assent, "~> 0.3.0"},
-      {:req, "~> 0.5"}
+      {:req, "~> 0.5"},
+      {:langchain, "~> 0.3.0"},
+      {:mdex, "~> 0.2"}
     ]
   end
 
