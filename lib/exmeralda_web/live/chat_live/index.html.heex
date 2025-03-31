@@ -26,7 +26,7 @@
           phx-click={JS.push("delete", value: %{id: session.id}) |> hide("##{id}")}
           data-confirm="Are you sure?"
         >
-          <.icon name="hero-x-mark" class="hidden group-hover:block hover:bg-error" />
+          <.icon name="hero-x-mark" class="invisible group-hover:visible hover:bg-error" />
         </button>
       </li>
     </ul>

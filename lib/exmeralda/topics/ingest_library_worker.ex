@@ -1,5 +1,5 @@
 defmodule Exmeralda.Topics.IngestLibraryWorker do
-  use Oban.Worker, queue: :ingest, max_attempts: 20
+  use Oban.Worker, queue: :ingest, max_attempts: 20, unique: [period: {360, :minutes}]
 
   alias Exmeralda.Repo
   alias Exmeralda.Topics.{Chunk, Library, Rag}
@@ -19,7 +19,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
     |> Multi.insert_all(:chunks, Chunk, fn %{library: library, ingestion: {chunks, _}} ->
       Enum.map(chunks, &Map.put(&1, :library_id, library.id))
     end)
-    |> Repo.transaction()
+    |> Repo.transaction(timeout: 100_000)
     |> case do
       {:ok, _} -> :ok
       {:error, :ingestion, {:repo_not_found, _} = error, _} -> {:discard, error}

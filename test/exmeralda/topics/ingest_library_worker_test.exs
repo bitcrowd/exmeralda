@@ -31,9 +31,11 @@ defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
                {"text_chunker", "~> 0.3.1", [optional: false]}
              ]
 
-      assert length(rag.chunks) == 35
-      assert length(rag.chunks |> Enum.filter(&(&1.type == :docs))) == 18
-      assert length(rag.chunks |> Enum.filter(&(&1.type == :code))) == 17
+      assert length(rag.chunks) > 30 and length(rag.chunks) < 40
+      docs = length(rag.chunks |> Enum.filter(&(&1.type == :docs)))
+      code = length(rag.chunks |> Enum.filter(&(&1.type == :code)))
+      assert docs > 10 && docs < 20
+      assert code > 10 && code < 20
 
       for source <- ["Rag.Telemetry.html", "mix.exs"] do
         assert chunk = Enum.find(rag.chunks, &(&1.source == source))

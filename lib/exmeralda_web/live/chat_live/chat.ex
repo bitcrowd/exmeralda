@@ -12,6 +12,13 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
   end
 
   @impl true
+  def update(%{session_update: {:sources, message_id}}, socket) do
+    message = Chats.get_message!(message_id)
+
+    {:ok, stream_insert(socket, :messages, message)}
+  end
+
+  @impl true
   def update(%{session_update: {:message_delta, message_id, delta}}, socket) do
     messages = socket.assigns.incomplete_messages
 
@@ -91,6 +98,27 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
             message_content_class(message.role)
           ]}>
             {message.content |> MDEx.to_html!() |> raw()}
+            <details
+              :if={message.role == :assistant && message.sources |> Enum.any?()}
+              class="mt-3 mb-1"
+            >
+              <summary>{gettext("Sources")}</summary>
+              <ul class="list-disc mx-5">
+                <li :for={s <- message.sources}>
+                  <a
+                    :if={s.chunk.type == :docs}
+                    href={"https://hexdocs.pm/#{@session.library.name}/#{@session.library.version}/#{s.chunk.source}"}
+                    target="blank"
+                    class="link"
+                    rel="noopener noreferrer"
+                  >
+                    {s.chunk.source}
+                  </a>
+
+                  <code :if={s.chunk.type == :code}>{s.chunk.source}</code>
+                </li>
+              </ul>
+            </details>
           </div>
           <div class="chat-footer opacity-50">
             <span :if={message.incomplete} class="loading loading-dots loading-xs"></span>

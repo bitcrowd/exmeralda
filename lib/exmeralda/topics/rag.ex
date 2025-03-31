@@ -1,7 +1,6 @@
 defmodule Exmeralda.Topics.Rag do
   @moduledoc false
   alias Exmeralda.Repo
-  alias Exmeralda.Topics.Chunk
   import Ecto.Query
   import Pgvector.Ecto.Query
   alias Rag.{Embedding, Generation, Retrieval}
@@ -9,6 +8,10 @@ defmodule Exmeralda.Topics.Rag do
 
   @doc_types ~w(.html .md .txt)
   @embedding_batch_size 80
+  @retrieval_weights %{fulltext_results: 1, semantic_results: 1}
+  @pgvector_limit 3
+  @fulltext_limit 3
+  @excluded_docs ~w(404.html)
 
   @default_splitter RecursiveCharacterTextSplitter.new!()
   @elixir_splitter RecursiveCharacterTextSplitter.new!(%{seperators: LanguageSeparators.elixir()})
@@ -23,7 +26,7 @@ defmodule Exmeralda.Topics.Rag do
       docs =
         for {path, content} <- exdocs,
             file = to_string(path),
-            Path.extname(file) in @doc_types,
+            Path.extname(file) in @doc_types and file not in @excluded_docs,
             chunk <- chunk_text(file, content) do
           %{source: file, type: :docs, content: chunk}
         end
@@ -77,53 +80,43 @@ defmodule Exmeralda.Topics.Rag do
     |> RecursiveCharacterTextSplitter.split_text(content)
   end
 
-  def build_generation(query) do
+  def build_generation(scope, query, opts \\ []) do
     generation =
-      Generation.new(query)
+      Generation.new(query, opts)
       |> Embedding.generate_embedding(embedding_provider())
-      |> Retrieval.retrieve(:fulltext_results, fn generation -> query_fulltext(generation) end)
-      |> Retrieval.retrieve(:semantic_results, fn generation ->
-        query_with_pgvector(generation)
-      end)
-      |> Retrieval.reciprocal_rank_fusion(
-        %{fulltext_results: 1, semantic_results: 1},
-        :rrf_result
-      )
+      |> Retrieval.retrieve(:fulltext_results, &query_fulltext(&1, scope))
+      |> Retrieval.retrieve(:semantic_results, &query_with_pgvector(&1, scope))
+      |> Retrieval.reciprocal_rank_fusion(@retrieval_weights, :rrf_result)
       |> Retrieval.deduplicate(:rrf_result, [:source])
 
-    context =
-      Generation.get_retrieval_result(generation, :rrf_result)
-      |> Enum.map_join("\n\n", & &1.document)
-
-    context_sources =
-      Generation.get_retrieval_result(generation, :rrf_result)
-      |> Enum.map(& &1.source)
+    result = Generation.get_retrieval_result(generation, :rrf_result)
+    context = Enum.map_join(result, "\n\n", & &1.content)
+    context_sources = Enum.map(result, & &1.source)
 
     prompt = prompt(query, context)
 
-    generation
-    |> Generation.put_context(context)
-    |> Generation.put_context_sources(context_sources)
-    |> Generation.put_prompt(prompt)
+    {result,
+     generation
+     |> Generation.put_context(context)
+     |> Generation.put_context_sources(context_sources)
+     |> Generation.put_prompt(prompt)}
   end
 
-  defp query_with_pgvector(%{query_embedding: query_embedding}, limit \\ 3) do
+  defp query_with_pgvector(%{query_embedding: query_embedding}, scope) do
     {:ok,
      Repo.all(
-       from(c in Chunk,
-         order_by: l2_distance(c.embedding, ^Pgvector.new(query_embedding)),
-         limit: ^limit
-       )
+       scope
+       |> order_by([c], l2_distance(c.embedding, ^Pgvector.new(query_embedding)))
+       |> limit(@pgvector_limit)
      )}
   end
 
-  defp query_fulltext(%{query: query}, limit \\ 3) do
+  defp query_fulltext(%{query: query}, scope) do
     {:ok,
      Repo.all(
-       from(c in Chunk,
-         where: fragment("to_tsvector(?) @@ websearch_to_tsquery(?)", c.chunk, ^query),
-         limit: ^limit
-       )
+       scope
+       |> order_by(fragment("search @@ websearch_to_tsquery(?)", ^query))
+       |> limit(@fulltext_limit)
      )}
   end
 
