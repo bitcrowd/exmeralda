@@ -11,7 +11,7 @@ defmodule Exmeralda.Chats do
   alias Exmeralda.Topics.{Rag, Chunk}
   alias Exmeralda.Chats.{LLM, Message, Session, Source}
 
-  @message_preload [sources: :chunk]
+  @message_preload [:source_chunks]
 
   @doc """
   Returns the list of chat_sessions of a user.

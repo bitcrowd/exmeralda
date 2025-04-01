@@ -104,18 +104,19 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
             >
               <summary>{gettext("Sources")}</summary>
               <ul class="list-disc mx-5">
-                <li :for={s <- message.sources}>
+                <li :for={{source, chunks} <- message.source_chunks |> Enum.group_by(& &1.source)}>
+                  <% type = List.first(chunks).type %>
                   <a
-                    :if={s.chunk.type == :docs}
-                    href={"https://hexdocs.pm/#{@session.library.name}/#{@session.library.version}/#{s.chunk.source}"}
+                    :if={type == :docs}
+                    href={"https://hexdocs.pm/#{@session.library.name}/#{@session.library.version}/#{source}"}
                     target="blank"
                     class="link"
                     rel="noopener noreferrer"
                   >
-                    {s.chunk.source}
+                    {source}
                   </a>
 
-                  <code :if={s.chunk.type == :code}>{s.chunk.source}</code>
+                  <code :if={type == :code}>{source}</code>
                 </li>
               </ul>
             </details>

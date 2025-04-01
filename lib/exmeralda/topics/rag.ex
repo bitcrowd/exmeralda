@@ -87,7 +87,7 @@ defmodule Exmeralda.Topics.Rag do
       |> Retrieval.retrieve(:fulltext_results, &query_fulltext(&1, scope))
       |> Retrieval.retrieve(:semantic_results, &query_with_pgvector(&1, scope))
       |> Retrieval.reciprocal_rank_fusion(@retrieval_weights, :rrf_result)
-      |> Retrieval.deduplicate(:rrf_result, [:source])
+      |> Retrieval.deduplicate(:rrf_result, [:id])
 
     result = Generation.get_retrieval_result(generation, :rrf_result)
     context = Enum.map_join(result, "\n\n", & &1.content)

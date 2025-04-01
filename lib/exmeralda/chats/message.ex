@@ -11,6 +11,10 @@ defmodule Exmeralda.Chats.Message do
     belongs_to :session, Session
     has_many :sources, Source
 
+    has_many :source_chunks,
+      through: [:sources, :chunk],
+      preload_order: [asc: :type, asc: :source]
+
     timestamps()
   end
 
