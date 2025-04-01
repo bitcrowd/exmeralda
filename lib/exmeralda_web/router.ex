@@ -2,6 +2,7 @@ defmodule ExmeraldaWeb.Router do
   use ExmeraldaWeb, :router
 
   import ExmeraldaWeb.UserAuth
+  import Oban.Web.Router
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -55,6 +56,20 @@ defmodule ExmeraldaWeb.Router do
       live "/chat/:id", ChatLive.Index, :show
       live "/library/new", LibraryLive.Index, :new
       live "/auth/settings", UserLive.Settings, :edit
+    end
+  end
+
+  scope "/", ExmeraldaWeb do
+    pipe_through [:browser, :admin_auth]
+
+    oban_dashboard("/oban")
+  end
+
+  defp admin_auth(conn, _opts) do
+    if admin_auth = Application.get_env(:exmeralda, :admin_auth) do
+      Plug.BasicAuth.basic_auth(conn, admin_auth)
+    else
+      conn
     end
   end
 end
