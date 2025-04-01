@@ -1,9 +1,13 @@
-defmodule Exmeralda.MockLLM do
+defmodule Exmeralda.LLM.Fake do
   @behaviour LangChain.ChatModels.ChatModel
 
   alias LangChain.{MessageDelta, Callbacks}
 
   defstruct name: "MockChatModel", version: "1.0", callbacks: []
+
+  def new(attrs) do
+    struct!(__MODULE__, attrs)
+  end
 
   @impl true
   def call(model, _messages, _tools \\ []) do
