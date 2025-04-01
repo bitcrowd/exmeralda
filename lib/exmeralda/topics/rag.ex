@@ -8,10 +8,18 @@ defmodule Exmeralda.Topics.Rag do
   alias LangChain.TextSplitter.{RecursiveCharacterTextSplitter, LanguageSeparators}
 
   @doc_types ~w(.html .md .txt)
-  @embedding_batch_size 80
+  @embedding_batch_size 20
+  @chunk_size 2000
+  @retrieval_weights %{fulltext_results: 1, semantic_results: 1}
+  @pgvector_limit 3
+  @fulltext_limit 3
+  @excluded_docs ~w(404.html)
 
-  @default_splitter RecursiveCharacterTextSplitter.new!()
-  @elixir_splitter RecursiveCharacterTextSplitter.new!(%{seperators: LanguageSeparators.elixir()})
+  @default_splitter RecursiveCharacterTextSplitter.new!(%{chunk_size: @chunk_size})
+  @elixir_splitter RecursiveCharacterTextSplitter.new!(%{
+                     seperators: LanguageSeparators.elixir(),
+                     chunk_size: @chunk_size
+                   })
 
   def ingest_from_hex(name, version) do
     full_name = "#{name}-#{version}"
@@ -23,14 +31,16 @@ defmodule Exmeralda.Topics.Rag do
       docs =
         for {path, content} <- exdocs,
             file = to_string(path),
-            Path.extname(file) in @doc_types,
+            Path.extname(file) in @doc_types and file not in @excluded_docs,
             chunk <- chunk_text(file, content) do
           %{source: file, type: :docs, content: chunk}
         end
 
       code =
-        for {file, content} <- repo["contents.tar.gz"], chunk <- chunk_text(file, content) do
-          %{source: file, type: :code, content: chunk}
+        for {file, content} <- repo["contents.tar.gz"],
+            String.valid?(content),
+            chunk <- chunk_text(file, content) do
+          %{source: file, type: :code, content: Enum.join(["# #{file}\n\n", chunk])}
         end
 
       dependencies =
@@ -81,14 +91,9 @@ defmodule Exmeralda.Topics.Rag do
     generation =
       Generation.new(query)
       |> Embedding.generate_embedding(embedding_provider())
-      |> Retrieval.retrieve(:fulltext_results, fn generation -> query_fulltext(generation) end)
-      |> Retrieval.retrieve(:semantic_results, fn generation ->
-        query_with_pgvector(generation)
-      end)
-      |> Retrieval.reciprocal_rank_fusion(
-        %{fulltext_results: 1, semantic_results: 1},
-        :rrf_result
-      )
+      |> Retrieval.retrieve(:fulltext_results, &query_fulltext/1)
+      |> Retrieval.retrieve(:semantic_results, &query_with_pgvector/1)
+      |> Retrieval.reciprocal_rank_fusion(@retrieval_weights, :rrf_result)
       |> Retrieval.deduplicate(:rrf_result, [:source])
 
     context =
@@ -107,22 +112,22 @@ defmodule Exmeralda.Topics.Rag do
     |> Generation.put_prompt(prompt)
   end
 
-  defp query_with_pgvector(%{query_embedding: query_embedding}, limit \\ 3) do
+  defp query_with_pgvector(%{query_embedding: query_embedding}) do
     {:ok,
      Repo.all(
        from(c in Chunk,
          order_by: l2_distance(c.embedding, ^Pgvector.new(query_embedding)),
-         limit: ^limit
+         limit: @pgvector_limit
        )
      )}
   end
 
-  defp query_fulltext(%{query: query}, limit \\ 3) do
+  defp query_fulltext(%{query: query}) do
     {:ok,
      Repo.all(
        from(c in Chunk,
          where: fragment("to_tsvector(?) @@ websearch_to_tsquery(?)", c.chunk, ^query),
-         limit: ^limit
+         limit: @fulltext_limit
        )
      )}
   end
@@ -140,6 +145,9 @@ defmodule Exmeralda.Topics.Rag do
   end
 
   defp embedding_provider do
-    Application.fetch_env!(:exmeralda, :embedding)
+    case Application.fetch_env!(:exmeralda, :embedding) do
+      embedding when is_struct(embedding) -> embedding
+      mod when is_atom(mod) -> mod.new(%{})
+    end
   end
 end

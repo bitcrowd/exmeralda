@@ -59,49 +59,47 @@ if config_env() == :prod do
 end
 
 cond do
-  config_env() == :test ->
-    config :exmeralda, :llm, %Exmeralda.MockLLM{}
-
-  System.get_env("GROQ_API_KEY") ->
+  config_env() == :prod || System.get_env("GROQ_API_KEY") ->
     config :exmeralda,
            :llm,
            LangChain.ChatModels.ChatOpenAI.new!(%{
              endpoint: "https://api.groq.com/openai/v1/chat/completions",
-             api_key: System.get_env("GROQ_API_KEY"),
+             api_key: System.fetch_env!("GROQ_API_KEY"),
              model: "qwen-2.5-coder-32b",
              stream: true
            })
 
-  true ->
+  config_env() == :dev ->
     config :exmeralda,
            :llm,
            LangChain.ChatModels.ChatOllamaAI.new!(%{
              model: "llama3.2:latest",
              stream: true
            })
+
+  true ->
+    config :exmeralda, :llm, Exmeralda.LLM.Fake
 end
 
 cond do
-  config_env() == :test ->
-    config :exmeralda,
-           :embedding,
-           Exmeralda.Rag.Fake.new(%{})
-
-  System.get_env("JINA_API_KEY") ->
+  config_env() == :prod || System.get_env("JINA_API_KEY") ->
     config :exmeralda,
            :embedding,
            Rag.Ai.OpenAI.new(%{
              embeddings_url: "https://api.jina.ai/v1/embeddings",
-             api_key: System.get_env("JINA_API_KEY"),
+             api_key: System.fetch_env!("JINA_API_KEY"),
              embeddings_model: "jina-embeddings-v2-base-code"
            })
 
-  true ->
+  config_env() == :dev ->
     config :exmeralda,
            :embedding,
            Exmeralda.Rag.Ollama.new(%{
              embeddings_model: "unclemusclez/jina-embeddings-v2-base-code"
            })
+
+  true ->
+    config :exmeralda, :embedding, Exmeralda.Rag.Fake
 end
 
 config :exmeralda,

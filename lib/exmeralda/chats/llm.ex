@@ -28,7 +28,10 @@ defmodule Exmeralda.Chats.LLM do
   end
 
   defp llm do
-    Application.fetch_env!(:exmeralda, :llm)
+    case Application.fetch_env!(:exmeralda, :llm) do
+      llm when is_struct(llm) -> llm
+      mod when is_atom(mod) -> mod.new(%{})
+    end
   end
 
   defp system_prompt do
