@@ -7,7 +7,8 @@ config :exmeralda,
 config :exmeralda,
        Exmeralda.Repo,
        migration_primary_key: [type: :binary_id],
-       migration_timestamps: [type: :utc_datetime_usec]
+       migration_timestamps: [type: :utc_datetime_usec],
+       types: Exmeralda.PostgrexTypes
 
 if config_env() in [:dev, :test] do
   config :exmeralda, Exmeralda.Repo,

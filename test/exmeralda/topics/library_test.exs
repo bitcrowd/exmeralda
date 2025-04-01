@@ -43,6 +43,18 @@ defmodule Exmeralda.Topics.LibraryTest do
              |> assert_changes(:version_requirement, "~> 1.0")
     end
 
+    test "validates names" do
+      for name <- ~w(ecto phoenix_live_view absinthe_graphql my_lib123) do
+        assert Library.changeset(%Library{}, %{name: name, version: "1.0.0"}).valid?
+      end
+
+      for name <- ~w(_underscore_start 123numbersfirst sh ends_with_ NOTEVENANAME $!@#) do
+        cs = Library.changeset(%Library{}, %{name: name, version: "1.0.0"})
+        refute cs.valid?
+        assert_error_on(cs, :name, :format)
+      end
+    end
+
     test "validates version strings" do
       changeset =
         Library.changeset(%Library{}, %{
@@ -52,7 +64,7 @@ defmodule Exmeralda.Topics.LibraryTest do
         })
 
       refute changeset.valid?
-      assert assert_error_on(changeset, :version, :version)
+      assert_error_on(changeset, :version, :version)
     end
 
     test "validates version embeds" do
@@ -72,7 +84,7 @@ defmodule Exmeralda.Topics.LibraryTest do
 
       [telemetry] = changeset.changes[:dependencies]
 
-      assert assert_error_on(telemetry, :version_requirement, :version_requirement)
+      assert_error_on(telemetry, :version_requirement, :version_requirement)
     end
   end
 end

@@ -9,7 +9,7 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
     ~H"""
     <div class="hero">
       <div class="hero-content flex-col lg:flex-row-reverse">
-        <img src={~p"/images/logo.jpeg"} class="max-w-sm rounded-lg shadow-2xl" />
+        <img src={~p"/images/logo.png"} class="max-w-sm rounded-lg" />
         <div class="max-w-md p-7">
           <h1 class="text-5xl font-bold">Just ask Exmeralda</h1>
           <p class="py-6">
@@ -47,6 +47,10 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
                     </a>
                   </li>
                 </ul>
+                <div class="text-sm p-4">
+                  {gettext("Missing one?")}
+                  <.link class="link" navigate={~p"/library/new"}>{gettext("Add it here")}</.link>
+                </div>
               </:menu>
             </.dropdown>
             <div id="close" tabindex="0" />

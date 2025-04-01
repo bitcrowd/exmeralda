@@ -81,6 +81,29 @@ cond do
            })
 end
 
+cond do
+  config_env() == :test ->
+    config :exmeralda,
+           :embedding,
+           Exmeralda.Rag.Fake.new(%{})
+
+  System.get_env("JINA_API_KEY") ->
+    config :exmeralda,
+           :embedding,
+           Rag.Ai.OpenAI.new(%{
+             embeddings_url: "https://api.jina.ai/v1/embeddings",
+             api_key: System.get_env("JINA_API_KEY"),
+             embeddings_model: "jina-embeddings-v2-base-code"
+           })
+
+  true ->
+    config :exmeralda,
+           :embedding,
+           Exmeralda.Rag.Ollama.new(%{
+             embeddings_model: "unclemusclez/jina-embeddings-v2-base-code"
+           })
+end
+
 config :exmeralda,
        :system_prompt,
        """

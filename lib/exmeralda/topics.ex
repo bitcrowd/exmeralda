@@ -1,6 +1,6 @@
 defmodule Exmeralda.Topics do
   alias Exmeralda.Repo
-  alias Exmeralda.Topics.Library
+  alias Exmeralda.Topics.{IngestLibraryWorker, Library}
   import Ecto.Query
 
   def last_libraries() do
@@ -55,5 +55,23 @@ defmodule Exmeralda.Topics do
   """
   def get_library!(id) do
     Repo.get!(Library, id)
+  end
+
+  @doc """
+  Schedules library ingestion
+  """
+  def create_library(params) do
+    changeset = new_library_changeset(params)
+
+    with {:ok, library} <- Ecto.Changeset.apply_action(changeset, :create) do
+      library |> Map.take([:name, :version]) |> IngestLibraryWorker.new() |> Oban.insert()
+    end
+  end
+
+  @doc """
+  Returns a changeset for ingesting a new library.
+  """
+  def new_library_changeset(params \\ %{}) do
+    Library.changeset(%Library{}, params)
   end
 end

@@ -63,8 +63,12 @@ defmodule Exmeralda.MixProject do
       {:ex_machina, "~> 2.8.0", only: [:dev, :test]},
       {:assent, "~> 0.3.0"},
       {:req, "~> 0.5"},
+      {:req_hex, "~> 0.2.1"},
       {:langchain, "~> 0.3.0"},
-      {:mdex, "~> 0.2"}
+      {:mdex, "~> 0.2"},
+      {:oban, "~> 2.19"},
+      {:rag, "~> 0.2.1"},
+      {:pgvector, "~> 0.3.0"}
     ]
   end
 

@@ -23,6 +23,7 @@ defmodule ExmeraldaWeb.ConnCase do
       @endpoint ExmeraldaWeb.Endpoint
 
       use ExmeraldaWeb, :verified_routes
+      use Oban.Testing, repo: Exmeralda.Repo
 
       # Import conveniences for testing with connections
       import Plug.Conn
