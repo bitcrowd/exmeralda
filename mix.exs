@@ -67,6 +67,7 @@ defmodule Exmeralda.MixProject do
       {:langchain, "~> 0.3.0"},
       {:mdex, "~> 0.2"},
       {:oban, "~> 2.19"},
+      {:oban_web, "~> 2.11"},
       {:rag, "~> 0.2.1"},
       {:pgvector, "~> 0.3.0"}
     ]

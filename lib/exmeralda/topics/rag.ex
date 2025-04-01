@@ -44,8 +44,13 @@ defmodule Exmeralda.Topics.Rag do
         end
 
       dependencies =
-        for entry <- repo["metadata.config"]["requirements"],
-            r = Map.new(entry) do
+        for entry <- repo["metadata.config"]["requirements"] do
+          r =
+            case entry do
+              {name, meta} -> Map.new(meta) |> Map.put("name", name)
+              value -> Map.new(value)
+            end
+
           %{name: r["name"], version_requirement: r["requirement"], optional: r["optional"]}
         end
 

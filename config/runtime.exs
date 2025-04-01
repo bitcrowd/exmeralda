@@ -119,3 +119,9 @@ config :exmeralda,
        this in your answer and keep it short. If you are unsure what kind of
        information the user needs, please ask follow-up questions.
        """
+
+if config_env() == :prod do
+  config :exmeralda, :admin_auth,
+    username: "exmeralda",
+    password: System.fetch_env!("ADMIN_AUTH_PASSWORD")
+end
