@@ -13,9 +13,8 @@
     </ul>
     <h2 class="sr-only">{gettext("Chats")}</h2>
     <ul class="menu menu-vertical w-full" phx-update="stream" id="chats">
-      <li :for={{id, session} <- @streams.sessions}>
+      <li :for={{id, session} <- @streams.sessions} id={id}>
         <.button
-          id={id}
           phx-click={JS.patch(~p"/chat/#{session}") |> mark_active_chat()}
           class={[
             "w-full justify-start gap-4 relative pr-16",
