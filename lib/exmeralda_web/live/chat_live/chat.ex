@@ -133,7 +133,7 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
       <.form for={@form} phx-target={@myself} phx-submit="send" class="flex shrink-0">
         <input type="hidden" name={@form[:index].name} value={@index + 1} />
         <input
-          class="input grow w-auto py-4 h-auto rounded-none border-x-0 border-b-0 text-lg border-t-2"
+          class="input grow w-auto py-4 h-auto rounded-none border-x-0 border-b-0 text-lg border-t-2 dark:border-gray-700"
           name={@form[:content].name}
           placeholder={gettext("What can I help you with?")}
         />
@@ -152,8 +152,8 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
   def message_class(:user), do: "chat chat-end"
   def message_class(:assistant), do: "chat chat-start"
 
-  def message_content_class(:user), do: "chat-bubble bg-violet-100"
-  def message_content_class(:assistant), do: "chat-bubble bg-base-200"
+  def message_content_class(:user), do: "chat-bubble bg-violet-100 dark:bg-violet-900"
+  def message_content_class(:assistant), do: "chat-bubble bg-base-200 dark:bg-base-300"
 
   def message_role(:user), do: gettext("You")
   def message_role(:assistant), do: gettext("Assistant")
