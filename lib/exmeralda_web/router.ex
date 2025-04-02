@@ -53,7 +53,21 @@ defmodule ExmeraldaWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :require_authenticated_user,
-      on_mount: [{ExmeraldaWeb.UserAuth, :ensure_authenticated}] do
+      on_mount: [
+        {ExmeraldaWeb.UserAuth, :ensure_authenticated}
+      ] do
+      live "/accept_terms", UserLive.AcceptTerms
+    end
+  end
+
+  scope "/", ExmeraldaWeb do
+    pipe_through [:browser, :require_authenticated_user, :require_terms]
+
+    live_session :require_authenticated_user_with_terms,
+      on_mount: [
+        {ExmeraldaWeb.UserAuth, :ensure_authenticated},
+        {ExmeraldaWeb.UserAuth, :ensure_terms}
+      ] do
       live "/chat/start", ChatLive.Index, :new
       live "/chat/:id", ChatLive.Index, :show
       live "/library/new", LibraryLive.Index, :new

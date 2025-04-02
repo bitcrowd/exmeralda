@@ -125,6 +125,16 @@ defmodule ExmeraldaWeb.UserAuth do
     end
   end
 
+  def on_mount(:ensure_terms, _params, _session, socket) do
+    if socket.assigns.current_user.terms_accepted_at do
+      {:cont, socket}
+    else
+      socket = Phoenix.LiveView.redirect(socket, to: ~p"/accept_terms")
+
+      {:halt, socket}
+    end
+  end
+
   defp mount_current_user(socket, session) do
     Phoenix.Component.assign_new(socket, :current_user, fn ->
       if user_id = session["user_id"] do
@@ -160,6 +170,16 @@ defmodule ExmeraldaWeb.UserAuth do
       |> put_flash(:error, gettext("You must log in to access this page."))
       |> maybe_store_return_to()
       |> redirect(to: ~p"/")
+      |> halt()
+    end
+  end
+
+  def require_terms(conn, _opts) do
+    if conn.assigns[:current_user].terms_accepted_at do
+      conn
+    else
+      conn
+      |> redirect(to: ~p"/accept_terms")
       |> halt()
     end
   end

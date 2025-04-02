@@ -22,7 +22,7 @@ defmodule Exmeralda.Accounts do
     %User{}
     |> User.changeset(params)
     |> Repo.insert(
-      on_conflict: {:replace_all_except, [:id, :email, :inserted_at]},
+      on_conflict: {:replace_all_except, [:id, :email, :inserted_at, :terms_accepted_at]},
       conflict_target: :github_id,
       returning: true
     )
@@ -35,5 +35,9 @@ defmodule Exmeralda.Accounts do
   def update_user_email(user, params) do
     change_user_email(user, params)
     |> Repo.update()
+  end
+
+  def accept_terms!(user) do
+    user |> User.accept_terms_changeset() |> Repo.update!()
   end
 end
