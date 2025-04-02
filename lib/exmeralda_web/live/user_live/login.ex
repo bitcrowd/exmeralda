@@ -4,15 +4,15 @@ defmodule ExmeraldaWeb.UserLive.Login do
   def render(assigns) do
     ~H"""
     <.hero_layout>
-      <div class="text-center lg:text-left">
-        <h1 class="text-5xl font-bold">Welcome</h1>
+      <div class="text-center flex flex-col gap-8">
         <img
-          src={~p"/images/logo-exmeralda.png"}
+          src={~p"/images/logo-exmeralda.svg"}
           width="523"
           height="516"
           alt="Exmeralda logo, with stylised circuit board tracks surrounding a central node"
-          class="max-w-sm rounded-lg py-5"
+          class="max-w-xs"
         />
+        <h1 class="text-5xl font-bold">Welcome</h1>
         <div class="card bg-base-100 w-full max-w-sm shrink-0 shadow-2xl">
           <div class="card-body">
             <a class="btn bg-black text-white" href={~p"/auth/github"}>

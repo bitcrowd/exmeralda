@@ -7,18 +7,18 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="hero">
-      <div class="hero-content flex-col lg:flex-row-reverse">
+    <div class="hero h-full">
+      <div class="hero-content flex-col lg:flex-row-reverse gap-16">
         <img
-          src={~p"/images/logo-exmeralda.png"}
+          src={~p"/images/logo-exmeralda.svg"}
           width="523"
           height="516"
           alt="Exmeralda logo, with stylised circuit board tracks surrounding a central node"
-          class="max-w-sm rounded-lg"
+          class="max-w-xs"
         />
         <div class="max-w-md p-7">
-          <h1 class="text-5xl font-bold">Just ask Exmeralda</h1>
-          <p class="py-6">
+          <h1 class="text-5xl font-bold mb-4">Ask Exmeralda</h1>
+          <p>
             {gettext("Choose a library, and ask me anything about it.")}
           </p>
           <.simple_form
@@ -35,7 +35,7 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
             />
             <.dropdown>
               <.library :if={@selected_library} library={@selected_library} />
-              <span :if={!@selected_library}>{gettext("Select a library...")}</span>
+              <span :if={!@selected_library}>{gettext("Select a library…")}</span>
 
               <:menu>
                 <.search_input phx-debounce="200" phx-change="search" phx-target={@myself} name="q" />

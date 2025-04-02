@@ -36,7 +36,7 @@ defmodule ExmeraldaWeb.ChatLiveTest do
         |> live(~p"/chat/start")
 
       assert html =~ session.id
-      assert html =~ "Just ask Exmeralda"
+      assert html =~ "Ask Exmeralda"
     end
 
     test "does not show other users sessions", %{conn: conn, session: session} do
@@ -46,7 +46,7 @@ defmodule ExmeraldaWeb.ChatLiveTest do
         |> live(~p"/chat/start")
 
       refute html =~ session.id
-      assert html =~ "Just ask Exmeralda"
+      assert html =~ "Ask Exmeralda"
     end
 
     test "start new session", %{conn: conn, user: user, library: library} do
