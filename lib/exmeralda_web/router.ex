@@ -79,6 +79,14 @@ defmodule ExmeraldaWeb.Router do
     pipe_through [:browser, :admin_auth]
 
     oban_dashboard("/oban")
+
+    scope "/admin", Admin do
+      live_session :require_admin_authenticated_user,
+        on_mount: [{ExmeraldaWeb.UserAuth, :ensure_authenticated}] do
+        live "/", LibraryLive.Index, :index
+        live "/library/:id", LibraryLive.Show, :show
+      end
+    end
   end
 
   defp admin_auth(conn, _opts) do

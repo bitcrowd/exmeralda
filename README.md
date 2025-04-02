@@ -15,13 +15,14 @@ To start your Phoenix server:
 
 To test the chatbot locally you either need to start with a Groq API key (see 1password):
 
-`GROQ_API_KEY=abcd iex -S mix phx.server`
+`GROQ_API_KEY=abcd JINA_API_KEY=abcd iex -S mix phx.server`
 
  or install Ollama:
  
 ```sh
 brew install ollama 
 ollama pull llama3.2:latest
+ollama pull unclemusclez/jina-embeddings-v2-base-code
 ```
 
 and then start as usual:
@@ -35,6 +36,8 @@ or
 ```sh
 iex -S mix phx.server
 ```
+
+Be aware that the seeded libraries are not that useful to chat with, since it is just dummy data.
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 

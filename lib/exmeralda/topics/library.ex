@@ -3,10 +3,16 @@ defmodule Exmeralda.Topics.Library do
 
   alias Exmeralda.Topics.{Dependency, Chunk}
 
+  @derive {Flop.Schema,
+           filterable: [:name, :version],
+           sortable: [:name, :version],
+           default_limit: 20,
+           max_limit: 100}
+
   schema "libraries" do
     field :name, :string
     field :version, :string
-    embeds_many :dependencies, Dependency
+    embeds_many :dependencies, Dependency, on_replace: :delete
 
     has_many :chunks, Chunk
 

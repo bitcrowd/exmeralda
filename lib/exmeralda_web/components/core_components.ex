@@ -18,6 +18,7 @@ defmodule ExmeraldaWeb.CoreComponents do
   use Gettext, backend: ExmeraldaWeb.Gettext
 
   alias Phoenix.LiveView.JS
+  import Flop.Phoenix, only: [filter_fields: 1]
 
   @doc """
   Renders a modal.
@@ -221,7 +222,7 @@ defmodule ExmeraldaWeb.CoreComponents do
       <.button phx-click="go" class="ml-2">Send!</.button>
   """
   attr :type, :string, default: nil
-  attr :class, :any, default: nil
+  attr :class, :string, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
 
   slot :inner_block, required: true
@@ -553,6 +554,53 @@ defmodule ExmeraldaWeb.CoreComponents do
         {@rest}
       />
     </label>
+    """
+  end
+
+  attr :fields, :list, required: true
+  attr :meta, Flop.Meta, required: true
+  attr :id, :string, default: nil
+  attr :on_change, :string, default: "update-filter"
+  attr :target, :string, default: nil
+  attr :rest, :global
+
+  def filter_form(%{meta: meta} = assigns) do
+    assigns = assign(assigns, form: Phoenix.Component.to_form(meta), meta: nil)
+
+    ~H"""
+    <.form
+      for={@form}
+      id={@id}
+      phx-target={@target}
+      phx-change={@on_change}
+      phx-submit={@on_change}
+      {@rest}
+    >
+      <.filter_fields :let={i} form={@form} fields={@fields}>
+        <.input field={i.field} label={i.label} type={i.type} phx-debounce={120} {i.rest} />
+      </.filter_fields>
+    </.form>
+    """
+  end
+
+  attr :rest, :global, include: ~w(meta path)
+
+  def pagination(assigns) do
+    ~H"""
+    <Flop.Phoenix.pagination
+      {@rest}
+      opts={[
+        wrapper_attrs: [class: "join p-5"],
+        next_link_attrs: [class: "join-item btn"],
+        current_link_attrs: [class: "btn btn-primary"],
+        previous_link_attrs: [class: "join-item btn"],
+        disabled_class: "btn-disabled",
+        ellipsis_attrs: [class: "btn btn-disabled"],
+        pagination_list_item_attrs: [class: "join-item"],
+        pagination_link_attrs: [class: "btn"],
+        pagination_list_attrs: [class: "join"]
+      ]}
+    />
     """
   end
 end

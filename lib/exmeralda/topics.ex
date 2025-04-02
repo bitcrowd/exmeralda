@@ -3,6 +3,10 @@ defmodule Exmeralda.Topics do
   alias Exmeralda.Topics.{IngestLibraryWorker, Library, Chunk}
   import Ecto.Query
 
+  def list_libraries(params) do
+    Flop.validate_and_run(Library, params, replace_invalid_params: true)
+  end
+
   def last_libraries() do
     from(l in Library,
       as: :library,
@@ -75,6 +79,25 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
+  Gets a single library.
+  """
+  def get_library_stats(%Library{id: id}) do
+    chunks = from c in Chunk, where: c.library_id == ^id
+
+    %{
+      chunks_total: chunks |> Repo.aggregate(:count),
+      chunks_embedding: chunks |> where([c], not is_nil(c.embedding)) |> Repo.aggregate(:count),
+      chunks_type:
+        chunks |> group_by([c], c.type) |> select([c], {c.type, count(c.id)}) |> Repo.all()
+    }
+  end
+
+  def list_chunks(%Library{id: id}, params) do
+    from(c in Chunk, where: c.library_id == ^id)
+    |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
+  end
+
+  @doc """
   Schedules library ingestion
   """
   def create_library(params) do
@@ -83,6 +106,20 @@ defmodule Exmeralda.Topics do
     with {:ok, library} <- Ecto.Changeset.apply_action(changeset, :create) do
       library |> Map.take([:name, :version]) |> IngestLibraryWorker.new() |> Oban.insert()
     end
+  end
+
+  @doc """
+  Schedules library ingestion for an existing library.
+  """
+  def reingest_library(library) do
+    IngestLibraryWorker.new(%{library_id: library.id}) |> Oban.insert()
+  end
+
+  @doc """
+  Deletes a libray.
+  """
+  def delete_library(library) do
+    library |> Repo.delete()
   end
 
   @doc """
