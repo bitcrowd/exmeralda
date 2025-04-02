@@ -1,0 +1,12 @@
+
+@layer components {
+  .prose {
+    h1 {
+        font-size: 36px;
+    }
+
+    h2 {
+        font-size: 30px;
+    }
+  }
+}
