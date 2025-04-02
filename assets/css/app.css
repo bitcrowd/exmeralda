@@ -3,6 +3,14 @@
 @import "tailwindcss/utilities";
 
 .chat-container {
-  p { margin: 1em 0 }
-  pre { overflow-x: scroll }
+  p {
+    margin: 1em 0;
+  }
+  pre {
+    overflow-x: scroll;
+  }
+}
+
+.drawer {
+  grid-auto-columns: 20rem minmax(0, 1fr);
 }

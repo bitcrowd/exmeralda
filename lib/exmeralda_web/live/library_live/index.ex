@@ -46,7 +46,13 @@ defmodule ExmeraldaWeb.LibraryLive.Index do
     <.navbar_layout user={@current_user}>
       <.hero_layout inside_navbar>
         <div class="flex flex-col lg:flex-row-reverse">
-          <img src={~p"/images/logo.png"} class="rounded-lg" />
+          <img
+            src={~p"/images/logo-exmeralda.png"}
+            width="523"
+            height="516"
+            alt="Exmeralda logo, with stylised circuit board tracks surrounding a central node"
+            class="rounded-lg"
+          />
           <div class="max-w-md p-7">
             <h1 class="text-5xl font-bold">{gettext("What next?")}</h1>
             <p class="py-6">
