@@ -1,7 +1,7 @@
 defmodule Exmeralda.Chats.Message do
   use Exmeralda.Schema
 
-  alias Exmeralda.Chats.Session
+  alias Exmeralda.Chats.{Session, Source}
 
   schema "chat_messages" do
     field :index, :integer
@@ -9,6 +9,11 @@ defmodule Exmeralda.Chats.Message do
     field :content, :string
     field :incomplete, :boolean, default: false
     belongs_to :session, Session
+    has_many :sources, Source
+
+    has_many :source_chunks,
+      through: [:sources, :chunk],
+      preload_order: [asc: :type, asc: :source]
 
     timestamps()
   end

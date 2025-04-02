@@ -8,7 +8,10 @@ defmodule Exmeralda.Chats do
   alias Ecto.Multi
   alias Phoenix.PubSub
 
-  alias Exmeralda.Chats.{LLM, Message, Session}
+  alias Exmeralda.Topics.{Rag, Chunk}
+  alias Exmeralda.Chats.{LLM, Message, Session, Source}
+
+  @message_preload [:source_chunks]
 
   @doc """
   Returns the list of chat_sessions of a user.
@@ -26,15 +29,15 @@ defmodule Exmeralda.Chats do
   def get_session!(user, id) do
     user.id
     |> session_scope()
-    |> preload(:messages)
     |> Repo.get!(id)
+    |> Repo.preload(messages: [@message_preload])
   end
 
   @doc """
   Gets a single message.
   """
   def get_message!(id) do
-    Repo.get!(Message, id)
+    Repo.get!(Message, id) |> Repo.preload(@message_preload)
   end
 
   defp session_scope(user_id) do
@@ -55,7 +58,7 @@ defmodule Exmeralda.Chats do
     |> Repo.transaction()
     |> case do
       {:ok, %{session: session, message: message, assistant_message: assistant_message}} ->
-        {:ok, Map.put(session, :messages, [message, assistant_message])}
+        {:ok, Map.put(session, :messages, [message, Map.put(assistant_message, :sources, [])])}
 
       {:error, :session, changeset, _} ->
         {:error, changeset}
@@ -73,7 +76,7 @@ defmodule Exmeralda.Chats do
     |> Repo.transaction()
     |> case do
       {:ok, %{message: message, assistant_message: assistant_message}} ->
-        {:ok, [message, assistant_message]}
+        {:ok, [message, Map.put(assistant_message, :sources, [])]}
 
       {:error, :message, changeset, _} ->
         {:error, changeset}
@@ -118,14 +121,36 @@ defmodule Exmeralda.Chats do
             assistant_message
             |> Message.changeset(%{incomplete: false, content: data.content})
           )
+          |> Repo.preload(@message_preload)
 
         send_session_update(session, {:message_completed, assistant_message})
       end
     }
 
     Task.Supervisor.start_child(Exmeralda.TaskSupervisor, fn ->
-      LLM.stream_responses(previous_messages ++ [message, assistant_message], handler)
+      {chunks, generation} = build_generation(message, session.library_id)
+      insert_sources(session, chunks, assistant_message)
+
+      LLM.stream_responses(
+        previous_messages ++ [%{message | content: generation.prompt}],
+        handler
+      )
     end)
+  end
+
+  defp build_generation(message, library_id) do
+    scope = from c in Chunk, where: c.library_id == ^library_id
+
+    Rag.build_generation(scope, message.content, ref: message)
+  end
+
+  defp insert_sources(session, chunks, assistant_message) do
+    Repo.insert_all(
+      Source,
+      Enum.map(chunks, &%{chunk_id: &1.id, message_id: assistant_message.id})
+    )
+
+    send_session_update(session, {:sources, assistant_message.id})
   end
 
   defp send_session_update(session, payload) do
