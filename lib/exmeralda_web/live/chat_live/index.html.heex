@@ -1,33 +1,39 @@
 <.navbar_layout user={@current_user}>
   <:drawer>
-    <ul class="menu menu-horizontal rounded-box">
+    <ul class="menu menu-vertical w-full">
       <li>
-        <.link phx-click={JS.patch(~p"/") |> no_active_chat()}>
+        <.button
+          phx-click={JS.patch(~p"/") |> no_active_chat()}
+          class="btn-lg justify-start gap-4"
+        >
           <.icon name="hero-chat-bubble-bottom-center" />
           {gettext("Start new chat")}
-        </.link>
+        </.button>
       </li>
     </ul>
-    <ul class="list text-base-content w-80" phx-update="stream" id="chats">
-      <li
-        :for={{id, session} <- @streams.sessions}
-        class={[
-          "list-row group cursor-pointer shadow-sm rounded-none",
-          @current_session && @current_session.id == session.id && active_chat_class()
-        ]}
-        id={id}
-        phx-click={JS.patch(~p"/chat/#{session}") |> mark_active_chat()}
-      >
-        <.icon name="hero-chat-bubble-bottom-center-text" />
-        <div>
+    <h2 class="sr-only">{gettext("Chats")}</h2>
+    <ul class="menu menu-vertical w-full" phx-update="stream" id="chats">
+      <li :for={{id, session} <- @streams.sessions}>
+        <.button
+          id={id}
+          phx-click={JS.patch(~p"/chat/#{session}") |> mark_active_chat()}
+          class={[
+            "w-full justify-start gap-4 relative pr-16",
+            @current_session && @current_session.id == session.id && active_chat_class()
+          ]}
+        >
+          <.icon name="hero-chat-bubble-bottom-center-text" />
           <.session_title session={session} />
-        </div>
-        <button
+        </.button>
+        <.button
           phx-click={JS.push("delete", value: %{id: session.id}) |> hide("##{id}")}
           data-confirm="Are you sure?"
+          class="btn-square absolute right-0 top-1/2 hover:text-error"
+          style="transform: translateY(-50%)"
         >
-          <.icon name="hero-x-mark" class="invisible group-hover:visible hover:bg-error" />
-        </button>
+          <span class="sr-only">{gettext("Delete")}</span>
+          <.icon name="hero-x-mark" />
+        </.button>
       </li>
     </ul>
   </:drawer>
