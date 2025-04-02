@@ -7,7 +7,6 @@ defmodule Exmeralda.Topics.Rag do
   alias LangChain.TextSplitter.{RecursiveCharacterTextSplitter, LanguageSeparators}
 
   @doc_types ~w(.html .md .txt)
-  @embedding_batch_size 20
   @chunk_size 2000
   @retrieval_weights %{fulltext_results: 1, semantic_results: 1}
   @pgvector_limit 3
@@ -53,19 +52,17 @@ defmodule Exmeralda.Topics.Rag do
           %{name: r["name"], version_requirement: r["requirement"], optional: r["optional"]}
         end
 
-      chunks =
-        (docs ++ code)
-        |> Enum.chunk_every(@embedding_batch_size)
-        |> Enum.flat_map(fn batch ->
-          batch
-          |> Embedding.generate_embeddings_batch(embedding_provider(),
-            text_key: :content,
-            embedding_key: :embedding
-          )
-        end)
+      chunks = docs ++ code
 
       {:ok, {chunks, dependencies}}
     end
+  end
+
+  def generate_embeddings(chunks) do
+    Embedding.generate_embeddings_batch(chunks, embedding_provider(),
+      text_key: :content,
+      embedding_key: :embedding
+    )
   end
 
   defp hex_fetch(url) do
@@ -117,6 +114,7 @@ defmodule Exmeralda.Topics.Rag do
     {:ok,
      Repo.all(
        scope
+       |> where([c], not is_nil(c.embedding))
        |> order_by([c], l2_distance(c.embedding, ^Pgvector.new(query_embedding)))
        |> limit(@pgvector_limit)
      )}
