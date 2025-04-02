@@ -1,0 +1,5 @@
+@layer components {
+  .drawer {
+    grid-auto-columns: 20rem minmax(0, 1fr);
+  }
+}

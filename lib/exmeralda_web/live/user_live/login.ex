@@ -6,7 +6,13 @@ defmodule ExmeraldaWeb.UserLive.Login do
     <.hero_layout>
       <div class="text-center lg:text-left">
         <h1 class="text-5xl font-bold">Welcome</h1>
-        <img src={~p"/images/logo.png"} class="max-w-sm rounded-lg py-5" />
+        <img
+          src={~p"/images/logo-exmeralda.png"}
+          width="523"
+          height="516"
+          alt="Exmeralda logo, with stylised circuit board tracks surrounding a central node"
+          class="max-w-sm rounded-lg py-5"
+        />
         <div class="card bg-base-100 w-full max-w-sm shrink-0 shadow-2xl">
           <div class="card-body">
             <a class="btn bg-black text-white" href={~p"/auth/github"}>
