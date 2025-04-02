@@ -1,4 +1,5 @@
 defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
+  alias Exmeralda.Topics.GenerateEmbeddingsWorker
   use Exmeralda.DataCase
 
   alias Exmeralda.Topics.{IngestLibraryWorker, Library}
@@ -40,9 +41,11 @@ defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
 
       for source <- ["Rag.Telemetry.html", "mix.exs"] do
         assert chunk = Enum.find(rag.chunks, &(&1.source == source))
-        assert chunk.embedding
+        refute chunk.embedding
         assert is_binary(chunk.content)
       end
+
+      assert_enqueued(worker: GenerateEmbeddingsWorker, args: %{library_id: rag.id})
     end
 
     test "discards non existant libs" do

@@ -61,4 +61,14 @@ defmodule Exmeralda.Factory do
         )
     end)
   end
+
+  def chunk_factory do
+    %Exmeralda.Topics.Chunk{
+      library: build(:library),
+      content: "I am a message",
+      embedding: Enum.map(1..768, fn _ -> :rand.uniform() end),
+      source: "file.ex",
+      type: :code
+    }
+  end
 end

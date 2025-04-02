@@ -1,13 +1,15 @@
 defmodule Exmeralda.Topics do
   alias Exmeralda.Repo
-  alias Exmeralda.Topics.{IngestLibraryWorker, Library}
+  alias Exmeralda.Topics.{IngestLibraryWorker, Library, Chunk}
   import Ecto.Query
 
   def last_libraries() do
     from(l in Library,
+      as: :library,
       order_by: [desc: :inserted_at],
       limit: 10
     )
+    |> with_chunks_ready()
     |> Repo.all()
   end
 
@@ -16,6 +18,7 @@ defmodule Exmeralda.Topics do
 
     from(
       l in Library,
+      as: :library,
       where:
         fragment(
           "search @@ to_tsquery(?)",
@@ -31,7 +34,21 @@ defmodule Exmeralda.Topics do
         desc: :version
       ]
     )
+    |> with_chunks_ready()
     |> Repo.all()
+  end
+
+  defp with_chunks_ready(query) do
+    where(
+      query,
+      [l],
+      not exists(
+        from c in Chunk,
+          where: c.library_id == parent_as(:library).id and is_nil(c.embedding),
+          select: 1,
+          limit: 1
+      )
+    )
   end
 
   # Splits a search term by spaces and appends a prefix match wildcard (:*)

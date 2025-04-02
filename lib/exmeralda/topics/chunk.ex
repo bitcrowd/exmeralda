@@ -10,4 +10,8 @@ defmodule Exmeralda.Topics.Chunk do
     field(:embedding, Pgvector.Ecto.Vector)
     belongs_to(:library, Library)
   end
+
+  def set_embedding(chunk, embedding) do
+    change(chunk, embedding: embedding)
+  end
 end
