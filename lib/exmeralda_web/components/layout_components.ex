@@ -3,7 +3,7 @@ defmodule ExmeraldaWeb.LayoutComponents do
 
   def navbar_layout(assigns) do
     ~H"""
-    <div class="navbar bg-base-100 shadow-sm">
+    <nav class="navbar bg-base-100 shadow-sm" aria-label="main">
       <div class="flex-1">
         <label :if={assigns[:drawer]} for="nav-drawer">
           <.icon name="hero-bars-3" class="m-2 lg:hidden" />
@@ -36,7 +36,7 @@ defmodule ExmeraldaWeb.LayoutComponents do
           </ul>
         </div>
       </div>
-    </div>
+    </nav>
     <.drawer :if={assigns[:drawer]} drawer_id="nav-drawer" inside_navbar>
       <:side>
         {render_slot(@drawer)}
@@ -55,13 +55,43 @@ defmodule ExmeraldaWeb.LayoutComponents do
       <input id={@drawer_id} type="checkbox" class="drawer-toggle" />
       <div class={["drawer-side z-40", full_screen_height(assigns)]}>
         <label for={@drawer_id} aria-label="close sidebar" class="drawer-overlay"></label>
-        <div class="bg-base-200 min-h-full">
-          {render_slot(@side)}
-        </div>
+        <nav class="bg-base-200 min-h-full flex flex-col place-content-between" aria-label="chats">
+          <div>
+            {render_slot(@side)}
+          </div>
+          <div>
+            <a
+              href="https://github.com/bitcrowd/exmeralda/"
+              class="p-4 m-2 rounded-lg flex items-center gap-2 text-gray-500 text-sm hover:bg-white"
+            >
+              <img
+                src={~p"/images/logo-github.svg"}
+                width="98"
+                height="96"
+                alt="github logo"
+                class="max-w-10"
+              /> Contribute on github
+            </a>
+            <hr class="mx-2" />
+            <a
+              href="https://bitcrowd.net"
+              class="p-4 m-2 rounded-lg flex flex-col gap-2 text-gray-500 text-sm hover:bg-white"
+            >
+              Built in Berlin with ♥ by <span class="sr-only">bitcrowd</span>
+              <img
+                src={~p"/images/logo-bitcrowd.svg"}
+                width="303"
+                height="93"
+                alt="bitcrowd logo, a dirigible airship flying amongst clouds"
+                class="max-w-32"
+              />
+            </a>
+          </div>
+        </nav>
       </div>
-      <div class="drawer-content">
+      <main class="drawer-content">
         {render_slot(@inner_block)}
-      </div>
+      </main>
     </div>
     """
   end

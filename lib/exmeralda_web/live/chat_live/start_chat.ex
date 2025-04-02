@@ -9,7 +9,13 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
     ~H"""
     <div class="hero">
       <div class="hero-content flex-col lg:flex-row-reverse">
-        <img src={~p"/images/logo.png"} class="max-w-sm rounded-lg" />
+        <img
+          src={~p"/images/logo-exmeralda.png"}
+          width="523"
+          height="516"
+          alt="Exmeralda logo, with stylised circuit board tracks surrounding a central node"
+          class="max-w-sm rounded-lg"
+        />
         <div class="max-w-md p-7">
           <h1 class="text-5xl font-bold">Just ask Exmeralda</h1>
           <p class="py-6">

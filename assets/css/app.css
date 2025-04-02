@@ -1,5 +1,17 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
-
 @import "components/chat-container";
+
+.chat-container {
+  p {
+    margin: 1em 0;
+  }
+  pre {
+    overflow-x: scroll;
+  }
+}
+
+.drawer {
+  grid-auto-columns: 20rem minmax(0, 1fr);
+}
