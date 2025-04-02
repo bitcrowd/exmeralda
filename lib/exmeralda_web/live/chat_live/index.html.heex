@@ -12,27 +12,26 @@
       </li>
     </ul>
     <h2 class="sr-only">{gettext("Chats")}</h2>
-    <ul class="menu menu-vertical w-full" phx-update="stream" id="chats">
-      <li :for={{id, session} <- @streams.sessions} id={id}>
-        <.button
-          phx-click={JS.patch(~p"/chat/#{session}") |> mark_active_chat()}
-          class={[
-            "w-full justify-start gap-4 relative pr-16",
-            @current_session && @current_session.id == session.id && active_chat_class()
-          ]}
-        >
-          <.icon name="hero-chat-bubble-bottom-center-text" />
+    <ul class="list text-base-content w-80" phx-update="stream" id="chats">
+      <li
+        :for={{id, session} <- @streams.sessions}
+        class={[
+          "list-row group cursor-pointer shadow-sm rounded-none",
+          @current_session && @current_session.id == session.id && active_chat_class()
+        ]}
+        id={id}
+        phx-click={JS.patch(~p"/chat/#{session}") |> mark_active_chat()}
+      >
+        <.icon name="hero-chat-bubble-bottom-center-text" />
+        <div>
           <.session_title session={session} />
-        </.button>
-        <.button
+        </div>
+        <button
           phx-click={JS.push("delete", value: %{id: session.id}) |> hide("##{id}")}
           data-confirm="Are you sure?"
-          class="btn-square absolute right-0 top-1/2 hover:text-error"
-          style="transform: translateY(-50%)"
         >
-          <span class="sr-only">{gettext("Delete")}</span>
-          <.icon name="hero-x-mark" />
-        </.button>
+          <.icon name="hero-x-mark" class="invisible group-hover:visible hover:bg-error" />
+        </button>
       </li>
     </ul>
   </:drawer>
