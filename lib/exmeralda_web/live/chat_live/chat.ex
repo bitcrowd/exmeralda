@@ -129,7 +129,7 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
       <.form for={@form} phx-target={@myself} phx-submit="send" class="flex shrink-0">
         <input type="hidden" name={@form[:index].name} value={@index + 1} />
         <input
-          class="input grow w-auto py-4 h-auto rounded-none border-x-0 text-lg border-t-2"
+          class="input grow w-auto py-4 h-auto rounded-none border-x-0 border-b-0 text-lg border-t-2"
           name={@form[:content].name}
           placeholder={gettext("What can I help you with?")}
         />
