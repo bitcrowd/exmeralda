@@ -114,11 +114,11 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
     """
   end
 
-  def message_class(:user), do: "chat-start"
-  def message_class(:assistant), do: "chat-end"
+  def message_class(:user), do: "chat chat-start"
+  def message_class(:assistant), do: "chat chat-end"
 
-  def message_content_class(:user), do: "chat-bubble chat-bubble bg-base-300"
-  def message_content_class(:assistant), do: "chat-bubble chat-bubble bg-base-200"
+  def message_content_class(:user), do: "chat-bubble bg-base-300"
+  def message_content_class(:assistant), do: "chat-bubble bg-base-200"
 
   def message_role(:user), do: gettext("You")
   def message_role(:assistant), do: gettext("Assistant")
