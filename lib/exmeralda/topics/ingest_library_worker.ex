@@ -6,6 +6,8 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
 
   alias Ecto.Multi
 
+  @insert_batch_size 1000
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
     Multi.new()
@@ -16,8 +18,18 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
     |> Multi.update(:dependencies, fn %{library: library, ingestion: {_, dependencies}} ->
       Library.changeset(library, %{dependencies: dependencies})
     end)
-    |> Multi.insert_all(:chunks, Chunk, fn %{library: library, ingestion: {chunks, _}} ->
-      Enum.map(chunks, &Map.put(&1, :library_id, library.id))
+    |> Ecto.Multi.merge(fn %{ingestion: {chunks, _}, library: library} ->
+      chunks
+      |> Enum.chunk_every(@insert_batch_size)
+      |> Enum.with_index()
+      |> Enum.reduce(Multi.new(), fn {batch, index}, multi ->
+        Multi.insert_all(
+          multi,
+          :"chunks_#{index}",
+          Chunk,
+          Enum.map(batch, &Map.put(&1, :library_id, library.id))
+        )
+      end)
     end)
     |> Oban.insert(:generate_embeddings, fn %{library: library} ->
       GenerateEmbeddingsWorker.new(%{library_id: library.id})
