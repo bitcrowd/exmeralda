@@ -1,10 +1,17 @@
 @layer components {
   .chat-container {
-    p + p {
+    @apply max-w-4xl;
+
+    * + * {
       @apply mb-4;
     }
+
     pre {
-      @apply overflow-x-scroll;
+      @apply overflow-x-scroll p-6 rounded-md;
+    }
+
+    a {
+      @apply underline text-violet-900 dark:text-violet-300;
     }
   }
 }
