@@ -59,19 +59,34 @@ defmodule ExmeraldaWeb.LayoutComponents do
           <div>
             {render_slot(@side)}
           </div>
-          <a
-            href="https://bitcrowd.net"
-            class="p-4 m-2 rounded-lg flex flex-col gap-2 text-gray-500 text-sm hover:bg-white"
-          >
-            Built in Berlin with ♥ by <span class="sr-only">bitcrowd</span>
-            <img
-              src={~p"/images/logo-bitcrowd.svg"}
-              width="303"
-              height="93"
-              alt="bitcrowd logo, a dirigible airship flying amongst clouds"
-              class="max-w-32"
-            />
-          </a>
+          <div>
+            <a
+              href="https://github.com/bitcrowd/exmeralda/"
+              class="p-4 m-2 rounded-lg flex items-center gap-2 text-gray-500 text-sm hover:bg-white"
+            >
+              <img
+                src={~p"/images/logo-github.svg"}
+                width="98"
+                height="96"
+                alt="github logo"
+                class="max-w-10"
+              /> Contribute on github
+            </a>
+            <hr class="mx-2" />
+            <a
+              href="https://bitcrowd.net"
+              class="p-4 m-2 rounded-lg flex flex-col gap-2 text-gray-500 text-sm hover:bg-white"
+            >
+              Built in Berlin with ♥ by <span class="sr-only">bitcrowd</span>
+              <img
+                src={~p"/images/logo-bitcrowd.svg"}
+                width="303"
+                height="93"
+                alt="bitcrowd logo, a dirigible airship flying amongst clouds"
+                class="max-w-32"
+              />
+            </a>
+          </div>
         </nav>
       </div>
       <main class="drawer-content">
