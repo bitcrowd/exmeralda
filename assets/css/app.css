@@ -2,7 +2,4 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
-.chat-container {
-  p { margin: 1em 0 }
-  pre { overflow-x: scroll }
-}
+@import "components/chat-container";

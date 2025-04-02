@@ -1,0 +1,10 @@
+@layer components {
+  .chat-container {
+    p + p {
+      @apply mb-4;
+    }
+    pre {
+      @apply overflow-x-scroll;
+    }
+  }
+}
