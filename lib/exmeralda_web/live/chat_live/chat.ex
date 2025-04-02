@@ -83,7 +83,11 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
   def render(assigns) do
     ~H"""
     <div class="h-[calc(100vh-4rem)] flex flex-col">
-      <div class="grow p-4 overflow-y-auto" phx-update="stream" id={"messages-#{@session.id}"}>
+      <div
+        class="grow p-4 overflow-y-auto flex flex-col gap-4"
+        phx-update="stream"
+        id={"messages-#{@session.id}"}
+      >
         <div :for={{id, message} <- @streams.messages} class={message_class(message.role)} id={id}>
           <div :if={message.role == :user} class="chat-image avatar">
             <div class="w-10 rounded-full">
@@ -145,10 +149,10 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
     """
   end
 
-  def message_class(:user), do: "chat chat-start"
-  def message_class(:assistant), do: "chat chat-end"
+  def message_class(:user), do: "chat chat-end"
+  def message_class(:assistant), do: "chat chat-start"
 
-  def message_content_class(:user), do: "chat-bubble bg-base-300"
+  def message_content_class(:user), do: "chat-bubble bg-violet-100"
   def message_content_class(:assistant), do: "chat-bubble bg-base-200"
 
   def message_role(:user), do: gettext("You")
