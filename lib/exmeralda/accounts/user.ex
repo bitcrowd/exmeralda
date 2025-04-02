@@ -9,6 +9,7 @@ defmodule Exmeralda.Accounts.User do
     field :github_id, :string
     field :github_profile, :string
     field :avatar_url, :string
+    field :terms_accepted_at, :utc_datetime_usec
 
     has_many :chats, Chats.Session
 
@@ -30,5 +31,10 @@ defmodule Exmeralda.Accounts.User do
     |> cast(attrs, [:email])
     |> validate_required(:email)
     |> validate_email(:email)
+  end
+
+  @doc false
+  def accept_terms_changeset(user) do
+    change(user, terms_accepted_at: DateTime.utc_now())
   end
 end

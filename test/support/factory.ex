@@ -24,7 +24,8 @@ defmodule Exmeralda.Factory do
       email: "rick@bitcrowd.io",
       github_id: sequence(:gitub_id, &"#{&1}"),
       avatar_url: "https://via.placeholder.com/150",
-      github_profile: "http://github.com/bitcrowd"
+      github_profile: "http://github.com/bitcrowd",
+      terms_accepted_at: DateTime.utc_now()
     }
   end
 
