@@ -24,7 +24,17 @@ brew install ollama
 ollama pull llama3.2:latest
 ```
 
-and then start as usual.
+and then start as usual:
+
+```sh
+mix phx.server
+```
+
+or 
+
+```sh
+iex -S mix phx.server
+```
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 

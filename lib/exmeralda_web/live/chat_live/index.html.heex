@@ -12,7 +12,7 @@
       <li
         :for={{id, session} <- @streams.sessions}
         class={[
-          "list-row group cursor-pointer",
+          "list-row group cursor-pointer shadow-sm",
           @current_session && @current_session.id == session.id && active_chat_class()
         ]}
         id={id}

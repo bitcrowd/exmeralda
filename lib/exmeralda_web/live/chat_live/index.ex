@@ -63,12 +63,12 @@ defmodule ExmeraldaWeb.ChatLive.Index do
 
   def session_title(assigns) do
     ~H"""
-    {@session.title}
     <div class="badge badge-info">{@session.library.name}</div>
+    {@session.title}
     """
   end
 
-  @active_chat_class "bg-primary"
+  @active_chat_class "bg-base-100 shadow-sm"
   def mark_active_chat(js \\ %JS{}) do
     js |> no_active_chat() |> JS.add_class(@active_chat_class)
   end
