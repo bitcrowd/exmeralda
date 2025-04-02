@@ -33,6 +33,8 @@ defmodule ExmeraldaWeb.Router do
     pipe_through :browser
 
     delete "/auth/log_out", AuthController, :log_out
+
+    live "/terms", UserLive.Terms
   end
 
   scope "/", ExmeraldaWeb do
