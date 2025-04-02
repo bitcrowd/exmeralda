@@ -82,8 +82,12 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="h-[calc(100vh-4rem)] overflow-scroll">
-      <div class="p-4 mb-10" phx-update="stream" id={"messages-#{@session.id}"}>
+    <div class="h-[calc(100vh-4rem)] flex flex-col">
+      <div
+        class="grow p-4 overflow-y-auto flex flex-col gap-4"
+        phx-update="stream"
+        id={"messages-#{@session.id}"}
+      >
         <div :for={{id, message} <- @streams.messages} class={message_class(message.role)} id={id}>
           <div :if={message.role == :user} class="chat-image avatar">
             <div class="w-10 rounded-full">
@@ -126,28 +130,30 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
           </div>
         </div>
       </div>
-      <div class="flex justify-center fixed bottom-1 w-full">
-        <.form for={@form} phx-target={@myself} phx-submit="send" class="join">
-          <input type="hidden" name={@form[:index].name} value={@index + 1} />
-          <input
-            class="input join-item w-64 sm:w-96"
-            name={@form[:content].name}
-            placeholder={gettext("What can I help you with?")}
-          />
-          <.button id="submit" class="btn-primary join-item" phx-disable-with="Asking...">
-            Go
-          </.button>
-        </.form>
-      </div>
+      <.form for={@form} phx-target={@myself} phx-submit="send" class="flex shrink-0">
+        <input type="hidden" name={@form[:index].name} value={@index + 1} />
+        <input
+          class="input grow w-auto py-4 h-auto rounded-none border-x-0 border-b-0 text-lg border-t-2 dark:border-gray-700"
+          name={@form[:content].name}
+          placeholder={gettext("What can I help you with?")}
+        />
+        <.button
+          id="submit"
+          class="btn-primary h-auto rounded-none text-lg"
+          phx-disable-with="Asking…"
+        >
+          Ask
+        </.button>
+      </.form>
     </div>
     """
   end
 
-  def message_class(:user), do: "chat chat-start"
-  def message_class(:assistant), do: "chat chat-end"
+  def message_class(:user), do: "chat chat-end"
+  def message_class(:assistant), do: "chat chat-start"
 
-  def message_content_class(:user), do: "chat-bubble bg-base-300"
-  def message_content_class(:assistant), do: "chat-bubble bg-base-200"
+  def message_content_class(:user), do: "chat-bubble bg-violet-100 dark:bg-violet-900"
+  def message_content_class(:assistant), do: "chat-bubble bg-base-200 dark:bg-base-300"
 
   def message_role(:user), do: gettext("You")
   def message_role(:assistant), do: gettext("Assistant")
