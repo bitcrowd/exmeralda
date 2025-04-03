@@ -12,26 +12,32 @@
       </li>
     </ul>
     <h2 class="sr-only">{gettext("Chats")}</h2>
-    <ul class="list text-base-content w-80" phx-update="stream" id="chats">
-      <li
-        :for={{id, session} <- @streams.sessions}
-        class={[
-          "list-row group cursor-pointer shadow-sm rounded-none",
-          @current_session && @current_session.id == session.id && active_chat_class()
-        ]}
-        id={id}
-        phx-click={JS.patch(~p"/chat/#{session}") |> mark_active_chat()}
-      >
-        <.icon name="hero-chat-bubble-bottom-center-text" />
-        <div>
-          <.session_title session={session} />
-        </div>
-        <button
+    <ul class="menu menu-vertical w-full gap-1" phx-update="stream" id="chats">
+      <li :for={{id, session} <- @streams.sessions} id={id}>
+        <.button
+          phx-click={JS.patch(~p"/chat/#{session}") |> mark_active_chat()}
+          class={
+            [
+              "w-full justify-start gap-4 relative pr-16 py-4 h-auto text-left items-start",
+              @current_session && @current_session.id == session.id && active_chat_class()
+            ]
+            |> Enum.map(& &1)
+            |> Enum.join(" ")
+          }
+        >
+          <div class="flex flex-col gap-2">
+            {session.title}
+            <span class="badge badge-info">{session.library.name}</span>
+          </div>
+        </.button>
+        <.button
           phx-click={JS.push("delete", value: %{id: session.id}) |> hide("##{id}")}
           data-confirm="Are you sure?"
+          class="btn-square absolute right-2 top-2 hover:text-error"
         >
-          <.icon name="hero-x-mark" class="invisible group-hover:visible hover:bg-error" />
-        </button>
+          <span class="sr-only">{gettext("Delete")}</span>
+          <.icon name="hero-x-mark" class="shrink-0" />
+        </.button>
       </li>
     </ul>
   </:drawer>

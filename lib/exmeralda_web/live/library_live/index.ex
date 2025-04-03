@@ -62,7 +62,7 @@ defmodule ExmeraldaWeb.LibraryLive.Index do
       <.hero_layout inside_navbar>
         <div class="flex flex-col lg:flex-row-reverse">
           <img
-            src={~p"/images/logo-exmeralda.png"}
+            src={~p"/images/logo-exmeralda.svg"}
             width="523"
             height="516"
             alt="Exmeralda logo, with stylised circuit board tracks surrounding a central node"

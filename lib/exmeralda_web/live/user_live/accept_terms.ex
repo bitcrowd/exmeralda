@@ -48,14 +48,14 @@ defmodule ExmeraldaWeb.UserLive.AcceptTerms do
   def render(assigns) do
     ~H"""
     <.hero_layout>
-      <div class="text-center lg:text-left">
+      <div class="text-center flex flex-col gap-8">
         <h1 class="text-5xl font-bold">Terms and Conditions</h1>
         <img
-          src={~p"/images/logo-exmeralda.png"}
+          src={~p"/images/logo-exmeralda.svg"}
           width="523"
           height="516"
           alt="Exmeralda logo, with stylised circuit board tracks surrounding a central node"
-          class="max-w-sm rounded-lg py-5"
+          class="max-w-xs py-5"
         />
         <div class="card bg-base-100 w-full shrink-0 shadow-2xl">
           <div class="card-body">

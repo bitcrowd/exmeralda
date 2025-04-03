@@ -64,7 +64,6 @@ defmodule ExmeraldaWeb.ChatLive.Index do
   def session_title(assigns) do
     ~H"""
     {@session.title}
-    <span class="badge badge-info">{@session.library.name}</span>
     """
   end
 
