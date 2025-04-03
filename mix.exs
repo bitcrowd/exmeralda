@@ -69,7 +69,9 @@ defmodule Exmeralda.MixProject do
       {:oban, "~> 2.19"},
       {:oban_web, "~> 2.11"},
       {:rag, "~> 0.2.2"},
-      {:pgvector, "~> 0.3.0"}
+      {:pgvector, "~> 0.3.0"},
+      {:flop, "~> 0.26.1"},
+      {:flop_phoenix, "~> 0.24.1"}
     ]
   end
 

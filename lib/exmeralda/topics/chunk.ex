@@ -3,6 +3,12 @@ defmodule Exmeralda.Topics.Chunk do
 
   alias Exmeralda.Topics.Library
 
+  @derive {Flop.Schema,
+           filterable: [:type, :source],
+           sortable: [:type, :source],
+           default_limit: 20,
+           max_limit: 100}
+
   schema "chunks" do
     field :type, Ecto.Enum, values: [:code, :docs]
     field :source, :string

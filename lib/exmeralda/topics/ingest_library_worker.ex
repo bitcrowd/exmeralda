@@ -3,15 +3,30 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
 
   alias Exmeralda.Repo
   alias Exmeralda.Topics.{Chunk, Library, Rag, GenerateEmbeddingsWorker}
-
   alias Ecto.Multi
+  import Ecto.Query
 
   @insert_batch_size 1000
+
+  @impl Oban.Worker
+  def perform(%Oban.Job{args: %{"library_id" => library_id}}) do
+    chunks = from c in Chunk, where: c.library_id == ^library_id
+
+    Multi.new()
+    |> Multi.delete_all(:remove_chunks, chunks)
+    |> Multi.run(:library, fn repo, _ -> {:ok, repo.get!(Library, library_id)} end)
+    |> ingest()
+  end
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: args}) do
     Multi.new()
     |> Multi.insert(:library, Library.changeset(%Library{}, args))
+    |> ingest()
+  end
+
+  def ingest(multi) do
+    multi
     |> Multi.run(:ingestion, fn _, %{library: library} ->
       Rag.ingest_from_hex(library.name, library.version)
     end)
@@ -37,6 +52,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
     |> Repo.transaction(timeout: 100_000)
     |> case do
       {:ok, _} -> :ok
+      {:error, :library, error, _} -> {:discard, error}
       {:error, :ingestion, {:repo_not_found, _} = error, _} -> {:discard, error}
       {:error, step, error, changes} -> {:error, {step, error, changes}}
     end
