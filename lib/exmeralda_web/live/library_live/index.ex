@@ -5,7 +5,22 @@ defmodule ExmeraldaWeb.LibraryLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :form, Topics.new_library_changeset() |> to_form())}
+    {:ok,
+     socket
+     |> assign(:form, Topics.new_library_changeset() |> to_form())
+     |> assign_async(:hex, fn ->
+       Topics.Hex.list()
+       |> case do
+         {:ok, hex} ->
+           hex =
+             hex |> Map.get(:packages) |> Map.new(&{&1[:name], &1[:versions] |> Enum.reverse()})
+
+           {:ok, %{hex: hex}}
+
+         error ->
+           error
+       end
+     end)}
   end
 
   @impl true
@@ -59,15 +74,30 @@ defmodule ExmeraldaWeb.LibraryLive.Index do
               {gettext("Choose a library you want me to look at.")}
             </p>
             <.simple_form for={@form} id="start-form" phx-submit="save" phx-change="validate">
-              <.input
-                field={@form[:name]}
-                label={gettext("Name")}
-                autocomplete="off"
-                placeholder="ecto"
-              />
-              <.input field={@form[:version]} label={gettext("Version")} placeholder="3.12.5" />
+              <.async_result :let={hex} assign={@hex}>
+                <:loading>
+                  <span class="loading loading-spinner loading-md"></span>
+                  {gettext("Loading list from hex.pm")}
+                </:loading>
+                <:failed :let={_failure}>
+                  {gettext("Loading from hex.pm failed. Try again later.")}
+                </:failed>
+                <.input field={@form[:name]} label={gettext("Name")} autocomplete="off" />
+                <.input
+                  field={@form[:version]}
+                  label={gettext("Version")}
+                  disabled={!Map.has_key?(hex, @form[:name].value)}
+                  type="select"
+                  options={hex |> Map.get(@form[:name].value, [])}
+                />
+              </.async_result>
               <:actions>
-                <.button id="submit" class="btn-primary" phx-disable-with="Saving...">
+                <.button
+                  id="submit"
+                  disabled={!@hex.ok?}
+                  class="btn-primary"
+                  phx-disable-with="Saving..."
+                >
                   {gettext("Have a look, please!")}
                 </.button>
               </:actions>
