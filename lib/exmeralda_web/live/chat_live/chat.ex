@@ -156,5 +156,5 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
   def message_content_class(:assistant), do: "chat-bubble bg-base-200 dark:bg-base-300"
 
   def message_role(:user), do: gettext("You")
-  def message_role(:assistant), do: gettext("Assistant")
+  def message_role(:assistant), do: gettext("Exmeralda")
 end
