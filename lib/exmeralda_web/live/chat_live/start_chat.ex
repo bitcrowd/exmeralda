@@ -19,7 +19,7 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
         <div class="max-w-md p-7">
           <h1 class="text-5xl font-bold">Just ask Exmeralda</h1>
           <p class="py-6">
-            {gettext("Choose a library you want to talk about and ask me anything.")}
+            {gettext("Choose a library, and ask me anything about it.")}
           </p>
           <.simple_form
             for={@form}
