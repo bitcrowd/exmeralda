@@ -49,7 +49,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
     |> Oban.insert(:generate_embeddings, fn %{library: library} ->
       GenerateEmbeddingsWorker.new(%{library_id: library.id})
     end)
-    |> Repo.transaction(timeout: 100_000)
+    |> Repo.transaction(timeout: 1000 * 60 * 60)
     |> case do
       {:ok, _} -> :ok
       {:error, :library, error, _} -> {:discard, error}
