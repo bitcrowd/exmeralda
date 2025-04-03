@@ -53,7 +53,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
         Plug.Conn.send_resp(conn, 404, "")
       end)
 
-      assert {:discard, {:repo_not_found, "https://repo.hex.pm/docs/rag-0.1.0.tar.gz"}} =
+      assert {:discard, {:repo_not_found, "/docs/rag-0.1.0.tar.gz"}} =
                perform_job(IngestLibraryWorker, %{name: "rag", version: "0.1.0"})
     end
   end

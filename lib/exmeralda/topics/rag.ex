@@ -3,6 +3,7 @@ defmodule Exmeralda.Topics.Rag do
   alias Exmeralda.Repo
   import Ecto.Query
   import Pgvector.Ecto.Query
+  alias Exmeralda.Topics.Hex
   alias Rag.{Embedding, Generation, Retrieval}
   alias LangChain.TextSplitter.{RecursiveCharacterTextSplitter, LanguageSeparators}
 
@@ -20,12 +21,8 @@ defmodule Exmeralda.Topics.Rag do
                    })
 
   def ingest_from_hex(name, version) do
-    full_name = "#{name}-#{version}"
-    docs_url = "https://repo.hex.pm/docs/#{full_name}.tar.gz"
-    code_url = "https://repo.hex.pm/tarballs/#{full_name}.tar"
-
-    with {:ok, exdocs} <- hex_fetch(docs_url),
-         {:ok, repo} <- hex_fetch(code_url) do
+    with {:ok, exdocs} <- Hex.docs(name, version),
+         {:ok, repo} <- Hex.tarball(name, version) do
       docs =
         for {path, content} <- exdocs,
             file = to_string(path),
@@ -63,19 +60,6 @@ defmodule Exmeralda.Topics.Rag do
       text_key: :content,
       embedding_key: :embedding
     )
-  end
-
-  defp hex_fetch(url) do
-    [url: url]
-    |> Keyword.merge(Application.get_env(:exmeralda, :hex_req_options, []))
-    |> Req.new()
-    |> ReqHex.attach()
-    |> Req.get!()
-    |> case do
-      %Req.Response{status: 200, body: body} -> {:ok, body}
-      %Req.Response{status: 404} -> {:error, {:repo_not_found, url}}
-      response -> {:error, {:hex_fetch_error, response}}
-    end
   end
 
   defp chunk_text(file, content) do
