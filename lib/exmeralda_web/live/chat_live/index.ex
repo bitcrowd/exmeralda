@@ -54,7 +54,7 @@ defmodule ExmeraldaWeb.ChatLive.Index do
 
     socket = stream_delete(socket, :sessions, session)
 
-    if session.id == socket.assigns.current_session.id do
+    if socket.assigns.current_session && session.id == socket.assigns.current_session.id do
       {:noreply, push_navigate(socket, to: ~p"/chat/start")}
     else
       {:noreply, socket}
