@@ -47,38 +47,40 @@ defmodule ExmeraldaWeb.UserLive.AcceptTerms do
 
   def render(assigns) do
     ~H"""
-    <.hero_layout>
-      <div class="text-center flex flex-col gap-8">
-        <h1 class="text-5xl font-bold">Terms and Conditions</h1>
-        <img
-          src={~p"/images/logo-exmeralda.svg"}
-          width="523"
-          height="516"
-          alt="Exmeralda logo, with stylised circuit board tracks surrounding a central node"
-          class="max-w-xs py-5"
-        />
-        <div class="card bg-base-100 w-full shrink-0 shadow-2xl">
-          <div class="card-body">
-            <div role="alert" class="alert alert-info">
-              <.icon name="hero-information-circle" />
-              <span>Please accept the terms of service to continue.</span>
+    <.navbar_layout user={@current_user}>
+      <.hero_layout inside_navbar>
+        <div class="text-center flex flex-col gap-8">
+          <h1 class="text-5xl font-bold">Terms and Conditions</h1>
+          <img
+            src={~p"/images/logo-exmeralda.svg"}
+            width="523"
+            height="516"
+            alt="Exmeralda logo, with stylised circuit board tracks surrounding a central node"
+            class="max-w-xs py-5"
+          />
+          <div class="card bg-base-100 w-full shrink-0 shadow-2xl">
+            <div class="card-body">
+              <div role="alert" class="alert alert-info">
+                <.icon name="hero-information-circle" />
+                <span>Please accept the terms of service to continue.</span>
+              </div>
+              <iframe class="w-full h-96" src="/terms" title="Terms of service"></iframe>
+              <.simple_form for={@form} phx-submit="accept">
+                <.input
+                  type="checkbox"
+                  field={@form[:terms_accepted]}
+                  label="I agree to the Terms and Conditions"
+                />
+                <p></p>
+                <:actions>
+                  <.button class="btn-primary">Continue</.button>
+                </:actions>
+              </.simple_form>
             </div>
-            <iframe class="w-full h-96" src="/terms" title="Terms of service"></iframe>
-            <.simple_form for={@form} phx-submit="accept">
-              <.input
-                type="checkbox"
-                field={@form[:terms_accepted]}
-                label="I agree to the Terms and Conditions"
-              />
-              <p></p>
-              <:actions>
-                <.button class="btn-primary">Continue</.button>
-              </:actions>
-            </.simple_form>
           </div>
         </div>
-      </div>
-    </.hero_layout>
+      </.hero_layout>
+    </.navbar_layout>
     """
   end
 end

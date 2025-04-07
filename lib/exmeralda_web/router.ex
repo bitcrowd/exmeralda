@@ -57,6 +57,7 @@ defmodule ExmeraldaWeb.Router do
         {ExmeraldaWeb.UserAuth, :ensure_authenticated}
       ] do
       live "/accept_terms", UserLive.AcceptTerms
+      live "/auth/settings", UserLive.Settings, :edit
     end
   end
 
@@ -71,7 +72,6 @@ defmodule ExmeraldaWeb.Router do
       live "/chat/start", ChatLive.Index, :new
       live "/chat/:id", ChatLive.Index, :show
       live "/library/new", LibraryLive.Index, :new
-      live "/auth/settings", UserLive.Settings, :edit
     end
   end
 

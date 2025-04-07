@@ -40,4 +40,8 @@ defmodule Exmeralda.Accounts do
   def accept_terms!(user) do
     user |> User.accept_terms_changeset() |> Repo.update!()
   end
+
+  def delete_user(user) do
+    Repo.delete(user)
+  end
 end
