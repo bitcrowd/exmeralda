@@ -107,20 +107,31 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
               class="mt-3 mb-1"
             >
               <summary>{gettext("Sources")}</summary>
-              <ul class="list-disc mx-5">
-                <li :for={{source, chunks} <- message.source_chunks |> Enum.group_by(& &1.source)}>
+              <ul class="menu">
+                <li
+                  :for={{source, chunks} <- message.source_chunks |> Enum.group_by(& &1.source)}
+                  class="mb-0"
+                >
                   <% type = List.first(chunks).type %>
                   <a
                     :if={type == :docs}
                     href={"https://hexdocs.pm/#{@session.library.name}/#{@session.library.version}/#{source}"}
                     target="blank"
-                    class="link"
                     rel="noopener noreferrer"
                   >
+                    <.icon name="hero-book-open" />
                     {source}
                   </a>
 
-                  <code :if={type == :code}>{source}</code>
+                  <a
+                    :if={type == :code}
+                    href={"https://preview.hex.pm/preview/#{@session.library.name}/#{@session.library.version}/show/#{source}"}
+                    target="blank"
+                    rel="noopener noreferrer"
+                  >
+                    <.icon name="hero-code-bracket" />
+                    {source}
+                  </a>
                 </li>
               </ul>
             </details>
