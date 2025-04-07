@@ -13,12 +13,21 @@ defmodule Exmeralda.Topics.Rag do
   @pgvector_limit 3
   @fulltext_limit 3
   @excluded_docs ~w(404.html)
+  @excluded_code_types ~w(.map)
 
   @default_splitter RecursiveCharacterTextSplitter.new!(%{chunk_size: @chunk_size})
   @elixir_splitter RecursiveCharacterTextSplitter.new!(%{
                      seperators: LanguageSeparators.elixir(),
                      chunk_size: @chunk_size
                    })
+  @js_splitter RecursiveCharacterTextSplitter.new!(%{
+                 seperators: LanguageSeparators.js(),
+                 chunk_size: @chunk_size
+               })
+  @markdown_splitter RecursiveCharacterTextSplitter.new!(%{
+                       seperators: LanguageSeparators.markdown(),
+                       chunk_size: @chunk_size
+                     })
 
   def ingest_from_hex(name, version) do
     with {:ok, exdocs} <- Hex.docs(name, version),
@@ -34,6 +43,7 @@ defmodule Exmeralda.Topics.Rag do
       code =
         for {file, content} <- repo["contents.tar.gz"],
             String.valid?(content),
+            Path.extname(file) not in @excluded_code_types,
             chunk <- chunk_text(file, content) do
           %{source: file, type: :code, content: Enum.join(["# #{file}\n\n", chunk])}
         end
@@ -67,6 +77,9 @@ defmodule Exmeralda.Topics.Rag do
     |> Path.extname()
     |> case do
       ".ex" -> @elixir_splitter
+      ".exs" -> @elixir_splitter
+      ".js" -> @js_splitter
+      ".md" -> @markdown_splitter
       _ -> @default_splitter
     end
     |> RecursiveCharacterTextSplitter.split_text(content)
