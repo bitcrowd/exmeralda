@@ -4,7 +4,7 @@ defmodule ExmeraldaWeb.UserLive.Login do
   def render(assigns) do
     ~H"""
     <.hero_layout>
-      <div class="text-center flex flex-col gap-8">
+      <div class="flex items-center flex-col gap-8">
         <img
           src={~p"/images/logo-exmeralda.svg"}
           width="523"
@@ -13,8 +13,15 @@ defmodule ExmeraldaWeb.UserLive.Login do
           class="max-w-xs"
         />
         <h1 class="text-5xl font-bold">Welcome</h1>
-        <div class="card bg-base-100 w-full max-w-sm shrink-0 shadow-2xl">
+        <div class="card bg-base-100  w-full md:w-1/2 shrink-0 shadow-2xl">
           <div class="card-body">
+            <h2 class="text-xl font-bold">Meet Exmeralda</h2>
+
+            <p class="py-2">
+              Exmeralda helps you ask questions about Elixir libraries and get accurate,
+              version-specific answers. Powered by Retrieval-Augmented Generation (RAG),
+              it combines the latest AI with real documentation to deliver helpful, grounded responses.
+            </p>
             <a class="btn bg-black text-white" href={~p"/auth/github"}>
               <svg
                 aria-label="GitHub logo"
@@ -32,6 +39,48 @@ defmodule ExmeraldaWeb.UserLive.Login do
               Login with GitHub
             </a>
           </div>
+        </div>
+        <div class="text-center">
+          <a
+            href="https://github.com/bitcrowd/exmeralda/"
+            class="p-4 m-2 rounded-lg flex flex-col items-center gap-2 text-gray-500 text-sm dark:bg-base-300"
+          >
+            <img
+              src={~p"/images/logo-github-light.svg"}
+              width="98"
+              height="96"
+              alt="github logo"
+              class="max-w-10 dark:hidden"
+            />
+            <img
+              src={~p"/images/logo-github-dark.svg"}
+              width="98"
+              height="96"
+              alt="github logo"
+              class="max-w-10 hidden dark:block"
+            /> Star us on GitHub
+          </a>
+          <hr class="mx-2 border-base-100" />
+          <a
+            href="https://bitcrowd.net"
+            class="p-4 m-2 rounded-lg flex flex-col items-center gap-2 text-gray-500 text-sm dark:bg-base-300"
+          >
+            Built in Berlin with ♥ by <span class="sr-only">bitcrowd</span>
+            <img
+              src={~p"/images/logo-bitcrowd-light.svg"}
+              width="303"
+              height="93"
+              alt="bitcrowd logo, a dirigible airship flying amongst clouds"
+              class="max-w-32 dark:hidden"
+            />
+            <img
+              src={~p"/images/logo-bitcrowd-dark.svg"}
+              width="303"
+              height="93"
+              alt="bitcrowd logo, a dirigible airship flying amongst clouds"
+              class="max-w-32 hidden dark:block"
+            />
+          </a>
         </div>
       </div>
     </.hero_layout>
