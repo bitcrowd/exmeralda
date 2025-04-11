@@ -18,7 +18,13 @@ defmodule ExmeraldaWeb.AuthController do
   def callback(conn, params) do
     session_params =
       get_session(conn, :session_params)
-      |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
+      |> Map.new(fn
+        {k, v} when is_binary(k) ->
+          {String.to_existing_atom(k), v}
+
+        {k, v} ->
+          {k, v}
+      end)
 
     config =
       conn
