@@ -16,7 +16,9 @@ defmodule ExmeraldaWeb.AuthController do
   end
 
   def callback(conn, params) do
-    session_params = get_session(conn, :session_params)
+    session_params =
+      get_session(conn, :session_params)
+      |> Map.new(fn {k, v} -> {String.to_existing_atom(k), v} end)
 
     config =
       conn

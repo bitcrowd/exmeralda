@@ -16,7 +16,7 @@ defmodule ExmeraldaWeb.GithubMock do
 
   @impl true
   def callback(config, %{"code" => "mock_code"}) do
-    %{"state" => "mock_state"} = config[:session_params]
+    %{state: "mock_state"} = config[:session_params]
 
     user_info = %{
       "sub" => "123",
