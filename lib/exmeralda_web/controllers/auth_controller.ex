@@ -37,7 +37,7 @@ defmodule ExmeraldaWeb.AuthController do
              github_id: user["sub"],
              github_profile: user["profile"],
              email: user["email"],
-             name: user["name"],
+             name: user["name"] || user["preferred_username"] || "Anonymous",
              avatar_url: user["picture"]
            }) do
       conn
