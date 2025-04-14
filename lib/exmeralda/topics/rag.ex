@@ -3,9 +3,10 @@ defmodule Exmeralda.Topics.Rag do
   alias Exmeralda.Repo
   import Ecto.Query
   import Pgvector.Ecto.Query
-  alias Exmeralda.Topics.Hex
+  alias Exmeralda.Topics.{Hex, LineCheck}
   alias Rag.{Embedding, Generation, Retrieval}
   alias LangChain.TextSplitter.{RecursiveCharacterTextSplitter, LanguageSeparators}
+  require Logger
 
   @doc_types ~w(.html .md .txt)
   @chunk_size 2000
@@ -43,6 +44,8 @@ defmodule Exmeralda.Topics.Rag do
       code =
         for {file, content} <- repo["contents.tar.gz"],
             String.valid?(content),
+            LineCheck.valid?(content),
+            Logger.debug("Chunking #{file} from #{name}-#{version}"),
             Path.extname(file) not in @excluded_code_types,
             chunk <- chunk_text(file, content) do
           %{source: file, type: :code, content: Enum.join(["# #{file}\n\n", chunk])}
