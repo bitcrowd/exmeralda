@@ -65,7 +65,7 @@ cond do
            LangChain.ChatModels.ChatOpenAI.new!(%{
              endpoint: "https://api.groq.com/openai/v1/chat/completions",
              api_key: System.fetch_env!("GROQ_API_KEY"),
-             model: "qwen-2.5-coder-32b",
+             model: "meta-llama/llama-4-maverick-17b-128e-instruct",
              stream: true
            })
 
