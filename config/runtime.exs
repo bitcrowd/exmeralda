@@ -59,15 +59,15 @@ if config_env() == :prod do
 end
 
 cond do
-  config_env() == :prod || System.get_env("GROQ_API_KEY") ->
-    config :exmeralda,
+  config_env() == :prod || System.get_env("HYPERBOLIC_API_KEY") ->
+  config :exmeralda,
            :llm,
            LangChain.ChatModels.ChatOpenAI.new!(%{
-             endpoint: "https://api.groq.com/openai/v1/chat/completions",
-             api_key: System.fetch_env!("GROQ_API_KEY"),
-             model: "meta-llama/llama-4-maverick-17b-128e-instruct",
-             stream: true
-           })
+            endpoint: "https://api.hyperbolic.xyz/v1/chat/completions",
+            api_key: System.fetch_env!("HYPERBOLIC_API_KEY"),
+            model: "Qwen/Qwen2.5-Coder-32B-Instruct",
+            stream: true
+          })
 
   config_env() == :dev ->
     config :exmeralda,
