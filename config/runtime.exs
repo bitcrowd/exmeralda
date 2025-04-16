@@ -60,14 +60,14 @@ end
 
 cond do
   config_env() == :prod || System.get_env("HYPERBOLIC_API_KEY") ->
-  config :exmeralda,
+    config :exmeralda,
            :llm,
            LangChain.ChatModels.ChatOpenAI.new!(%{
-            endpoint: "https://api.hyperbolic.xyz/v1/chat/completions",
-            api_key: System.fetch_env!("HYPERBOLIC_API_KEY"),
-            model: "Qwen/Qwen2.5-Coder-32B-Instruct",
-            stream: true
-          })
+             endpoint: "https://api.hyperbolic.xyz/v1/chat/completions",
+             api_key: System.fetch_env!("HYPERBOLIC_API_KEY"),
+             model: "Qwen/Qwen2.5-Coder-32B-Instruct",
+             stream: true
+           })
 
   config_env() == :dev ->
     config :exmeralda,
