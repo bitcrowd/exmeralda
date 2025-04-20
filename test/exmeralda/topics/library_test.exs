@@ -44,11 +44,11 @@ defmodule Exmeralda.Topics.LibraryTest do
     end
 
     test "validates names" do
-      for name <- ~w(ecto phoenix_live_view absinthe_graphql my_lib123) do
+      for name <- ~w(ecto phoenix_live_view absinthe_graphql my_lib123 nx) do
         assert Library.changeset(%Library{}, %{name: name, version: "1.0.0"}).valid?
       end
 
-      for name <- ~w(_underscore_start 123numbersfirst sh ends_with_ NOTEVENANAME $!@#) do
+      for name <- ~w(_underscore_start 123numbersfirst s ends_with_ NOTEVENANAME $!@#) do
         cs = Library.changeset(%Library{}, %{name: name, version: "1.0.0"})
         refute cs.valid?
         assert_error_on(cs, :name, :format)
