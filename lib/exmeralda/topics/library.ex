@@ -24,7 +24,7 @@ defmodule Exmeralda.Topics.Library do
     library
     |> cast(attrs, [:name, :version])
     |> validate_required([:name, :version])
-    |> validate_format(:name, ~r/^[a-z][a-z0-9_]{1,}[a-z0-9]$/)
+    |> validate_format(:name, ~r/^[a-z][a-z0-9_]*?[a-z0-9]$/)
     |> validate_version()
     |> cast_embed(:dependencies)
     |> unique_constraint([:name, :version])
