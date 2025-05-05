@@ -1,5 +1,7 @@
 # Exmeralda
 
+Check it out yourself at [exmeralda.chat](https://exmeralda.chat).
+
 ## Prerequisits 
 
 - Erlang & Elixir
