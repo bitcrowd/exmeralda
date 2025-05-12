@@ -10,9 +10,30 @@ Check it out yourself at [exmeralda.chat](https://exmeralda.chat).
 
 You can install all of it (except pgvector) with [asdf](https://github.com/asdf-vm/asdf). 
 
+---
+
+**If you have Docker installed, you can use Docker Compose to start the required services:**
+
+The repository provides a `docker-compose.yml` file that will start both Postgres (with pgvector) and Ollama for you. This is a convenient way to get up and running without installing dependencies manually.
+
+To start the services, run:
+
+```sh
+docker compose up -d
+```
+
+---
+
 To start your Phoenix server:
 
   * Run `mix setup` to install and setup dependencies
+
+    The `mix setup` alias will:
+    - Fetch and install all Elixir dependencies (`mix deps.get`)
+    - Create and migrate the database, and seed it with initial data (`mix ecto.setup`)
+    - Install Tailwind, esbuild, and npm dependencies for assets (`mix assets.setup`)
+    - Build frontend assets using Tailwind and esbuild (`mix assets.build`)
+
   * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
 
 To test the chatbot locally you either need to start with a Groq API key (see 1password):
