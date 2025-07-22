@@ -63,6 +63,13 @@ defmodule Exmeralda.Factory do
     end)
   end
 
+  def ingestion_factory do
+    %Exmeralda.Topics.Ingestion{
+      state: :queued,
+      library: build(:library)
+    }
+  end
+
   def chunk_factory do
     %Exmeralda.Topics.Chunk{
       library: build(:library),
