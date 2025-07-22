@@ -7,7 +7,8 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
 
   def insert_library(_) do
     library = insert(:library)
-    chunks = insert_list(25, :chunk, library: library, embedding: nil)
+    ingestion = insert(:ingestion, library: library)
+    chunks = insert_list(25, :chunk, ingestion: ingestion, library: library, embedding: nil)
     %{chunks: chunks, library: library}
   end
 

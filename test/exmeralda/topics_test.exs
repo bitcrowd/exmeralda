@@ -6,14 +6,16 @@ defmodule Exmeralda.TopicsTest do
 
   def insert_ingested_library(_) do
     library = insert(:library, name: "ecto")
-    insert_list(3, :chunk, library: library)
+    ingestion = insert(:ingestion, library: library)
+    insert_list(3, :chunk, ingestion: ingestion, library: library)
     %{ingested: library}
   end
 
   def insert_in_progress_library(_) do
     library = insert(:library, name: "ecto_sql")
-    insert_list(3, :chunk, library: library)
-    insert_list(1, :chunk, library: library, embedding: nil)
+    ingestion = insert(:ingestion, library: library)
+    insert_list(3, :chunk, ingestion: ingestion, library: library)
+    insert_list(1, :chunk, ingestion: ingestion, library: library, embedding: nil)
     %{in_progress: library}
   end
 
