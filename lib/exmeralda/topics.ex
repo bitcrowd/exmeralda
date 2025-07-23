@@ -13,7 +13,7 @@ defmodule Exmeralda.Topics do
       order_by: [desc: :inserted_at],
       limit: 10
     )
-    |> with_chunks_ready()
+    |> with_ingestion_ready()
     |> Repo.all()
   end
 
@@ -40,6 +40,16 @@ defmodule Exmeralda.Topics do
     )
     |> with_chunks_ready()
     |> Repo.all()
+  end
+
+  defp with_ingestion_ready(query) do
+    where(
+      query,
+      [l],
+      exists(
+        from i in Ingestion, where: i.library_id == parent_as(:library).id and i.state == :ready
+      )
+    )
   end
 
   defp with_chunks_ready(query) do

@@ -5,7 +5,10 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   alias Exmeralda.{Repo, Chats.Session}
 
   defp insert_library(_) do
-    %{library: insert(:library, name: "ecto")}
+    library = insert(:library, name: "ecto")
+    ingestion = insert(:ingestion, library: library, state: :ready)
+
+    %{library: library, ingestion: ingestion}
   end
 
   defp insert_session(%{user: user, library: library}) do
