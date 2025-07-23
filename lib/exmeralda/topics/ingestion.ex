@@ -20,4 +20,9 @@ defmodule Exmeralda.Topics.Ingestion do
     |> cast(attrs, [:state, :library_id])
     |> validate_required([:state, :library_id])
   end
+
+  @doc false
+  def set_state(ingestion, state) do
+    change(ingestion, state: state)
+  end
 end

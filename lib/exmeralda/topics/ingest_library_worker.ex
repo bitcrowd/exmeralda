@@ -53,8 +53,8 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
         )
       end)
     end)
-    |> Oban.insert(:generate_embeddings, fn %{library: library} ->
-      GenerateEmbeddingsWorker.new(%{library_id: library.id})
+    |> Oban.insert(:generate_embeddings, fn %{library: library, insert_ingestion: ingestion} ->
+      GenerateEmbeddingsWorker.new(%{library_id: library.id, ingestion_id: ingestion.id})
     end)
     |> Repo.transaction(timeout: 1000 * 60 * 60)
     |> case do

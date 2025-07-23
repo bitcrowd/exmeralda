@@ -1,6 +1,6 @@
 defmodule Exmeralda.Topics do
   alias Exmeralda.Repo
-  alias Exmeralda.Topics.{IngestLibraryWorker, Library, Chunk}
+  alias Exmeralda.Topics.{IngestLibraryWorker, Library, Chunk, Ingestion}
   import Ecto.Query
 
   def list_libraries(params) do
@@ -127,5 +127,13 @@ defmodule Exmeralda.Topics do
   """
   def new_library_changeset(params \\ %{}) do
     Library.changeset(%Library{}, params)
+  end
+
+  @doc """
+  Updates the state of an ingestion.
+  """
+  def update_ingestion_state!(ingestion, state) do
+    Ingestion.set_state(ingestion, state)
+    |> Repo.update!()
   end
 end

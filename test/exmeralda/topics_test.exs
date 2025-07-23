@@ -43,4 +43,16 @@ defmodule Exmeralda.TopicsTest do
       assert in_progress.id in ids
     end
   end
+
+  describe "update_ingestion_state!/2" do
+    test "updates state of ingestion" do
+      ingestion = insert(:ingestion, state: :queued)
+
+      Topics.update_ingestion_state!(ingestion, :embedding)
+
+      ingestion = Repo.reload(ingestion)
+
+      assert ingestion.state == :embedding
+    end
+  end
 end

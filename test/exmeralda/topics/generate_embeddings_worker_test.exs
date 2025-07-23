@@ -7,16 +7,24 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
 
   def insert_library(_) do
     library = insert(:library)
-    ingestion = insert(:ingestion, library: library)
+    ingestion = insert(:ingestion, library: library, state: :embedding)
     chunks = insert_list(25, :chunk, ingestion: ingestion, library: library, embedding: nil)
-    %{chunks: chunks, library: library}
+    %{chunks: chunks, library: library, ingestion: ingestion}
   end
 
   describe "perform/1" do
     setup [:insert_library]
 
-    test "generates embeddings for a library", %{library: library, chunks: chunks} do
-      assert :ok = perform_job(GenerateEmbeddingsWorker, %{library_id: library.id})
+    test "generates embeddings for a library", %{
+      library: library,
+      chunks: chunks,
+      ingestion: ingestion
+    } do
+      assert :ok =
+               perform_job(GenerateEmbeddingsWorker, %{
+                 library_id: library.id,
+                 ingestion_id: ingestion.id
+               })
 
       workers = all_enqueued(worker: GenerateEmbeddingsWorker)
 
@@ -35,6 +43,25 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
       %{success: 2} = Oban.drain_queue(queue: :ingest)
 
       refute from(c in Chunk, where: is_nil(c.embedding)) |> Repo.one()
+    end
+
+    test "sets ingestion state to :ready when all chunks embedded", %{
+      library: library,
+      ingestion: ingestion
+    } do
+      assert ingestion.state == :embedding
+
+      assert :ok =
+               perform_job(GenerateEmbeddingsWorker, %{
+                 library_id: library.id,
+                 ingestion_id: ingestion.id
+               })
+
+      %{success: 2} = Oban.drain_queue(queue: :ingest)
+
+      ingestion = Repo.reload(ingestion)
+
+      assert ingestion.state == :ready
     end
   end
 end
