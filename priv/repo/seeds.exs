@@ -36,6 +36,6 @@ libraries = [
 ]
 
 for library <- libraries do
-  ingestion = insert(:ingestion, library: library)
+  ingestion = insert(:ingestion, library: library, state: :ready)
   insert(:chunk, library: library, ingestion: ingestion)
 end
