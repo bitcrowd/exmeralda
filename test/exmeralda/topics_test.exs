@@ -6,14 +6,14 @@ defmodule Exmeralda.TopicsTest do
 
   def insert_ingested_library(_) do
     library = insert(:library, name: "ecto")
-    ingestion = insert(:ingestion, library: library)
+    ingestion = insert(:ingestion, library: library, state: :ready)
     insert_list(3, :chunk, ingestion: ingestion, library: library)
     %{ingested: library}
   end
 
   def insert_in_progress_library(_) do
     library = insert(:library, name: "ecto_sql")
-    ingestion = insert(:ingestion, library: library)
+    ingestion = insert(:ingestion, library: library, state: :embedding)
     insert_list(3, :chunk, ingestion: ingestion, library: library)
     insert_list(1, :chunk, ingestion: ingestion, library: library, embedding: nil)
     %{in_progress: library}
@@ -22,6 +22,22 @@ defmodule Exmeralda.TopicsTest do
   def insert_chunkless_library(_) do
     library = insert(:library, name: "bitcrowd_ecto")
     %{chunkless: library}
+  end
+
+  describe "last_libraries/0" do
+    setup [:insert_ingested_library, :insert_chunkless_library, :insert_in_progress_library]
+
+    test "returns only libraries with ingestion that is ready", %{
+      ingested: ingested,
+      chunkless: chunkless,
+      in_progress: in_progress
+    } do
+      ids = Topics.last_libraries() |> Enum.map(& &1.id)
+
+      assert ingested.id in ids
+      refute in_progress.id in ids
+      refute chunkless.id in ids
+    end
   end
 
   describe "search_libraries/1" do
