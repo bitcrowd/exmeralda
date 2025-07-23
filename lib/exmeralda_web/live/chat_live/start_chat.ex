@@ -94,7 +94,11 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
 
   @impl true
   def handle_event("start", %{"session" => session_params}, socket) do
-    case Chats.start_session(socket.assigns.user, session_params) do
+    current_ingestion = Topics.current_ingestion(socket.assigns.selected_library)
+
+    params = Map.put(session_params, "ingestion_id", current_ingestion.id)
+
+    case Chats.start_session(socket.assigns.user, params) do
       {:ok, session} ->
         notify_parent({:start, Map.put(session, :library, socket.assigns.selected_library)})
 
