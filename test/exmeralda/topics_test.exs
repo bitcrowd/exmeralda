@@ -72,4 +72,31 @@ defmodule Exmeralda.TopicsTest do
       assert ingestion.state == :embedding
     end
   end
+
+  describe "current_ingestion/1" do
+    test "returns nil when no ingestion" do
+      library = insert(:library)
+
+      refute Topics.current_ingestion(library)
+    end
+
+    test "returns the latest ingestion in state :ready for a library" do
+      library = insert(:library)
+      queued_ingestion = insert(:ingestion, library: library)
+
+      refute Topics.current_ingestion(library)
+
+      ready_ingestion = Ingestion.set_state(queued_ingestion, :ready) |> Repo.update!()
+
+      assert Topics.current_ingestion(library).id == ready_ingestion.id
+
+      _non_ready_ingestion = insert(:ingestion, library: library)
+
+      assert Topics.current_ingestion(library).id == ready_ingestion.id
+
+      new_ready_ingestion = insert(:ingestion, library: library, state: :ready)
+
+      assert Topics.current_ingestion(library).id == new_ready_ingestion.id
+    end
+  end
 end
