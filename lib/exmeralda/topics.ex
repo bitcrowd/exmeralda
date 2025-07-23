@@ -38,7 +38,7 @@ defmodule Exmeralda.Topics do
         desc: :version
       ]
     )
-    |> with_chunks_ready()
+    |> with_ingestion_ready()
     |> Repo.all()
   end
 
@@ -48,19 +48,6 @@ defmodule Exmeralda.Topics do
       [l],
       exists(
         from i in Ingestion, where: i.library_id == parent_as(:library).id and i.state == :ready
-      )
-    )
-  end
-
-  defp with_chunks_ready(query) do
-    where(
-      query,
-      [l],
-      not exists(
-        from c in Chunk,
-          where: c.library_id == parent_as(:library).id and is_nil(c.embedding),
-          select: 1,
-          limit: 1
       )
     )
   end
