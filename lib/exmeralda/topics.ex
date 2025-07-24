@@ -75,20 +75,6 @@ defmodule Exmeralda.Topics do
     Repo.get!(Library, id)
   end
 
-  @doc """
-  Gets a single library.
-  """
-  def get_library_stats(%Library{id: id}) do
-    chunks = from c in Chunk, where: c.library_id == ^id
-
-    %{
-      chunks_total: chunks |> Repo.aggregate(:count),
-      chunks_embedding: chunks |> where([c], not is_nil(c.embedding)) |> Repo.aggregate(:count),
-      chunks_type:
-        chunks |> group_by([c], c.type) |> select([c], {c.type, count(c.id)}) |> Repo.all()
-    }
-  end
-
   def list_chunks(%Library{id: id}, params) do
     from(c in Chunk, where: c.library_id == ^id)
     |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
