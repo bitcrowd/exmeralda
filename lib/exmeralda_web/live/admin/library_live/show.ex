@@ -78,11 +78,11 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
             type: "select",
             options: [
               {"All states", ""},
-              {"Queued", "queued"}, 
-              {"Preprocessing", "preprocessing"}, 
-              {"Chunking", "chunking"}, 
-              {"Embedding", "embedding"}, 
-              {"Failed", "failed"}, 
+              {"Queued", "queued"},
+              {"Preprocessing", "preprocessing"},
+              {"Chunking", "chunking"},
+              {"Embedding", "embedding"},
+              {"Failed", "failed"},
               {"Ready", "ready"}
             ]
           ]
@@ -90,7 +90,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
         meta={@meta}
         id="ingestion-filter-form"
       />
-      
+
       <Flop.Phoenix.table
         items={@ingestions}
         meta={@meta}
