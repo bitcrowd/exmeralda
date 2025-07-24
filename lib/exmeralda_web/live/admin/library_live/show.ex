@@ -6,15 +6,22 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
   @impl true
   def handle_params(params, _url, socket) do
     library = Topics.get_library!(params["id"])
-    ingestions = Topics.list_ingestions(library)
+    {:ok, {ingestions, meta}} = Topics.list_ingestions(library, params)
 
     socket =
       socket
       |> assign(:page_title, "#{library.name} #{library.version}")
       |> assign(:library, library)
       |> assign(:ingestions, ingestions)
+      |> assign(:meta, meta)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("update-filter", params, socket) do
+    params = Map.delete(params, "_target")
+    {:noreply, push_patch(socket, to: ~p"/admin/library/#{socket.assigns.library.id}?#{params}")}
   end
 
   @impl true
@@ -63,47 +70,64 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
         </li>
       </ul>
 
-      <div class="overflow-x-auto">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>State</th>
-              <th>Created At</th>
-              <th>Updated At</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr :for={ingestion <- @ingestions}>
-              <td>{ingestion.id}</td>
-              <td>
-                <span class={[
-                  "badge",
-                  case ingestion.state do
-                    :ready -> "badge-success"
-                    :failed -> "badge-error"
-                    :queued -> "badge-info"
-                    _ -> "badge-warning"
-                  end
-                ]}>
-                  {ingestion.state}
-                </span>
-              </td>
-              <td>{Calendar.strftime(ingestion.inserted_at, "%Y-%m-%d %H:%M")}</td>
-              <td>{Calendar.strftime(ingestion.updated_at, "%Y-%m-%d %H:%M")}</td>
-              <td>
-                <.link
-                  class="btn btn-primary btn-sm"
-                  navigate={~p"/admin/library/#{@library.id}/ingestion/#{ingestion.id}"}
-                >
-                  Show
-                </.link>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <.filter_form
+        class="grid grid-cols-4 gap-4 p-4"
+        fields={[
+          state: [
+            label: gettext("State"),
+            type: "select",
+            options: [
+              {"All states", ""},
+              {"Queued", "queued"}, 
+              {"Preprocessing", "preprocessing"}, 
+              {"Chunking", "chunking"}, 
+              {"Embedding", "embedding"}, 
+              {"Failed", "failed"}, 
+              {"Ready", "ready"}
+            ]
+          ]
+        ]}
+        meta={@meta}
+        id="ingestion-filter-form"
+      />
+      
+      <Flop.Phoenix.table
+        items={@ingestions}
+        meta={@meta}
+        path={~p"/admin/library/#{@library.id}"}
+        opts={[table_attrs: [class: "table"]]}
+      >
+        <:col :let={ingestion} label="ID" field={:id}>{ingestion.id}</:col>
+        <:col :let={ingestion} label="State" field={:state}>
+          <span class={[
+            "badge",
+            case ingestion.state do
+              :ready -> "badge-success"
+              :failed -> "badge-error"
+              :queued -> "badge-info"
+              _ -> "badge-warning"
+            end
+          ]}>
+            {ingestion.state}
+          </span>
+        </:col>
+        <:col :let={ingestion} label="Created At" field={:inserted_at}>
+          {Calendar.strftime(ingestion.inserted_at, "%Y-%m-%d %H:%M")}
+        </:col>
+        <:col :let={ingestion} label="Updated At" field={:updated_at}>
+          {Calendar.strftime(ingestion.updated_at, "%Y-%m-%d %H:%M")}
+        </:col>
+        <:col :let={ingestion} label="Actions">
+          <.link
+            class="btn btn-primary btn-sm"
+            navigate={~p"/admin/library/#{@library.id}/ingestion/#{ingestion.id}"}
+          >
+            Show
+          </.link>
+        </:col>
+      </Flop.Phoenix.table>
+
+      <.pagination meta={@meta} path={~p"/admin/library/#{@library.id}"} />
     </.navbar_layout>
     """
   end
