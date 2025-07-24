@@ -8,7 +8,7 @@ defmodule Exmeralda.TopicsTest do
     library = insert(:library, name: "ecto")
     ingestion = insert(:ingestion, library: library, state: :ready)
     insert_list(3, :chunk, ingestion: ingestion, library: library)
-    %{ingested: library}
+    %{ingested: library, ingested_library_ingestion: ingestion}
   end
 
   def insert_in_progress_library(_) do
@@ -97,6 +97,104 @@ defmodule Exmeralda.TopicsTest do
       new_ready_ingestion = insert(:ingestion, library: library, state: :ready)
 
       assert Topics.current_ingestion(library).id == new_ready_ingestion.id
+    end
+  end
+
+  describe "list_ingestions/2" do
+    setup [:insert_ingested_library, :insert_chunkless_library]
+
+    test "returns ingestions for a library with Flop support", %{
+      ingested: library,
+      ingested_library_ingestion: library_ingestion
+    } do
+      {:ok, {ingestions, meta}} = Topics.list_ingestions(library, %{})
+
+      assert [ingestion] = ingestions
+      assert ingestion.id == library_ingestion.id
+      assert meta.total_count == 1
+    end
+
+    test "filters ingestions by state", %{
+      ingested: library,
+      ingested_library_ingestion: ready_ingestion
+    } do
+      _queued_ingestion = insert(:ingestion, library: library, state: :queued)
+
+      {:ok, {ingestions, meta}} =
+        Topics.list_ingestions(library, %{
+          "filters" => [%{"field" => "state", "value" => "ready"}]
+        })
+
+      assert length(ingestions) == 1
+      assert hd(ingestions).id == ready_ingestion.id
+      assert meta.total_count == 1
+    end
+
+    test "supports pagination", %{
+      chunkless: library
+    } do
+      insert_list(3, :ingestion, library: library)
+
+      {:ok, {ingestions, meta}} = Topics.list_ingestions(library, %{"page_size" => "2"})
+
+      assert length(ingestions) == 2
+      assert meta.total_count == 3
+      assert meta.total_pages == 2
+    end
+  end
+
+  describe "get_ingestion_stats/1" do
+    setup [:insert_ingested_library, :insert_chunkless_library]
+
+    test "returns chunk statistics for an ingestion", %{
+      ingested_library_ingestion: ingestion
+    } do
+      stats = Topics.get_ingestion_stats(ingestion)
+
+      assert stats.chunks_total == 3
+      assert stats.chunks_embedding == 3
+      assert stats.chunks_type == [code: 3]
+    end
+
+    test "returns zero stats for ingestion with no chunks", %{chunkless: chunkless_library} do
+      ingestion = insert(:ingestion, library: chunkless_library)
+
+      stats = Topics.get_ingestion_stats(ingestion)
+
+      assert stats.chunks_total == 0
+      assert stats.chunks_embedding == 0
+      assert stats.chunks_type == []
+    end
+  end
+
+  describe "list_ingestion_chunks/2" do
+    setup :insert_ingested_library
+
+    test "returns chunks for an ingestion with Flop support", %{
+      ingested_library_ingestion: ingestion
+    } do
+      {:ok, {chunks, meta}} = Topics.list_ingestion_chunks(ingestion, %{})
+
+      assert length(chunks) == 3
+      assert meta.total_count == 3
+    end
+
+    test "filters chunks by type", %{ingested_library_ingestion: ingestion} do
+      {:ok, {chunks, meta}} =
+        Topics.list_ingestion_chunks(ingestion, %{
+          "filters" => [%{"field" => "type", "value" => "code"}]
+        })
+
+      assert length(chunks) == 3
+      assert meta.total_count == 3
+    end
+
+    test "supports pagination", %{ingested_library_ingestion: ingestion} do
+      {:ok, {chunks, meta}} = Topics.list_ingestion_chunks(ingestion, %{"page_size" => "2"})
+
+      assert length(chunks) == 2
+      assert meta.total_count == 3
+      assert meta.total_pages == 2
     end
   end
 end
