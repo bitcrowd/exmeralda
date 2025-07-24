@@ -168,13 +168,13 @@ defmodule Exmeralda.TopicsTest do
     end
   end
 
-  describe "list_ingestion_chunks/2" do
+  describe "list_chunks_for_ingestion/2" do
     setup :insert_ingested_library
 
     test "returns chunks for an ingestion with Flop support", %{
       ingested_library_ingestion: ingestion
     } do
-      {:ok, {chunks, meta}} = Topics.list_ingestion_chunks(ingestion, %{})
+      {:ok, {chunks, meta}} = Topics.list_chunks_for_ingestion(ingestion, %{})
 
       assert length(chunks) == 3
       assert meta.total_count == 3
@@ -182,7 +182,7 @@ defmodule Exmeralda.TopicsTest do
 
     test "filters chunks by type", %{ingested_library_ingestion: ingestion} do
       {:ok, {chunks, meta}} =
-        Topics.list_ingestion_chunks(ingestion, %{
+        Topics.list_chunks_for_ingestion(ingestion, %{
           "filters" => [%{"field" => "type", "value" => "code"}]
         })
 
@@ -191,7 +191,7 @@ defmodule Exmeralda.TopicsTest do
     end
 
     test "supports pagination", %{ingested_library_ingestion: ingestion} do
-      {:ok, {chunks, meta}} = Topics.list_ingestion_chunks(ingestion, %{"page_size" => "2"})
+      {:ok, {chunks, meta}} = Topics.list_chunks_for_ingestion(ingestion, %{"page_size" => "2"})
 
       assert length(chunks) == 2
       assert meta.total_count == 3
