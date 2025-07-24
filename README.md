@@ -43,11 +43,3 @@ Be aware that the seeded libraries are not that useful to chat with, since it is
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
-## Migrations
-
-We run migrations automatically when deploying the application to fly.
-
-### Data Migrations
-
-Following the [Safe Ecto Migrations](https://fly.io/phoenix-files/safe-ecto-migrations/) guide from fly, data migrations are stored separately in `priv/repo/data_migrations`.
-We must run them manually, for instance using `./exmeralda eval Exmeralda.Release.migrate_data`.
