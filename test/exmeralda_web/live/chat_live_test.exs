@@ -11,12 +11,13 @@ defmodule ExmeraldaWeb.ChatLiveTest do
     %{library: library, ingestion: ingestion}
   end
 
-  defp insert_session(%{user: user, library: library}) do
+  defp insert_session(%{user: user, library: library, ingestion: ingestion}) do
     %{
       session:
         insert(:chat_session,
           user: user,
           library: library,
+          ingestion: ingestion,
           messages: [
             build(:message, role: :user, index: 0, session: nil),
             build(:message, role: :assistant, index: 1, session: nil)
