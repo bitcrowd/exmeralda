@@ -243,7 +243,7 @@ defmodule Exmeralda.Topics do
   @doc """
   Lists chunks for an ingestion.
   """
-  def list_ingestion_chunks(%Ingestion{id: id}, params) do
+  def list_chunks_for_ingestion(%Ingestion{id: id}, params) do
     from(c in Chunk, where: c.ingestion_id == ^id)
     |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
   end

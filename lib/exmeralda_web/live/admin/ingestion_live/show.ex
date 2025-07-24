@@ -9,7 +9,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
     ingestion = Topics.get_ingestion!(params["id"], preloads: [:job])
     stats = Topics.get_ingestion_stats(ingestion)
     embedding_job_stats = Topics.get_embedding_chunks_jobs(ingestion)
-    {:ok, {chunks, meta}} = Topics.list_ingestion_chunks(ingestion, params)
+    {:ok, {chunks, meta}} = Topics.list_chunks_for_ingestion(ingestion, params)
 
     socket =
       socket
