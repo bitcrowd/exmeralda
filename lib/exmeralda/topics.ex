@@ -146,4 +146,44 @@ defmodule Exmeralda.Topics do
     Ingestion.set_state(ingestion, state)
     |> Repo.update!()
   end
+
+  @doc """
+  Gets all ingestions for a library.
+  """
+  def list_ingestions(%Library{id: library_id}) do
+    from(i in Ingestion,
+      where: i.library_id == ^library_id,
+      order_by: [desc: :updated_at]
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets a single ingestion.
+  """
+  def get_ingestion!(id) do
+    Repo.get!(Ingestion, id)
+  end
+
+  @doc """
+  Gets stats for chunks belonging to an ingestion.
+  """
+  def get_ingestion_stats(%Ingestion{id: id}) do
+    chunks = from c in Chunk, where: c.ingestion_id == ^id
+
+    %{
+      chunks_total: chunks |> Repo.aggregate(:count),
+      chunks_embedding: chunks |> where([c], not is_nil(c.embedding)) |> Repo.aggregate(:count),
+      chunks_type:
+        chunks |> group_by([c], c.type) |> select([c], {c.type, count(c.id)}) |> Repo.all()
+    }
+  end
+
+  @doc """
+  Lists chunks for an ingestion.
+  """
+  def list_ingestion_chunks(%Ingestion{id: id}, params) do
+    from(c in Chunk, where: c.ingestion_id == ^id)
+    |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
+  end
 end
