@@ -148,14 +148,13 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Gets all ingestions for a library.
+  Gets all ingestions for a library with Flop support for pagination, filtering, and sorting.
   """
-  def list_ingestions(%Library{id: library_id}) do
+  def list_ingestions(%Library{id: library_id}, params) do
     from(i in Ingestion,
-      where: i.library_id == ^library_id,
-      order_by: [desc: :updated_at]
+      where: i.library_id == ^library_id
     )
-    |> Repo.all()
+    |> Flop.validate_and_run(params, replace_invalid_params: true, for: Ingestion)
   end
 
   @doc """
