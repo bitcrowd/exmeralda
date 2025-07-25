@@ -603,4 +603,24 @@ defmodule ExmeraldaWeb.CoreComponents do
     />
     """
   end
+
+  attr :state, :atom, required: true
+
+  slot :inner_block, required: true
+
+  def ingestion_state_badge(assigns) do
+    ~H"""
+    <span class={[
+      "badge",
+      case assigns.state do
+        :ready -> "badge-success"
+        :failed -> "badge-error"
+        :queued -> "badge-info"
+        _ -> "badge-warning"
+      end
+    ]}>
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
 end
