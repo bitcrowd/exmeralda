@@ -99,17 +99,9 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
       >
         <:col :let={ingestion} label="ID" field={:id}>{ingestion.id}</:col>
         <:col :let={ingestion} label="State" field={:state}>
-          <span class={[
-            "badge",
-            case ingestion.state do
-              :ready -> "badge-success"
-              :failed -> "badge-error"
-              :queued -> "badge-info"
-              _ -> "badge-warning"
-            end
-          ]}>
+          <.ingestion_state_badge state={ingestion.state}>
             {ingestion.state}
-          </span>
+          </.ingestion_state_badge>
         </:col>
         <:col :let={ingestion} label="Created At" field={:inserted_at}>
           {Calendar.strftime(ingestion.inserted_at, "%Y-%m-%d %H:%M")}
