@@ -204,6 +204,14 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
+  Gets the latest ingestions.
+  """
+  def latest_ingestions(params) do
+    from(i in Ingestion, order_by: [desc: :updated_at], preload: :library)
+    |> list_ingestions(params)
+  end
+
+  @doc """
   Gets a single ingestion.
   """
   def get_ingestion!(id, opts \\ []) do
