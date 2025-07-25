@@ -46,7 +46,7 @@ defmodule ExmeraldaWeb.LibraryLive.Index do
               "Your new library will be available in a few minutes! Thanks for participating."
             )
           )
-          |> push_navigate(to: ~p"/chat/start")
+          |> push_navigate(to: ~p"/ingestions")
 
         {:error, changeset} ->
           assign(socket, :form, changeset |> to_form())
