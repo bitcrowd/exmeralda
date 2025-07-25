@@ -49,6 +49,8 @@ defmodule ExmeraldaWeb.LibraryLiveTest do
       assert html =~
                "Your new library will be available in a few minutes! Thanks for participating."
 
+      assert html =~ "Current Ingestions"
+
       assert_enqueued(worker: IngestLibraryWorker, args: %{name: "ecto", version: "3.13.0"})
     end
 
