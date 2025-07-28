@@ -2,6 +2,7 @@ defmodule Exmeralda.Topics.Chunk do
   use Exmeralda.Schema
 
   alias Exmeralda.Topics.Library
+  alias Exmeralda.Topics.Ingestion
 
   @derive {Flop.Schema,
            filterable: [:type, :source],
@@ -15,6 +16,7 @@ defmodule Exmeralda.Topics.Chunk do
     field :content, :string
     field(:embedding, Pgvector.Ecto.Vector)
     belongs_to(:library, Library)
+    belongs_to(:ingestion, Ingestion)
   end
 
   def set_embedding(chunk, embedding) do
