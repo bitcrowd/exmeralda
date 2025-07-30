@@ -26,7 +26,7 @@ defmodule ExmeraldaWeb.IngestionLiveTest do
         |> log_in_user(user)
         |> live(~p"/ingestions")
 
-      assert html =~ "Currently Ingesting"
+      assert html =~ "Ingestions"
 
       assert html =~ "rag"
       assert html =~ "embedding"
