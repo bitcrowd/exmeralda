@@ -133,13 +133,39 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
+  Gets ingestions for `scope` with Flop support for pagination, filtering, and sorting.
+  """
+  def list_ingestions(scope \\ Ingestion, params) do
+    scope
+    |> preload(:library)
+    |> Flop.validate_and_run(params, replace_invalid_params: true, for: Ingestion)
+  end
+
+  @doc """
   Gets all ingestions for a library with Flop support for pagination, filtering, and sorting.
   """
-  def list_ingestions(%Library{id: library_id}, params) do
+  def list_ingestions_for_library(%Library{id: library_id}, params) do
+    from(i in Ingestion, where: i.library_id == ^library_id)
+    |> list_ingestions(params)
+  end
+
+  @doc """
+  Gets the latest ingestions.
+  """
+  def latest_ingestions(params) do
+    from(i in Ingestion, order_by: [desc: :updated_at], preload: :library)
+    |> list_ingestions(params)
+  end
+
+  @doc """
+  Gets ingestions that are not ready yet.
+  """
+  def list_not_ready_ingestions() do
     from(i in Ingestion,
-      where: i.library_id == ^library_id
+      where: i.state != :ready,
+      preload: :library
     )
-    |> Flop.validate_and_run(params, replace_invalid_params: true, for: Ingestion)
+    |> Repo.all()
   end
 
   @doc """
@@ -166,7 +192,7 @@ defmodule Exmeralda.Topics do
   @doc """
   Lists chunks for an ingestion.
   """
-  def list_ingestion_chunks(%Ingestion{id: id}, params) do
+  def list_chunks_for_ingestion(%Ingestion{id: id}, params) do
     from(c in Chunk, where: c.ingestion_id == ^id)
     |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
   end

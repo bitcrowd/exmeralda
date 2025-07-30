@@ -101,13 +101,12 @@ defmodule Exmeralda.TopicsTest do
   end
 
   describe "list_ingestions/2" do
-    setup [:insert_ingested_library, :insert_chunkless_library]
+    setup [:insert_ingested_library]
 
-    test "returns ingestions for a library with Flop support", %{
-      ingested: library,
+    test "returns all ingestions with Flop support", %{
       ingested_library_ingestion: library_ingestion
     } do
-      {:ok, {ingestions, meta}} = Topics.list_ingestions(library, %{})
+      {:ok, {ingestions, meta}} = Topics.list_ingestions(%{})
 
       assert [ingestion] = ingestions
       assert ingestion.id == library_ingestion.id
@@ -121,7 +120,47 @@ defmodule Exmeralda.TopicsTest do
       _queued_ingestion = insert(:ingestion, library: library, state: :queued)
 
       {:ok, {ingestions, meta}} =
-        Topics.list_ingestions(library, %{
+        Topics.list_ingestions(%{"filters" => [%{"field" => "state", "value" => "ready"}]})
+
+      assert length(ingestions) == 1
+      assert hd(ingestions).id == ready_ingestion.id
+      assert meta.total_count == 1
+    end
+
+    test "supports pagination", %{ingested: library} do
+      insert_list(3, :ingestion, library: library)
+
+      {:ok, {ingestions, meta}} =
+        Topics.list_ingestions(%{"page_size" => "2"})
+
+      assert length(ingestions) == 2
+      assert meta.total_count == 4
+      assert meta.total_pages == 2
+    end
+  end
+
+  describe "list_ingestions_for_library/2" do
+    setup [:insert_ingested_library, :insert_chunkless_library]
+
+    test "returns ingestions for a library with Flop support", %{
+      ingested: library,
+      ingested_library_ingestion: library_ingestion
+    } do
+      {:ok, {ingestions, meta}} = Topics.list_ingestions_for_library(library, %{})
+
+      assert [ingestion] = ingestions
+      assert ingestion.id == library_ingestion.id
+      assert meta.total_count == 1
+    end
+
+    test "filters ingestions by state", %{
+      ingested: library,
+      ingested_library_ingestion: ready_ingestion
+    } do
+      _queued_ingestion = insert(:ingestion, library: library, state: :queued)
+
+      {:ok, {ingestions, meta}} =
+        Topics.list_ingestions_for_library(library, %{
           "filters" => [%{"field" => "state", "value" => "ready"}]
         })
 
@@ -135,7 +174,8 @@ defmodule Exmeralda.TopicsTest do
     } do
       insert_list(3, :ingestion, library: library)
 
-      {:ok, {ingestions, meta}} = Topics.list_ingestions(library, %{"page_size" => "2"})
+      {:ok, {ingestions, meta}} =
+        Topics.list_ingestions_for_library(library, %{"page_size" => "2"})
 
       assert length(ingestions) == 2
       assert meta.total_count == 3
@@ -167,13 +207,13 @@ defmodule Exmeralda.TopicsTest do
     end
   end
 
-  describe "list_ingestion_chunks/2" do
+  describe "list_chunks_for_ingestion/2" do
     setup :insert_ingested_library
 
     test "returns chunks for an ingestion with Flop support", %{
       ingested_library_ingestion: ingestion
     } do
-      {:ok, {chunks, meta}} = Topics.list_ingestion_chunks(ingestion, %{})
+      {:ok, {chunks, meta}} = Topics.list_chunks_for_ingestion(ingestion, %{})
 
       assert length(chunks) == 3
       assert meta.total_count == 3
@@ -181,7 +221,7 @@ defmodule Exmeralda.TopicsTest do
 
     test "filters chunks by type", %{ingested_library_ingestion: ingestion} do
       {:ok, {chunks, meta}} =
-        Topics.list_ingestion_chunks(ingestion, %{
+        Topics.list_chunks_for_ingestion(ingestion, %{
           "filters" => [%{"field" => "type", "value" => "code"}]
         })
 
@@ -190,7 +230,7 @@ defmodule Exmeralda.TopicsTest do
     end
 
     test "supports pagination", %{ingested_library_ingestion: ingestion} do
-      {:ok, {chunks, meta}} = Topics.list_ingestion_chunks(ingestion, %{"page_size" => "2"})
+      {:ok, {chunks, meta}} = Topics.list_chunks_for_ingestion(ingestion, %{"page_size" => "2"})
 
       assert length(chunks) == 2
       assert meta.total_count == 3

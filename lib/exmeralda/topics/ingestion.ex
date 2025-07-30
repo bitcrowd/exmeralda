@@ -8,7 +8,11 @@ defmodule Exmeralda.Topics.Ingestion do
            filterable: [:state],
            sortable: [:state, :inserted_at, :updated_at],
            default_limit: 20,
-           max_limit: 100}
+           max_limit: 100,
+           default_order: %{
+             order_by: [:updated_at],
+             order_directions: [:desc]
+           }}
 
   schema "ingestions" do
     field :state, Ecto.Enum,
