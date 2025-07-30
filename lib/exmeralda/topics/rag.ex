@@ -30,6 +30,39 @@ defmodule Exmeralda.Topics.Rag do
                        chunk_size: @chunk_size
                      })
 
+  def get_code_and_docs_and_dependencies(name, version) do
+    with {:ok, exdocs} <- Hex.docs(name, version),
+         {:ok, repo} <- Hex.tarball(name, version) do
+      docs =
+        for {path, content} <- exdocs,
+            file = to_string(path),
+            Path.extname(file) in @doc_types and file not in @excluded_docs do
+          %{source: file, content: content}
+        end
+
+      code =
+        for {file, content} <- repo["contents.tar.gz"],
+            String.valid?(content),
+            LineCheck.valid?(content),
+            Path.extname(file) not in @excluded_code_types do
+          %{source: file, content: content}
+        end
+
+      dependencies =
+        for entry <- repo["metadata.config"]["requirements"] do
+          r =
+            case entry do
+              {name, meta} -> Map.new(meta) |> Map.put("name", name)
+              value -> Map.new(value)
+            end
+
+          %{name: r["name"], version_requirement: r["requirement"], optional: r["optional"]}
+        end
+
+      {:ok, %{docs: docs, code: code, dependencies: dependencies}}
+    end
+  end
+
   def ingest_from_hex(name, version) do
     with {:ok, exdocs} <- Hex.docs(name, version),
          {:ok, repo} <- Hex.tarball(name, version) do
@@ -75,7 +108,7 @@ defmodule Exmeralda.Topics.Rag do
     )
   end
 
-  defp chunk_text(file, content) do
+  def chunk_text(file, content) do
     file
     |> Path.extname()
     |> case do

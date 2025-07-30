@@ -2,27 +2,73 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
   use Oban.Worker, queue: :ingest, max_attempts: 20, unique: [period: {360, :minutes}]
 
   alias Exmeralda.Repo
-  alias Exmeralda.Topics.{Chunk, Ingestion, Library, Rag, GenerateEmbeddingsWorker}
-  alias Ecto.Multi
-  import Ecto.Query
+  alias Exmeralda.Topics
+  alias Exmeralda.Topics.{Chunk, Ingestion, Rag, GenerateEmbeddingsWorker}
 
   @insert_batch_size 1000
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"library_id" => library_id}}) do
-    chunks = from c in Chunk, where: c.library_id == ^library_id
+  def perform(%Oban.Job{args: %{"ingestion_id" => ingestion_id}}) do
+    ingestion = Repo.get!(Ingestion, ingestion_id, preload: :library)
 
-    Multi.new()
-    |> Multi.delete_all(:remove_chunks, chunks)
-    |> Multi.run(:library, fn repo, _ -> {:ok, repo.get!(Library, library_id)} end)
-    |> ingest()
+    proceed_ingestion(ingestion)
   end
 
-  @impl Oban.Worker
-  def perform(%Oban.Job{args: args}) do
-    Multi.new()
-    |> Multi.insert(:library, Library.changeset(%Library{}, args))
-    |> ingest()
+  def proceed_ingestion(ingestion) when ingestion.state in [:embedding, :ready, :failed] do
+  end
+
+  def proceed_ingestion(ingestion) do
+    do_proceed_ingestion(ingestion)
+    |> proceed_ingestion()
+  end
+
+  def do_proceed_ingestion(%{ingestion: %{state: :queued} = ingestion}) do
+    %{ingestion: ingestion |> Topics.update_ingestion_state!(:preprocessing)}
+  end
+
+  def do_proceed_ingestion(%{ingestion: %{state: :preprocessing} = ingestion}) do
+    library = ingestion.library
+
+    with {:ok, code_docs_deps} <-
+           Rag.get_code_and_docs_and_dependencies(library.name, library.version),
+         {:ok, _library} <-
+           Topics.update_library(library, %{dependencies: code_docs_deps.dependencies}) do
+      ingestion =
+        Topics.update_ingestion_state!(ingestion, :chunking)
+
+      code_and_docs = Map.drop(code_docs_deps, :dependencies)
+
+      %{ingestion: ingestion, args: code_and_docs}
+    else
+      _error -> {:discard, error}
+    end
+  end
+
+  def do_proceed_ingestion(%{ingestion: %{state: :embedding} = ingestion}) do
+    GenerateEmbeddingsWorker.new(%{library_id: ingestion.library_id, ingestion_id: ingestion.id})
+  end
+
+  def do_proceed_ingestion(%{state: :chunking} = ingestion, %{docs: docs, code: code}) do
+    docs_chunks =
+      for {file, content} <- docs, chunk <- Rag.chunk_text(file, content) do
+        %{source: file, type: :docs, content: chunk}
+      end
+
+    code_chunks =
+      for {file, content} <- code, chunk <- Rag.chunk_text(file, content) do
+        %{source: file, type: :code, content: Enum.join(["# #{file}\n\n", chunk])}
+      end
+
+    (docs_chunks ++ code_chunks)
+    |> Enum.map(&to_chunk(&1, ingestion))
+    |> Enum.chunk_every(@insert_batch_size)
+    |> Enum.each(&Repo.insert_all(Chunk, &1))
+
+    Topics.update_ingestion_state!(ingestion, :embedding)
+  end
+
+  defp to_chunk(chunk, ingestion) do
+    Map.merge(chunk, %{ingestion_id: ingestion.id, library_id: ingestion.library_id})
   end
 
   def ingest(multi) do
@@ -59,7 +105,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
     |> Repo.transaction(timeout: 1000 * 60 * 60)
     |> case do
       {:ok, _} -> :ok
-      {:error, :library, error, _} -> {:discard, error}
+      {:error, :library, error, _} -> 
       {:error, :ingestion, {:repo_not_found, _} = error, _} -> {:discard, error}
       {:error, step, error, changes} -> {:error, {step, error, changes}}
     end
