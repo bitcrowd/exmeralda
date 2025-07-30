@@ -192,7 +192,9 @@ defmodule Exmeralda.Topics do
   Gets ingestions for `scope` with Flop support for pagination, filtering, and sorting.
   """
   def list_ingestions(scope \\ Ingestion, params) do
-    Flop.validate_and_run(scope, params, replace_invalid_params: true, for: Ingestion)
+    scope
+    |> preload(:library)
+    |> Flop.validate_and_run(params, replace_invalid_params: true, for: Ingestion)
   end
 
   @doc """
