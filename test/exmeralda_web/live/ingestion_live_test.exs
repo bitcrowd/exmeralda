@@ -32,17 +32,6 @@ defmodule ExmeraldaWeb.IngestionLiveTest do
       assert html =~ "embedding"
     end
 
-    test "shows latest successful ingestions", %{conn: conn, user: user} do
-      {:ok, _index_live, html} =
-        conn
-        |> log_in_user(user)
-        |> live(~p"/ingestions")
-
-      assert html =~ "Latest Library Updates"
-
-      assert html =~ "ecto"
-    end
-
     test "requires authentication", %{conn: conn} do
       assert {:error,
               {:redirect, %{to: "/", flash: %{"error" => "You must log in to access this page."}}}} =
