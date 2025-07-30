@@ -37,7 +37,7 @@ defmodule ExmeraldaWeb.LibraryLive.Index do
 
   def handle_event("save", %{"library" => params}, socket) do
     socket =
-      case Topics.create_library(params) do
+      case Topics.create_library_and_ingestion(params) do
         {:ok, _} ->
           socket
           |> put_flash(
@@ -49,6 +49,7 @@ defmodule ExmeraldaWeb.LibraryLive.Index do
           |> push_navigate(to: ~p"/ingestions")
 
         {:error, changeset} ->
+          dbg(changeset)
           assign(socket, :form, changeset |> to_form())
       end
 

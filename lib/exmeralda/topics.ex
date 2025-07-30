@@ -1,6 +1,6 @@
 defmodule Exmeralda.Topics do
   alias Exmeralda.Repo
-  alias Exmeralda.Topics.{IngestLibraryWorker, Library, Chunk, Ingestion}
+  alias Exmeralda.Topics.{Ingestion, IngestLibraryWorker, Library, Chunk, Ingestion}
   import Ecto.Query
 
   def list_libraries(params) do
@@ -83,12 +83,20 @@ defmodule Exmeralda.Topics do
   @doc """
   Schedules library ingestion
   """
-  def create_library(params) do
+  def create_library_and_ingestion(params) do
     changeset = new_library_changeset(params)
 
-    with {:ok, library} <- Ecto.Changeset.apply_action(changeset, :create) do
-      library |> Map.take([:name, :version]) |> IngestLibraryWorker.new() |> Oban.insert()
-    end
+    Repo.transact(fn ->
+      with {:ok, library} <- Repo.insert(changeset),
+           {:ok, ingestion} <- queue_ingestion_for_library(library) do
+        IngestLibraryWorker.new(%{ingestion_id: ingestion.id}) |> Oban.insert()
+      end
+    end)
+  end
+
+  defp queue_ingestion_for_library(library) do
+    Repo.insert(Ingestion.changeset(%{library_id: library.id, state: :queued}))
+    # |> PubSub.broadcast(new ingestion)
   end
 
   @doc """
@@ -96,6 +104,15 @@ defmodule Exmeralda.Topics do
   """
   def reingest_library(library) do
     IngestLibraryWorker.new(%{library_id: library.id}) |> Oban.insert()
+  end
+
+  @doc """
+  Updates a library.
+  """
+  def update_library(library, params) do
+    library
+    |> Library.changeset(params)
+    |> Repo.update()
   end
 
   @doc """
@@ -130,6 +147,8 @@ defmodule Exmeralda.Topics do
   def update_ingestion_state!(ingestion, state) do
     Ingestion.set_state(ingestion, state)
     |> Repo.update!()
+
+    # |> pubsub
   end
 
   @doc """
