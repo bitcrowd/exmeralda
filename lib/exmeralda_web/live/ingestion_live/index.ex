@@ -5,15 +5,16 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
 
   @latest_successful_ingestions_limit 10
   @impl true
-  def handle_params(_params, _url, socket) do
+  def handle_params(params, _url, socket) do
     {:ok, {latest_successful_ingestions, _meta}} =
       Topics.latest_successful_ingestions(%{limit: @latest_successful_ingestions_limit})
 
-    ingestions = Topics.list_not_ready_ingestions()
+    {:ok, {ingestions, meta}} = Topics.list_ingestions(params)
 
     socket =
       socket
       |> assign(:page_title, "Current Ingestions")
+      |> assign(:meta, meta)
       |> stream(:latest_successful_ingestions, latest_successful_ingestions,
         limit: @latest_successful_ingestions_limit,
         reset: true
@@ -21,6 +22,12 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
       |> stream(:ingestions, ingestions, reset: true)
 
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("update-filter", params, socket) do
+    params = Map.delete(params, "_target")
+    {:noreply, push_patch(socket, to: ~p"/ingestions?#{params}")}
   end
 
   @impl true
@@ -34,28 +41,50 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
       <div class="p-4 gap-8 grid grid-cols-1 lg:grid-cols-[1fr_auto]">
         <article>
           <h2 class="text-2xl font-bold p-4">
-            {gettext("Currently Ingesting")}
+            {gettext("Ingestions")}
           </h2>
-          <div class="overflow-x-auto">
-            <table class="table">
-              <thead>
-                <th>{gettext("Library")}</th>
-                <th>{gettext("Version")}</th>
-                <th>{gettext("State")}</th>
-              </thead>
-              <tbody id="ingestions" phx-update="stream">
-                <tr :for={{dom_id, ingestion} <- @streams.ingestions} id={dom_id}>
-                  <td>{ingestion.library.name}</td>
-                  <td>{ingestion.library.version}</td>
-                  <td>
-                    <.ingestion_state_badge state={ingestion.state}>
-                      {ingestion.state}
-                    </.ingestion_state_badge>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <.filter_form
+            class="grid grid-cols-4 gap-4 p-4"
+            fields={[
+              state: [
+                label: gettext("State"),
+                type: "select",
+                options: [
+                  {"All states", ""},
+                  {"Queued", "queued"},
+                  {"Preprocessing", "preprocessing"},
+                  {"Chunking", "chunking"},
+                  {"Embedding", "embedding"},
+                  {"Failed", "failed"},
+                  {"Ready", "ready"}
+                ]
+              ]
+            ]}
+            meta={@meta}
+            id="ingestion-filter-form"
+          />
+          <Flop.Phoenix.table
+            items={@streams.ingestions}
+            meta={@meta}
+            path={~p"/ingestions"}
+            opts={[table_attrs: [class: "table"]]}
+          >
+            <:col :let={{_id, ingestion}} label="Name" field={:name}>{ingestion.library.name}</:col>
+            <:col :let={{_id, ingestion}} label="Version" field={:version}>
+              {ingestion.library.version}
+            </:col>
+            <:col :let={{_id, ingestion}} label="State" field={:state}>
+              <.ingestion_state_badge state={ingestion.state}>
+                {ingestion.state}
+              </.ingestion_state_badge>
+            </:col>
+            <:col :let={{_id, ingestion}} label="Created At" field={:inserted_at}>
+              {Calendar.strftime(ingestion.inserted_at, "%Y-%m-%d %H:%M")}
+            </:col>
+            <:col :let={{_id, ingestion}} label="Updated At" field={:updated_at}>
+              {Calendar.strftime(ingestion.updated_at, "%Y-%m-%d %H:%M")}
+            </:col>
+          </Flop.Phoenix.table>
         </article>
         <aside class="order-first lg:order-last">
           <h2 class="text-2xl font-bold p-4">
