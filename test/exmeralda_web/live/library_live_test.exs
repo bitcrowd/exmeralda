@@ -2,7 +2,7 @@ defmodule ExmeraldaWeb.LibraryLiveTest do
   use ExmeraldaWeb.ConnCase
 
   import Phoenix.LiveViewTest
-  alias Exmeralda.{Topics.IngestLibraryWorker}
+  alias Exmeralda.{Topics.IngestLibraryWorker, Topics}
 
   defp insert_user(_) do
     %{user: insert(:user)}
@@ -51,7 +51,9 @@ defmodule ExmeraldaWeb.LibraryLiveTest do
 
       assert html =~ "Current Ingestions"
 
-      assert_enqueued(worker: IngestLibraryWorker, args: %{name: "ecto", version: "3.13.0"})
+      assert ingestion = Topics.get_ingestion_by_library_name_and_version!("ecto", "3.13.0")
+
+      assert_enqueued(worker: IngestLibraryWorker, args: %{ingestion_id: ingestion.id})
     end
 
     test "requires authentication", %{conn: conn} do

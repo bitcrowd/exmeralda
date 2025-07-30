@@ -15,7 +15,13 @@ defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
         |> Plug.Conn.send_resp(200, body)
       end)
 
-      assert :ok = perform_job(IngestLibraryWorker, %{name: "rag", version: "0.1.0"})
+      ingestion =
+        insert(:ingestion,
+          state: :queued,
+          library: insert(:library, name: "rag", version: "0.1.0")
+        )
+
+      assert :ok = perform_job(IngestLibraryWorker, %{ingestion_id: ingestion.id})
 
       assert rag = Repo.get_by(Library, name: "rag", version: "0.1.0") |> Repo.preload(:chunks)
 
@@ -53,8 +59,14 @@ defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
         Plug.Conn.send_resp(conn, 404, "")
       end)
 
-      assert {:discard, {:repo_not_found, "/docs/rag-0.1.0.tar.gz"}} =
-               perform_job(IngestLibraryWorker, %{name: "rag", version: "0.1.0"})
+      ingestion =
+        insert(:ingestion,
+          state: :queued,
+          library: insert(:library, name: "rag", version: "0.1.0")
+        )
+
+      assert {:cancel, {:repo_not_found, "/docs/rag-0.1.0.tar.gz"}} =
+               perform_job(IngestLibraryWorker, %{ingestion_id: ingestion.id})
     end
   end
 end
