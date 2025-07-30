@@ -158,18 +158,6 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Gets the latest successful ingestions.
-  """
-  def latest_successful_ingestions(params) do
-    from(i in Ingestion,
-      where: i.state == :ready,
-      order_by: [desc: :updated_at],
-      preload: :library
-    )
-    |> list_ingestions(params)
-  end
-
-  @doc """
   Gets ingestions that are not ready yet.
   """
   def list_not_ready_ingestions() do
