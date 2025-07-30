@@ -230,6 +230,19 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
+  Gets a single ingestion by library name and version.
+  """
+  def get_ingestion_by_library_name_and_version!(name, version) do
+    Repo.one!(
+      from i in Ingestion,
+        join: l in Library,
+        on: i.library_id == l.id,
+        where: l.name == ^name and l.version == ^version,
+        preload: :library
+    )
+  end
+
+  @doc """
   Gets stats for chunks belonging to an ingestion.
   """
   def get_ingestion_stats(%Ingestion{id: id}) do
