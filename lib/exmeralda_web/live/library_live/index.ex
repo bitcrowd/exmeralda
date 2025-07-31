@@ -49,7 +49,6 @@ defmodule ExmeraldaWeb.LibraryLive.Index do
           |> push_navigate(to: ~p"/ingestions")
 
         {:error, changeset} ->
-          dbg(changeset)
           assign(socket, :form, changeset |> to_form())
       end
 
