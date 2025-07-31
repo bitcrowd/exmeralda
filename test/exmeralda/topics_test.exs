@@ -2,7 +2,7 @@ defmodule Exmeralda.TopicsTest do
   use Exmeralda.DataCase
 
   alias Exmeralda.Topics
-  alias Exmeralda.Topics.Ingestion
+  alias Exmeralda.Topics.{Ingestion, Library}
 
   def insert_ingested_library(_) do
     library = insert(:library, name: "ecto")
@@ -62,14 +62,23 @@ defmodule Exmeralda.TopicsTest do
   end
 
   describe "update_ingestion_state!/2" do
-    test "updates state of ingestion" do
-      ingestion = insert(:ingestion, state: :queued)
+    setup [:insert_in_progress_library]
 
-      Topics.update_ingestion_state!(ingestion, :embedding)
+    test "updates state of ingestion and broadcasts state updated", %{
+      in_progress_ingestion: ingestion
+    } do
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "ingestions")
+
+      assert ingestion.state == :embedding
+
+      Topics.update_ingestion_state!(ingestion, :ready)
 
       ingestion = Repo.reload(ingestion)
 
-      assert ingestion.state == :embedding
+      assert ingestion.state == :ready
+
+      ingestion_id = ingestion.id
+      assert_receive {:ingestion_state_updated, %{id: ^ingestion_id}}
     end
   end
 
@@ -235,6 +244,27 @@ defmodule Exmeralda.TopicsTest do
       assert length(chunks) == 2
       assert meta.total_count == 3
       assert meta.total_pages == 2
+    end
+  end
+
+  describe "create_library_and_ingestion/1" do
+    test "creates a library and an ingestion, starts worker and broadcasts ingestion created" do
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "ingestions")
+
+      library = %{"name" => "ecto", "version" => "1.0.0"}
+      {:ok, ingestion} = Topics.create_library_and_ingestion(library)
+
+      assert ingestion.state == :queued
+
+      assert_enqueued(
+        worker: Exmeralda.Topics.IngestLibraryWorker,
+        args: %{ingestion_id: ingestion.id}
+      )
+
+      assert %{name: "ecto", version: "1.0.0"} = Repo.get(Library, ingestion.library_id)
+
+      ingestion_id = ingestion.id
+      assert_receive {:ingestion_created, %{id: ^ingestion_id}}
     end
   end
 end

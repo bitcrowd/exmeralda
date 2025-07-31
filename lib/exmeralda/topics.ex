@@ -87,23 +87,32 @@ defmodule Exmeralda.Topics do
     changeset = new_library_changeset(params)
 
     Repo.transact(fn ->
-      with {:ok, library} <- Repo.insert(changeset),
-           {:ok, ingestion} <- queue_ingestion_for_library(library) do
-        IngestLibraryWorker.new(%{ingestion_id: ingestion.id}) |> Oban.insert()
+      with {:ok, library} <- Repo.insert(changeset) do
+        queue_ingestion_for_library(library)
       end
     end)
   end
 
   defp queue_ingestion_for_library(library) do
-    Repo.insert(Ingestion.changeset(%{library_id: library.id, state: :queued}))
-    # |> PubSub.broadcast(new ingestion)
+    with {:ok, ingestion} <-
+           Repo.insert(Ingestion.changeset(%{library_id: library.id, state: :queued})),
+         {:ok, _oban_job} <-
+           IngestLibraryWorker.new(%{ingestion_id: ingestion.id}) |> Oban.insert() do
+      Phoenix.PubSub.broadcast(
+        Exmeralda.PubSub,
+        "ingestions",
+        {:ingestion_created, %{id: ingestion.id}}
+      )
+
+      {:ok, ingestion}
+    end
   end
 
   @doc """
-  Schedules library ingestion for an existing library.
+  Schedules library ingestion for an existing ingestion.
   """
-  def reingest_library(library) do
-    IngestLibraryWorker.new(%{library_id: library.id}) |> Oban.insert()
+  def reingest_library(ingestion) do
+    IngestLibraryWorker.new(%{ingestion_id: ingestion.id}) |> Oban.insert()
   end
 
   @doc """
@@ -145,10 +154,15 @@ defmodule Exmeralda.Topics do
   Updates the state of an ingestion.
   """
   def update_ingestion_state!(ingestion, state) do
-    Ingestion.set_state(ingestion, state)
-    |> Repo.update!()
+    ingestion = Ingestion.set_state(ingestion, state) |> Repo.update!()
 
-    # |> pubsub
+    Phoenix.PubSub.broadcast(
+      Exmeralda.PubSub,
+      "ingestions",
+      {:ingestion_state_updated, %{id: ingestion.id}}
+    )
+
+    ingestion
   end
 
   @doc """
@@ -227,6 +241,13 @@ defmodule Exmeralda.Topics do
   """
   def get_ingestion!(id) do
     Repo.get!(Ingestion, id)
+  end
+
+  @doc """
+  Gets a single ingestion with library.
+  """
+  def get_ingestion_with_library!(id) do
+    Repo.get!(Ingestion, id) |> Repo.preload(:library)
   end
 
   @doc """

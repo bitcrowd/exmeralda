@@ -5,6 +5,10 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "ingestions")
+    end
+
     {:ok,
      stream_configure(socket, :ingestions,
        dom_id: fn {ingestion, _job} -> "ingestions-#{ingestion.id}" end
@@ -28,6 +32,19 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
   def handle_event("update-filter", params, socket) do
     params = Map.delete(params, "_target")
     {:noreply, push_patch(socket, to: ~p"/ingestions?#{params}")}
+  end
+
+  def handle_info({:ingestion_state_updated, %{id: id}}, socket) do
+    ingestion = Topics.get_ingestion_with_library!(id)
+    socket = stream_insert(socket, :ingestions, ingestion, update_only: true)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:ingestion_created, %{id: id}}, socket) do
+    ingestion = Topics.get_ingestion_with_library!(id)
+    socket = stream_insert(socket, :ingestions, ingestion, at: 0)
+    {:noreply, socket}
   end
 
   @impl true
