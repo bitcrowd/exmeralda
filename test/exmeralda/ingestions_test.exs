@@ -5,7 +5,7 @@ defmodule Exmeralda.IngestionsTest do
 
   describe "set_preprocessing/1" do
     test "sets the ingestion state to preprocessing" do
-      ingestion =
+      {:ok, ingestion} =
         insert(:ingestion, state: :queued)
         |> Ingestions.set_preprocessing()
 
@@ -29,7 +29,7 @@ defmodule Exmeralda.IngestionsTest do
           library: insert(:library, name: "rag", version: "0.1.0")
         )
 
-      %{ingestion: ingestion, args: _args} = Ingestions.set_chunking(ingestion)
+      {:ok, %{ingestion: ingestion, args: _args}} = Ingestions.set_chunking(ingestion)
 
       assert %{state: :chunking} = ingestion
     end
@@ -37,7 +37,7 @@ defmodule Exmeralda.IngestionsTest do
 
   describe "set_embedding/2" do
     test "sets the ingestion state to embedding" do
-      ingestion =
+      {:ok, ingestion} =
         insert(:ingestion, state: :chunking)
         |> Ingestions.set_embedding(%{docs: [], code: []})
 
@@ -54,7 +54,7 @@ defmodule Exmeralda.IngestionsTest do
         }
       ]
 
-      ingestion =
+      {:ok, ingestion} =
         insert(:ingestion, state: :chunking)
         |> Ingestions.set_embedding(%{docs: docs, code: code})
 

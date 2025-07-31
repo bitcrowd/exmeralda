@@ -5,6 +5,15 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
 
   @latest_successful_ingestions_limit 10
   @impl true
+  def mount(_params, _session, socket) do
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "ingestions")
+    end
+
+    {:ok, socket}
+  end
+
+  @impl true
   def handle_params(_params, _url, socket) do
     {:ok, {latest_successful_ingestions, _meta}} =
       Topics.latest_successful_ingestions(%{limit: @latest_successful_ingestions_limit})
@@ -20,6 +29,20 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
       )
       |> stream(:ingestions, ingestions, reset: true)
 
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:ingestion_state_updated, %{id: id}}, socket) do
+    ingestion = Topics.get_ingestion_with_library!(id)
+    socket = stream_insert(socket, :ingestions, ingestion, update_only: true)
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info({:ingestion_created, %{id: id}}, socket) do
+    ingestion = Topics.get_ingestion_with_library!(id)
+    socket = stream_insert(socket, :ingestions, ingestion, at: 0)
     {:noreply, socket}
   end
 
