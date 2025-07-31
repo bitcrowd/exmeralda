@@ -2,6 +2,7 @@ defmodule ExmeraldaWeb.LibraryLive.Index do
   use ExmeraldaWeb, :live_view
 
   alias Exmeralda.Topics
+  alias Exmeralda.IngestionProcess
 
   @impl true
   def mount(_params, _session, socket) do
@@ -39,6 +40,8 @@ defmodule ExmeraldaWeb.LibraryLive.Index do
     socket =
       case Topics.create_library(params) do
         {:ok, _} ->
+          IngestionProcess.notify_user(socket.assigns.current_user)
+
           socket
           |> put_flash(
             :info,
