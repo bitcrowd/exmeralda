@@ -6,15 +6,13 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
   @impl true
   def handle_params(params, _url, socket) do
     library = Topics.get_library!(params["id"])
-    stats = Topics.get_library_stats(library)
-    {:ok, {chunks, meta}} = Topics.list_chunks(library, params)
+    {:ok, {ingestions, meta}} = Topics.list_ingestions(library, params)
 
     socket =
       socket
       |> assign(:page_title, "#{library.name} #{library.version}")
       |> assign(:library, library)
-      |> assign(:stats, stats)
-      |> assign(:chunks, chunks)
+      |> assign(:ingestions, ingestions)
       |> assign(:meta, meta)
 
     {:noreply, socket}
@@ -48,54 +46,9 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
       <.link class="btn m-3" navigate={~p"/admin"} title="Back">
         <.icon name="hero-arrow-left" />
       </.link>
-      <div class="stats shadow">
-        <div class="stat">
-          <div class="stat-figure text-primary">
-            <.icon name="hero-bolt" />
-          </div>
-          <div class="stat-title">Total Chunks</div>
-          <div class="stat-value text-primary">{total = @stats[:chunks_total]}</div>
-        </div>
 
-        <div class="stat">
-          <div class="stat-figure text-secondary">
-            <.icon name="hero-book-open" />
-          </div>
-          <div class="stat-title">Embedded chunks</div>
-          <div class="stat-value text-secondary">
-            {embedding = @stats[:chunks_embedding]}
-            <div class="stat-desc">
-              <.percent value={embedding} total={total} />
-            </div>
-          </div>
-        </div>
+      <h2 class="text-2xl font-bold p-4">Ingestions for {@library.name} {@library.version}</h2>
 
-        <div class="stat">
-          <div class="stat-figure text-secondary">
-            <.icon name="hero-book-open" />
-          </div>
-          <div class="stat-title">Chunks from docs</div>
-          <div class="stat-value text-secondary">
-            {docs = Keyword.get(@stats[:chunks_type], :docs, 0)}
-            <div class="stat-desc">
-              <.percent value={docs} total={total} />
-            </div>
-          </div>
-        </div>
-
-        <div class="stat">
-          <div class="stat-figure text-secondary">
-            <.icon name="hero-code-bracket" />
-          </div>
-          <div class="stat-title">Chunks from code</div>
-          <div class="stat-value">
-            {code = Keyword.get(@stats[:chunks_type], :code, 0)}
-          </div>
-          <div class="stat-desc">
-            <.percent value={code} total={total} />
-          </div>
-        </div>
-      </div>
       <ul class="flex p-5 gap-3">
         <li>
           <.link
@@ -116,46 +69,66 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
           </.link>
         </li>
       </ul>
+
       <.filter_form
         class="grid grid-cols-4 gap-4 p-4"
         fields={[
-          type: [label: gettext("Type"), type: "select", options: ["code", "docs"]],
-          source: [
-            label: gettext("Source"),
-            op: :ilike_and
+          state: [
+            label: gettext("State"),
+            type: "select",
+            options: [
+              {"All states", ""},
+              {"Queued", "queued"},
+              {"Preprocessing", "preprocessing"},
+              {"Chunking", "chunking"},
+              {"Embedding", "embedding"},
+              {"Failed", "failed"},
+              {"Ready", "ready"}
+            ]
           ]
         ]}
         meta={@meta}
-        id="chunk-filter-form"
+        id="ingestion-filter-form"
       />
+
       <Flop.Phoenix.table
-        items={@chunks}
+        items={@ingestions}
         meta={@meta}
         path={~p"/admin/library/#{@library.id}"}
         opts={[table_attrs: [class: "table"]]}
       >
-        <:col :let={chunk} label="Type" field={:type}>{chunk.type}</:col>
-        <:col :let={chunk} label="Source" field={:source}>{chunk.source}</:col>
-        <:col :let={chunk} label="Content" field={:content}>
-          <details>
-            <summary>Show</summary>
-            {chunk.content}
-          </details>
+        <:col :let={ingestion} label="ID" field={:id}>{ingestion.id}</:col>
+        <:col :let={ingestion} label="State" field={:state}>
+          <span class={[
+            "badge",
+            case ingestion.state do
+              :ready -> "badge-success"
+              :failed -> "badge-error"
+              :queued -> "badge-info"
+              _ -> "badge-warning"
+            end
+          ]}>
+            {ingestion.state}
+          </span>
+        </:col>
+        <:col :let={ingestion} label="Created At" field={:inserted_at}>
+          {Calendar.strftime(ingestion.inserted_at, "%Y-%m-%d %H:%M")}
+        </:col>
+        <:col :let={ingestion} label="Updated At" field={:updated_at}>
+          {Calendar.strftime(ingestion.updated_at, "%Y-%m-%d %H:%M")}
+        </:col>
+        <:col :let={ingestion} label="Actions">
+          <.link
+            class="btn btn-primary btn-sm"
+            navigate={~p"/admin/library/#{@library.id}/ingestion/#{ingestion.id}"}
+          >
+            Show
+          </.link>
         </:col>
       </Flop.Phoenix.table>
 
       <.pagination meta={@meta} path={~p"/admin/library/#{@library.id}"} />
     </.navbar_layout>
     """
-  end
-
-  def percent(%{total: 0} = assigns) do
-    ~H"0%"
-  end
-
-  def percent(%{total: total, value: value} = assigns) do
-    assigns = assign(assigns, percent: div(value * 100, total))
-
-    ~H"{@percent}%"
   end
 end
