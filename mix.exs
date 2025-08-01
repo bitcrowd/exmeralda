@@ -52,6 +52,7 @@ defmodule Exmeralda.MixProject do
        compile: false,
        depth: 1},
       {:swoosh, "~> 1.5"},
+      {:gen_smtp, "~> 1.3"},
       {:bitcrowd_ecto, "~> 1.0"},
       {:finch, "~> 0.13"},
       {:telemetry_metrics, "~> 1.0"},
