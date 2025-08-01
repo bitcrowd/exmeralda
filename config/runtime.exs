@@ -58,6 +58,30 @@ if config_env() == :prod do
     secret_key_base: secret_key_base
 end
 
+if config_env() == :prod do
+  relay = System.get_env("EMAIL_RELAY") || raise "environment variable EMAIL_RELAY is missing"
+
+  username =
+    System.get_env("EMAIL_USERNAME") || raise "environment variable EMAIL_USERNAME is missing"
+
+  password =
+    System.get_env("EMAIL_PASSWORD") || raise "environment variable EMAIL_PASSWORD is missing"
+
+  config :exmeralda, Exmeralda.Mailer,
+    adapter: Swoosh.Adapters.SMTP,
+    relay: relay,
+    username: username,
+    password: password,
+    auth: :always,
+    tls: :always,
+    tls_options: [
+      versions: [:"tlsv1.3"],
+      cacerts: :public_key.cacerts_get(),
+      server_name_indication: String.to_charlist(relay),
+      depth: 10
+    ]
+end
+
 cond do
   config_env() == :prod || System.get_env("LAMBDA_API_KEY") ->
     config :exmeralda,
