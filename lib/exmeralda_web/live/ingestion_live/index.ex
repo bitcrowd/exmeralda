@@ -29,7 +29,7 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
       <.link class="btn m-3" navigate={~p"/chat/start"} title="Back">
         <.icon name="hero-arrow-left" />
       </.link>
-      <article>
+      <article class="max-w-4xl mx-auto p-4">
         <h2 class="text-2xl font-bold p-4">
           {gettext("Ingestions")}
         </h2>
@@ -63,18 +63,13 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
           <:col :let={{_id, ingestion}} label="Version" field={:version}>
             {ingestion.library.version}
           </:col>
-          <:col :let={{_id, ingestion}} label="State" field={:state}>
+          <:col :let={{_id, ingestion}} label="State" field={nil}>
             <.ingestion_state_badge state={ingestion.state}>
               {ingestion.state}
             </.ingestion_state_badge>
           </:col>
-          <:col :let={{_id, ingestion}} label="Created At" field={:inserted_at}>
-            {Calendar.strftime(ingestion.inserted_at, "%Y-%m-%d %H:%M")}
-          </:col>
-          <:col :let={{_id, ingestion}} label="Updated At" field={:updated_at}>
-            {Calendar.strftime(ingestion.updated_at, "%Y-%m-%d %H:%M")}
-          </:col>
         </Flop.Phoenix.table>
+        <.pagination meta={@meta} path={~p"/ingestions"} />
       </article>
     </.navbar_layout>
     """
