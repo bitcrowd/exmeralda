@@ -4,14 +4,22 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
   alias Exmeralda.Topics
 
   @impl true
+  def mount(_params, _session, socket) do
+    {:ok,
+     stream_configure(socket, :ingestions,
+       dom_id: fn {ingestion, _job} -> "ingestions-#{ingestion.id}" end
+     )}
+  end
+
+  @impl true
   def handle_params(params, _url, socket) do
-    {:ok, {ingestions, meta}} = Topics.list_ingestions(params)
+    {:ok, {ingestions_with_job, meta}} = Topics.list_ingestions_with_latest_job(params)
 
     socket =
       socket
       |> assign(:page_title, "Current Ingestions")
       |> assign(:meta, meta)
-      |> stream(:ingestions, ingestions, reset: true)
+      |> stream(:ingestions, ingestions_with_job, reset: true)
 
     {:noreply, socket}
   end
@@ -44,29 +52,43 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
           />
         </div>
 
-        <Flop.Phoenix.table
-          items={@streams.ingestions}
-          meta={@meta}
-          path={~p"/ingestions"}
-          opts={[table_attrs: [class: "table md:table-fixed"]]}
-        >
-          <:col :let={{_id, ingestion}} label="Name" field={:name}>{ingestion.library.name}</:col>
-          <:col :let={{_id, ingestion}} label="Version" field={:version}>
-            {ingestion.library.version}
-          </:col>
-          <:col
-            :let={{_id, ingestion}}
-            label="State"
-            field={nil}
-            thead_th_attrs={[class: "text-center"]}
-            tbody_td_attrs={[class: "text-center"]}
+        <div class="overflow-x-auto">
+          <Flop.Phoenix.table
+            items={@streams.ingestions}
+            meta={@meta}
+            path={~p"/ingestions"}
+            opts={[table_attrs: [class: "table md:table-fixed"]]}
           >
-            <.ingestion_state_badge state={ingestion.state}>
-              {ingestion.state}
-            </.ingestion_state_badge>
-          </:col>
-        </Flop.Phoenix.table>
-        <.pagination meta={@meta} path={~p"/ingestions"} />
+            <:col :let={{_id, {ingestion, _job}}} label="Name" field={:name}>
+              {ingestion.library.name}
+            </:col>
+            <:col :let={{_id, {ingestion, _job}}} label="Version" field={:version}>
+              {ingestion.library.version}
+            </:col>
+            <:col
+              :let={{_id, {ingestion, _job}}}
+              label="State"
+              field={nil}
+              thead_th_attrs={[class: "text-center"]}
+              tbody_td_attrs={[class: "text-center"]}
+            >
+              <.ingestion_state_badge state={ingestion.state}>
+                {ingestion.state}
+              </.ingestion_state_badge>
+            </:col>
+            <:col :let={{_id, {_ingestion, job}}}>
+              <span :if={job && job.state == :executing} class="loading loading-spinner" />
+              <div
+                :if={job && job.state in [:discarded, :cancelled]}
+                class="flex flex-row items-center gap-2 text-error "
+              >
+                <.icon name="hero-exclamation-circle" />
+                {gettext("We're investigating")}
+              </div>
+            </:col>
+          </Flop.Phoenix.table>
+          <.pagination meta={@meta} path={~p"/ingestions"} />
+        </div>
       </article>
     </.navbar_layout>
     """
