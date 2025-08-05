@@ -30,40 +30,37 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
         <.icon name="hero-arrow-left" />
       </.link>
       <article class="max-w-4xl mx-auto p-4">
-        <h2 class="text-2xl font-bold p-4">
-          {gettext("Ingestions")}
-        </h2>
-        <.filter_form
-          class="grid grid-cols-4 gap-4 p-4"
-          fields={[
-            state: [
-              label: gettext("State"),
-              type: "select",
-              options: [
-                {"All states", ""},
-                {"Queued", "queued"},
-                {"Preprocessing", "preprocessing"},
-                {"Chunking", "chunking"},
-                {"Embedding", "embedding"},
-                {"Failed", "failed"},
-                {"Ready", "ready"}
-              ]
-            ]
-          ]}
-          meta={@meta}
-          id="ingestion-filter-form"
-        />
+        <div class="grid grid-cols-1 sm:grid-cols-2 p-4 justify-between">
+          <h2 class="text-2xl font-bold">
+            {gettext("Ingestions")}
+          </h2>
+          <.ingestion_state_filter_toggle
+            class="justify-self-end"
+            state={:ready}
+            label={gettext("Only ready")}
+            checked={checked?(@meta)}
+            meta={@meta}
+            id="ingestion-filter-form"
+          />
+        </div>
+
         <Flop.Phoenix.table
           items={@streams.ingestions}
           meta={@meta}
           path={~p"/ingestions"}
-          opts={[table_attrs: [class: "table"]]}
+          opts={[table_attrs: [class: "table md:table-fixed"]]}
         >
           <:col :let={{_id, ingestion}} label="Name" field={:name}>{ingestion.library.name}</:col>
           <:col :let={{_id, ingestion}} label="Version" field={:version}>
             {ingestion.library.version}
           </:col>
-          <:col :let={{_id, ingestion}} label="State" field={nil}>
+          <:col
+            :let={{_id, ingestion}}
+            label="State"
+            field={nil}
+            thead_th_attrs={[class: "text-center"]}
+            tbody_td_attrs={[class: "text-center"]}
+          >
             <.ingestion_state_badge state={ingestion.state}>
               {ingestion.state}
             </.ingestion_state_badge>
@@ -74,4 +71,6 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
     </.navbar_layout>
     """
   end
+
+  defp checked?(meta), do: !!Flop.Filter.get(meta.flop.filters, :state)
 end
