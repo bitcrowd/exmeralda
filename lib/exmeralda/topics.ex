@@ -189,6 +189,31 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
+  Gets ingestions together with the latest associated Oban job for `scope` with Flop support for pagination, filtering, and sorting.
+  """
+  def list_ingestions_with_latest_job(scope \\ Ingestion, params) do
+    with {:ok, flop} <- Flop.validate(params, replace_invalid_params: true, for: Ingestion) do
+      job_query =
+        from(Oban.Job,
+          where: fragment("args->>'ingestion_id' = ?::text", parent_as(:ingestion).id),
+          order_by: [desc: :attempted_at],
+          limit: 1
+        )
+
+      {:ok,
+       scope
+       |> Flop.query(flop)
+       |> from(as: :ingestion)
+       |> preload(:library)
+       |> join(:left_lateral, [i], j in subquery(job_query),
+         on: fragment("args->>'ingestion_id' = ?::text", i.id)
+       )
+       |> select([i, j], {i, j})
+       |> Flop.run(flop, for: Ingestion)}
+    end
+  end
+
+  @doc """
   Gets ingestions for `scope` with Flop support for pagination, filtering, and sorting.
   """
   def list_ingestions(scope \\ Ingestion, params) do
