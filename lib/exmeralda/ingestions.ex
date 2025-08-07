@@ -5,45 +5,28 @@ defmodule Exmeralda.Ingestions do
 
   @insert_batch_size 1000
 
-  def set_preprocessing(%{state: :queued} = ingestion) do
-    ingestion = Topics.update_ingestion_state!(ingestion, :preprocessing)
-    {:ok, ingestion}
-  end
-
-  def set_chunking(%{state: :preprocessing} = ingestion) do
+  def preprocess(%{state: :preprocessing} = ingestion) do
     library = ingestion.library
 
-    with {:ok, code_docs_deps} <-
-           Rag.get_code_and_docs_and_dependencies(library.name, library.version),
-         {:ok, _library} <-
-           Topics.update_library(library, %{dependencies: code_docs_deps.dependencies}) do
-      ingestion =
-        Topics.update_ingestion_state!(ingestion, :chunking)
-
-      code_and_docs = Map.drop(code_docs_deps, [:dependencies])
-
-      {:ok, %{ingestion: ingestion, args: code_and_docs}}
+    with {:ok, {documents, dependencies}} <-
+           Rag.get_documents_and_dependencies(library.name, library.version),
+         {:ok, _library} <- Topics.update_library(library, %{dependencies: dependencies}) do
+      {:ok, documents}
     end
   end
 
-  def set_embedding(%{state: :chunking} = ingestion, %{docs: docs, code: code}) do
-    docs_chunks =
-      for %{source: file, content: content} <- docs, chunk <- Rag.chunk_text(file, content) do
-        %{source: file, type: :docs, content: chunk}
+  def chunk_and_insert_documents(%{state: :chunking} = ingestion, documents) do
+    chunks =
+      for document <- documents,
+          content_chunk <- Rag.chunk_text(document.source, document.content) do
+        to_chunk(content_chunk, document, ingestion)
       end
 
-    code_chunks =
-      for %{source: file, content: content} <- code, chunk <- Rag.chunk_text(file, content) do
-        %{source: file, type: :code, content: Enum.join(["# #{file}\n\n", chunk])}
-      end
-
-    (docs_chunks ++ code_chunks)
-    |> Enum.map(&to_chunk(&1, ingestion))
+    chunks
     |> Enum.chunk_every(@insert_batch_size)
     |> Enum.each(&Repo.insert_all(Chunk, &1))
 
-    ingestion = Topics.update_ingestion_state!(ingestion, :embedding)
-    {:ok, ingestion}
+    :ok
   end
 
   def schedule_embeddings_worker(%{state: :embedding} = ingestion) do
@@ -51,7 +34,25 @@ defmodule Exmeralda.Ingestions do
     |> Oban.insert()
   end
 
-  defp to_chunk(chunk, ingestion) do
-    Map.merge(chunk, %{ingestion_id: ingestion.id, library_id: ingestion.library_id})
+  defp to_chunk(content_chunk, document, ingestion) do
+    content_chunk = maybe_insert_header(content_chunk, document)
+
+    %{
+      source: document.source,
+      type: document.type,
+      content: content_chunk,
+      ingestion_id: ingestion.id,
+      library_id: ingestion.library_id
+    }
   end
+
+  defp maybe_insert_header(content, %{type: :code} = document) do
+    """
+    # #{document.source}
+
+    #{content}
+    """
+  end
+
+  defp maybe_insert_header(content, _document), do: content
 end

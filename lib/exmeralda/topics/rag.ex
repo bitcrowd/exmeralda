@@ -30,14 +30,14 @@ defmodule Exmeralda.Topics.Rag do
                        chunk_size: @chunk_size
                      })
 
-  def get_code_and_docs_and_dependencies(name, version) do
+  def get_documents_and_dependencies(name, version) do
     with {:ok, exdocs} <- Hex.docs(name, version),
          {:ok, repo} <- Hex.tarball(name, version) do
       docs =
         for {path, content} <- exdocs,
             file = to_string(path),
             Path.extname(file) in @doc_types and file not in @excluded_docs do
-          %{source: file, content: content}
+          %{source: file, content: content, type: :docs}
         end
 
       code =
@@ -45,7 +45,7 @@ defmodule Exmeralda.Topics.Rag do
             String.valid?(content),
             LineCheck.valid?(content),
             Path.extname(file) not in @excluded_code_types do
-          %{source: file, content: content}
+          %{source: file, content: content, type: :code}
         end
 
       dependencies =
@@ -59,7 +59,7 @@ defmodule Exmeralda.Topics.Rag do
           %{name: r["name"], version_requirement: r["requirement"], optional: r["optional"]}
         end
 
-      {:ok, %{docs: docs, code: code, dependencies: dependencies}}
+      {:ok, {docs ++ code, dependencies}}
     end
   end
 

@@ -4,7 +4,8 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
   import Ecto.Query
   alias Exmeralda.Repo
   alias Exmeralda.Ingestions
-  alias Exmeralda.Topics.{Ingestion}
+  alias Exmeralda.Topics
+  alias Exmeralda.Topics.Ingestion
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"ingestion_id" => ingestion_id}}) do
@@ -23,22 +24,31 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
   end
 
   def do_proceed_ingestion(%{state: :queued} = ingestion) do
-    Ingestions.set_preprocessing(ingestion)
+    ingestion = Topics.update_ingestion_state!(ingestion, :preprocessing)
+    {:ok, ingestion}
   end
 
   def do_proceed_ingestion(%{state: :preprocessing} = ingestion) do
-    Ingestions.set_chunking(ingestion)
+    # as we don't store documents we must handle these two steps in a transaction
+    Repo.transact(fn ->
+      with {:ok, documents} <- Ingestions.preprocess(ingestion),
+           ingestion = Topics.update_ingestion_state!(ingestion, :chunking),
+           :ok <- Ingestions.chunk_and_insert_documents(ingestion, documents) do
+        ingestion = Topics.update_ingestion_state!(ingestion, :embedding)
+        {:ok, ingestion}
+      end
+    end)
   end
 
-  def do_proceed_ingestion(%{
-        ingestion: %{state: :chunking} = ingestion,
-        args: %{docs: docs, code: code}
-      }) do
-    Ingestions.set_embedding(ingestion, %{docs: docs, code: code})
+  def do_proceed_ingestion(%{state: :chunking} = ingestion) do
+    # we can't proceed from state chunking as we don't have the documents stored
+    # go back to preprocessing
+    ingestion = Topics.update_ingestion_state!(ingestion, :preprocessing)
+    {:ok, ingestion}
   end
 
   def do_proceed_ingestion(%{state: :embedding} = ingestion) do
-    Ingestions.schedule_embeddings_worker(ingestion)
+    {:ok, _job} = Ingestions.schedule_embeddings_worker(ingestion)
     :done
   end
 end

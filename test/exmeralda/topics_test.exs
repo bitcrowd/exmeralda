@@ -252,7 +252,7 @@ defmodule Exmeralda.TopicsTest do
       Phoenix.PubSub.subscribe(Exmeralda.PubSub, "ingestions")
 
       library = %{"name" => "ecto", "version" => "1.0.0"}
-      {:ok, ingestion} = Topics.create_library_and_ingestion(library)
+      {:ok, %{ingestion: ingestion}} = Topics.create_library_and_ingestion(library)
 
       assert ingestion.state == :queued
 

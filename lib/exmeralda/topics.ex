@@ -87,25 +87,32 @@ defmodule Exmeralda.Topics do
     changeset = new_library_changeset(params)
 
     Repo.transact(fn ->
-      with {:ok, library} <- Repo.insert(changeset) do
-        queue_ingestion_for_library(library)
+      with {:ok, library} <- create_library(changeset),
+           {:ok, ingestion} <- create_ingestion_for_library(library),
+           {:ok, _oban_job} <- schedule_ingestion_worker(ingestion) do
+        broadcast("ingestions", {:ingestion_created, %{id: ingestion.id}})
+
+        {:ok, %{library: library, ingestion: ingestion}}
       end
     end)
   end
 
-  defp queue_ingestion_for_library(library) do
-    with {:ok, ingestion} <-
-           Repo.insert(Ingestion.changeset(%{library_id: library.id, state: :queued})),
-         {:ok, _oban_job} <-
-           IngestLibraryWorker.new(%{ingestion_id: ingestion.id}) |> Oban.insert() do
-      Phoenix.PubSub.broadcast(
-        Exmeralda.PubSub,
-        "ingestions",
-        {:ingestion_created, %{id: ingestion.id}}
-      )
+  defp create_library(changeset) do
+    Repo.insert(changeset)
+  end
 
-      {:ok, ingestion}
-    end
+  defp create_ingestion_for_library(library) do
+    Ingestion.changeset(%{library_id: library.id, state: :queued})
+    |> Repo.insert()
+  end
+
+  defp schedule_ingestion_worker(ingestion) do
+    IngestLibraryWorker.new(%{ingestion_id: ingestion.id})
+    |> Oban.insert()
+  end
+
+  defp broadcast(topic, event) do
+    Phoenix.PubSub.broadcast(Exmeralda.PubSub, topic, event)
   end
 
   @doc """
