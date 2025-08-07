@@ -27,17 +27,17 @@ defmodule Exmeralda.Emails do
     """
   end
 
-  def ingestion_in_progress_email(%{name: name, email: email}) do
+  def ingestion_in_progress_email(%{name: name, email: email}, library_name) do
     from = {"Exmeralda", "exmeralda@bitcrowd.net"}
     to = {name, email}
-    subject = "We are ingesting your library"
+    subject = "We are ingesting the package #{library_name} for you"
 
-    assigns = %{}
+    assigns = %{library_name: library_name}
 
     body =
       ~H"""
       <.email_layout>
-        <h1>We are ingesting your library</h1>
+        <h1>We are ingesting the package {@library_name} for you</h1>
 
         <p>
           The ingestion process typically takes some time. Watch your <a href="https://exmeralda.chat/ingestions">ingestion in realtime</a>.

@@ -10,13 +10,13 @@ defmodule Exmeralda.IngestionProcessTest do
     %{user: user}
   end
 
-  describe "notify_user/1" do
+  describe "notify_user/2" do
     test "inserts DeliverNotificationWorker for user", %{user: user} do
-      assert {:ok, _job} = IngestionProcess.notify_user(user)
+      assert {:ok, _job} = IngestionProcess.notify_user(user, "hop")
 
       assert_enqueued(
         worker: DeliverIngestionInProgressEmailWorker,
-        args: %{name: user.name, email: user.email}
+        args: %{name: user.name, email: user.email, library_name: "hop"}
       )
     end
   end
