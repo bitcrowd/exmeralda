@@ -3,8 +3,10 @@ defmodule Exmeralda.IngestionProcess.DeliverIngestionInProgressEmailWorker do
   alias Exmeralda.{Emails, Mailer}
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"name" => name, "email" => email}}) do
-    Emails.ingestion_in_progress_email(%{name: name, email: email})
+  def perform(%Oban.Job{
+        args: %{"name" => name, "email" => email, "library_name" => library_name}
+      }) do
+    Emails.ingestion_in_progress_email(%{name: name, email: email}, library_name)
     |> Mailer.deliver()
   end
 end
