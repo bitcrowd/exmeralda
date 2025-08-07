@@ -1,7 +1,7 @@
-defmodule Exmeralda.IngestionProcess.DeliverIngestionInProgressEmailWorkerTest do
+defmodule Exmeralda.Ingestions.DeliverIngestionInProgressEmailWorkerTest do
   use Exmeralda.DataCase
 
-  alias Exmeralda.IngestionProcess.DeliverIngestionInProgressEmailWorker
+  alias Exmeralda.Ingestions.DeliverIngestionInProgressEmailWorker
 
   setup do
     user = insert(:user)

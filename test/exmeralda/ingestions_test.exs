@@ -1,8 +1,8 @@
-defmodule Exmeralda.IngestionProcessTest do
+defmodule Exmeralda.IngestionsTest do
   use Exmeralda.DataCase
 
-  alias Exmeralda.IngestionProcess
-  alias Exmeralda.IngestionProcess.DeliverIngestionInProgressEmailWorker
+  alias Exmeralda.Ingestions
+  alias Exmeralda.Ingestions.DeliverIngestionInProgressEmailWorker
 
   setup do
     user = insert(:user)
@@ -12,7 +12,7 @@ defmodule Exmeralda.IngestionProcessTest do
 
   describe "notify_user/2" do
     test "inserts DeliverNotificationWorker for user", %{user: user} do
-      assert {:ok, _job} = IngestionProcess.notify_user(user, "hop")
+      assert {:ok, _job} = Ingestions.notify_user(user, "hop")
 
       assert_enqueued(
         worker: DeliverIngestionInProgressEmailWorker,

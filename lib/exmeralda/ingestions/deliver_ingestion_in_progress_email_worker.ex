@@ -1,4 +1,4 @@
-defmodule Exmeralda.IngestionProcess.DeliverIngestionInProgressEmailWorker do
+defmodule Exmeralda.Ingestions.DeliverIngestionInProgressEmailWorker do
   use Oban.Worker, queue: :emails, max_attempts: 5
   alias Exmeralda.{Emails, Mailer}
 
