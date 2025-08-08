@@ -111,7 +111,7 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Schedules library ingestion for an existing ingestion.
+  Schedules a new library ingestion for an existing library.
   """
   def reingest_library(%Library{} = library) do
     case create_ingestion_for_library(library) do
