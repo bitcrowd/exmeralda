@@ -200,6 +200,8 @@ defmodule Exmeralda.Topics do
           limit: 1
         )
 
+      flop = maybe_add_pagination(flop)
+
       {:ok,
        scope
        |> Flop.query(flop)
@@ -210,6 +212,14 @@ defmodule Exmeralda.Topics do
        )
        |> select([i, j], {i, j})
        |> Flop.run(flop, for: Ingestion)}
+    end
+  end
+
+  defp maybe_add_pagination(flop) do
+    if flop.first || flop.last || flop.page do
+      flop
+    else
+      %{flop | first: 10}
     end
   end
 
