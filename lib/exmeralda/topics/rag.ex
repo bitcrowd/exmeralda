@@ -63,44 +63,6 @@ defmodule Exmeralda.Topics.Rag do
     end
   end
 
-  def ingest_from_hex(name, version) do
-    with {:ok, exdocs} <- Hex.docs(name, version),
-         {:ok, repo} <- Hex.tarball(name, version) do
-      docs =
-        for {path, content} <- exdocs,
-            file = to_string(path),
-            Path.extname(file) in @doc_types and file not in @excluded_docs,
-            chunk <- chunk_text(file, content) do
-          %{source: file, type: :docs, content: chunk}
-        end
-
-      code =
-        for {file, content} <- repo["contents.tar.gz"],
-            String.valid?(content),
-            LineCheck.valid?(content),
-            Logger.debug("Chunking #{file} from #{name}-#{version}"),
-            Path.extname(file) not in @excluded_code_types,
-            chunk <- chunk_text(file, content) do
-          %{source: file, type: :code, content: Enum.join(["# #{file}\n\n", chunk])}
-        end
-
-      dependencies =
-        for entry <- repo["metadata.config"]["requirements"] do
-          r =
-            case entry do
-              {name, meta} -> Map.new(meta) |> Map.put("name", name)
-              value -> Map.new(value)
-            end
-
-          %{name: r["name"], version_requirement: r["requirement"], optional: r["optional"]}
-        end
-
-      chunks = docs ++ code
-
-      {:ok, {chunks, dependencies}}
-    end
-  end
-
   def generate_embeddings_for_chunks(chunks) do
     try do
       embeddings =

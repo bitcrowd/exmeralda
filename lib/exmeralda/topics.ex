@@ -75,13 +75,8 @@ defmodule Exmeralda.Topics do
     Repo.get!(Library, id)
   end
 
-  def list_chunks(%Library{id: id}, params) do
-    from(c in Chunk, where: c.library_id == ^id)
-    |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
-  end
-
   @doc """
-  Schedules library ingestion
+  Creates library and ingestion, schedules library ingestion
   """
   def create_library_and_ingestion(params) do
     changeset = new_library_changeset(params)
@@ -118,8 +113,15 @@ defmodule Exmeralda.Topics do
   @doc """
   Schedules library ingestion for an existing ingestion.
   """
-  def reingest_library(ingestion) do
-    IngestLibraryWorker.new(%{ingestion_id: ingestion.id}) |> Oban.insert()
+  def reingest_library(%Library{} = library) do
+    case create_ingestion_for_library(library) do
+      {:ok, ingestion} ->
+        IngestLibraryWorker.new(%{ingestion_id: ingestion.id})
+        |> Oban.insert()
+
+      {:error, error} ->
+        {:error, error}
+    end
   end
 
   @doc """
@@ -236,49 +238,10 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Gets the latest ingestions.
-  """
-  def latest_ingestions(params) do
-    from(i in Ingestion, order_by: [desc: :updated_at], preload: :library)
-    |> list_ingestions(params)
-  end
-
-  @doc """
-  Gets ingestions that are not ready yet.
-  """
-  def list_not_ready_ingestions() do
-    from(i in Ingestion,
-      where: i.state != :ready,
-      preload: :library
-    )
-    |> Repo.all()
-  end
-
-  @doc """
   Gets a single ingestion.
   """
   def get_ingestion!(id) do
     Repo.get!(Ingestion, id)
-  end
-
-  @doc """
-  Gets a single ingestion with library.
-  """
-  def get_ingestion_with_library!(id) do
-    Repo.get!(Ingestion, id) |> Repo.preload(:library)
-  end
-
-  @doc """
-  Gets a single ingestion by library name and version.
-  """
-  def get_ingestion_by_library_name_and_version!(name, version) do
-    Repo.one!(
-      from i in Ingestion,
-        join: l in Library,
-        on: i.library_id == l.id,
-        where: l.name == ^name and l.version == ^version,
-        preload: :library
-    )
   end
 
   @doc """
