@@ -16,10 +16,18 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
 
   def proceed_ingestion(ingestion) do
     case do_proceed_ingestion(ingestion) do
-      {:ok, ingestion} -> proceed_ingestion(ingestion)
-      {:error, {:repo_not_found, _} = error} -> {:cancel, error}
-      {:error, error} -> {:error, error}
-      :done -> :ok
+      {:ok, ingestion} ->
+        proceed_ingestion(ingestion)
+
+      {:error, {:repo_not_found, _} = error} ->
+        Topics.update_ingestion_state!(ingestion, :failed)
+        {:cancel, error}
+
+      {:error, error} ->
+        {:error, error}
+
+      :done ->
+        :ok
     end
   end
 

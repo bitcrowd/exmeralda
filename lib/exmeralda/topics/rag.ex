@@ -101,11 +101,19 @@ defmodule Exmeralda.Topics.Rag do
     end
   end
 
-  def generate_embeddings(chunks) do
-    Embedding.generate_embeddings_batch(chunks, embedding_provider(),
-      text_key: :content,
-      embedding_key: :embedding
-    )
+  def generate_embeddings_for_chunks(chunks) do
+    try do
+      embeddings =
+        Embedding.generate_embeddings_batch(chunks, embedding_provider(),
+          text_key: :content,
+          embedding_key: :embedding
+        )
+        |> Enum.map(& &1.embedding)
+
+      {:ok, embeddings}
+    rescue
+      error in MatchError -> error.term
+    end
   end
 
   def chunk_text(file, content) do
