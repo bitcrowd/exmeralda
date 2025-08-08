@@ -35,14 +35,14 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
   end
 
   def handle_info({:ingestion_state_updated, %{id: id}}, socket) do
-    ingestion = Topics.get_ingestion_with_library!(id)
+    ingestion = Topics.get_ingestion_with_latest_job!(id)
     socket = stream_insert(socket, :ingestions, ingestion, update_only: true)
     {:noreply, socket}
   end
 
   @impl true
   def handle_info({:ingestion_created, %{id: id}}, socket) do
-    ingestion = Topics.get_ingestion_with_library!(id)
+    ingestion = Topics.get_ingestion_with_latest_job!(id)
     socket = stream_insert(socket, :ingestions, ingestion, at: 0)
     {:noreply, socket}
   end

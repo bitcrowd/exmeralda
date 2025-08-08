@@ -173,6 +173,17 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
+  Gets a single ingestion with the latest associated Oban job for `scope`.
+  """
+  def get_ingestion_with_latest_job!(id) do
+    scope = from i in Ingestion, where: i.id == ^id
+
+    {:ok, {[{ingestion, job}], _meta}} = list_ingestions_with_latest_job(scope, %{limit: 1})
+
+    {ingestion, job}
+  end
+
+  @doc """
   Gets ingestions together with the latest associated Oban job for `scope` with Flop support for pagination, filtering, and sorting.
   """
   def list_ingestions_with_latest_job(scope \\ Ingestion, params) do
