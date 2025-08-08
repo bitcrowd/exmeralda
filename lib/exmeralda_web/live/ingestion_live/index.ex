@@ -77,9 +77,9 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
               </.ingestion_state_badge>
             </:col>
             <:col :let={{_id, {_ingestion, job}}}>
-              <span :if={job && job.state == :executing} class="loading loading-spinner" />
+              <span :if={job && job.state == "executing"} class="loading loading-spinner" />
               <div
-                :if={job && job.state in [:discarded, :cancelled]}
+                :if={job && job.state in ["discarded", "cancelled"]}
                 class="flex flex-row items-center gap-2 text-error "
               >
                 <.icon name="hero-exclamation-circle" />
