@@ -9,10 +9,10 @@ defmodule Exmeralda.Chats do
   alias Phoenix.PubSub
 
   alias Exmeralda.Topics.{Rag, Chunk, Ingestion}
-  alias Exmeralda.Chats.{LLM, Message, Session, Source}
+  alias Exmeralda.Chats.{LLM, Message, Reaction, Session, Source}
   alias Exmeralda.Accounts.User
 
-  @message_preload [:source_chunks]
+  @message_preload [:source_chunks, :reaction]
 
   @doc """
   Returns the list of chat_sessions of a user.
@@ -201,5 +201,41 @@ defmodule Exmeralda.Chats do
   """
   def new_message_changeset(attrs \\ %{}) do
     Message.changeset(%Message{role: :user}, attrs)
+  end
+
+  @doc """
+  Gets the reaction for message and user.
+  """
+  def get_reaction(message_id, user_id) do
+    Repo.get_by(Reaction, message_id: message_id, user_id: user_id)
+  end
+
+  @doc """
+  Creates a reaction for a message and user.
+  """
+  def create_reaction(message_id, user_id, type) do
+    Reaction.changeset(%{message_id: message_id, user_id: user_id, type: type})
+    |> Repo.insert()
+  end
+
+  @doc """
+  Toggles a reaction for a message and user:
+  - if there is no current reaction, a new reaction will be created.
+  - if the current reaction is of `type`, it will be deleted.
+  - if the current reaction is not of `type`, it will be deleted and a new reaction of `type` will be created.
+  """
+  def toggle_reaction(message_id, user_id, type) do
+    case get_reaction(message_id, user_id) do
+      nil ->
+        create_reaction(message_id, user_id, type)
+
+      %{type: ^type} = reaction ->
+        Repo.delete(reaction)
+
+      reaction ->
+        with {:ok, _reaction} <- Repo.delete(reaction) do
+          create_reaction(message_id, user_id, type)
+        end
+    end
   end
 end

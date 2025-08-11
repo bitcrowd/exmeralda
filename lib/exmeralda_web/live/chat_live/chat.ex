@@ -56,6 +56,32 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
   end
 
   @impl true
+  def handle_event("upvote", %{"value" => message_id}, socket) do
+    user_id = socket.assigns.session.user_id
+
+    case Chats.toggle_reaction(message_id, user_id, :upvote) do
+      {:ok, _reaction} ->
+        message = Chats.get_message!(message_id)
+        {:noreply, stream_insert(socket, :messages, message, update_only: true)}
+
+      {:error, _error} ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("downvote", %{"value" => message_id}, socket) do
+    user_id = socket.assigns.session.user_id
+
+    case Chats.toggle_reaction(message_id, user_id, :downvote) do
+      {:ok, _reaction} ->
+        message = Chats.get_message!(message_id)
+        {:noreply, stream_insert(socket, :messages, message, update_only: true)}
+
+      {:error, _error} ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("send", %{"message" => message_params}, socket) do
     socket.assigns.session
     |> Chats.continue_session(message_params)
@@ -136,8 +162,34 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
               </ul>
             </details>
           </div>
-          <div class="chat-footer opacity-50">
-            <span :if={message.incomplete} class="loading loading-dots loading-xs"></span>
+          <div class="chat-footer p-2 gap-4">
+            <div :if={message.role == :assistant}>
+              <.button
+                id="upvote"
+                class={[
+                  "btn btn-xs btn-soft btn-circle btn-success btn-outline",
+                  message.reaction && message.reaction.type == :upvote && "btn-active"
+                ]}
+                phx-click="upvote"
+                value={message.id}
+                phx-target={@myself}
+              >
+                <.icon name="hero-hand-thumb-up" />
+              </.button>
+              <.button
+                id="downvote"
+                class={[
+                  "btn btn-xs btn-soft btn-circle btn-error",
+                  message.reaction && message.reaction.type == :downvote && "btn-active"
+                ]}
+                phx-click="downvote"
+                value={message.id}
+                phx-target={@myself}
+              >
+                <.icon name="hero-hand-thumb-down" />
+              </.button>
+            </div>
+            <span :if={message.incomplete} class="opacity-50 loading loading-dots loading-xs"></span>
           </div>
         </div>
       </div>

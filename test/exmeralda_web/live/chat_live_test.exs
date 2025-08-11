@@ -2,7 +2,9 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   use ExmeraldaWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
-  alias Exmeralda.{Repo, Chats.Session}
+  import Ecto.Query
+  alias Exmeralda.Repo
+  alias Exmeralda.Chats.{Reaction, Session}
 
   defp insert_library(_) do
     library = insert(:library, name: "ecto")
@@ -92,6 +94,49 @@ defmodule ExmeraldaWeb.ChatLiveTest do
       assert {:error,
               {:redirect, %{to: "/", flash: %{"error" => "You must log in to access this page."}}}} =
                live(conn, ~p"/chat/start")
+    end
+  end
+
+  describe "chat session" do
+    setup [:insert_library, :insert_user, :insert_session]
+
+    test "users can up and downvote messages and undo their votes", %{
+      conn: conn,
+      user: user,
+      session: session
+    } do
+      {:ok, chat_live, html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/chat/#{session}")
+
+      assert html =~ "I am a message"
+
+      assert chat_live |> element("#upvote") |> render_click()
+      assert chat_live |> element("#downvote") |> render_click()
+
+      assert Repo.aggregate(
+               from(r in Reaction, where: r.user_id == ^user.id and r.type == :upvote),
+               :count
+             ) == 1
+
+      assert Repo.aggregate(
+               from(r in Reaction, where: r.user_id == ^user.id and r.type == :downvote),
+               :count
+             ) == 1
+
+      assert chat_live |> element("#upvote") |> render_click()
+      assert chat_live |> element("#downvote") |> render_click()
+
+      assert Repo.aggregate(
+               from(r in Reaction, where: r.user_id == ^user.id and r.type == :upvote),
+               :count
+             ) == 0
+
+      assert Repo.aggregate(
+               from(r in Reaction, where: r.user_id == ^user.id and r.type == :downvote),
+               :count
+             ) == 0
     end
   end
 end
