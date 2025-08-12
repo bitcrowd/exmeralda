@@ -2,38 +2,53 @@
 
 Check it out yourself at [exmeralda.chat](https://exmeralda.chat).
 
-## Prerequisits 
+## Prerequisites
 
 - Erlang & Elixir
 - Node JS
-- Postgres (with [pgvector](https://github.com/pgvector/pgvector))
+- Postgres 17 (with [pgvector](https://github.com/pgvector/pgvector))
 
-You can install all of it (except pgvector) with [asdf](https://github.com/asdf-vm/asdf). 
+You can install all of it (except pgvector) with [asdf](https://github.com/asdf-vm/asdf).
 
-To start your Phoenix server:
-
-  * Run `mix setup` to install and setup dependencies
-  * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+## Setup
 
 To test the chatbot locally you either need to start with a Groq API key (see 1password):
 
 `GROQ_API_KEY=abcd JINA_API_KEY=abcd iex -S mix phx.server`
 
- or install Ollama:
- 
+ or install [Ollama](https://github.com/ollama/ollama):
+
 ```sh
-brew install ollama 
+brew install ollama
+
+# In a separate terminal
+ollama start
+
+# Then back to the initial terminal
 ollama pull llama3.2:latest
 ollama pull unclemusclez/jina-embeddings-v2-base-code
 ```
 
-and then start as usual:
+and then:
+
+```
+mix deps.get
+mix setup
+```
+
+## Run
+
+Start as usual:
 
 ```sh
+# In a separate terminal
+ollama start
+
+# In another terminal
 mix phx.server
 ```
 
-or 
+or
 
 ```sh
 iex -S mix phx.server
