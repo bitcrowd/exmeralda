@@ -21,7 +21,7 @@ defmodule Exmeralda.Chats.Message do
   @doc false
   def changeset(message \\ %__MODULE__{}, attrs) do
     message
-    |> cast(attrs, [:role, :index, :content, :incomplete])
-    |> validate_required([:role, :index, :content, :incomplete])
+    |> cast(attrs, [:session_id, :role, :index, :content, :incomplete])
+    |> validate_required([:session_id, :role, :index, :content, :incomplete])
   end
 end

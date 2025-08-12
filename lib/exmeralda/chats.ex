@@ -8,8 +8,9 @@ defmodule Exmeralda.Chats do
   alias Ecto.Multi
   alias Phoenix.PubSub
 
-  alias Exmeralda.Topics.{Rag, Chunk}
+  alias Exmeralda.Topics.{Rag, Chunk, Ingestion}
   alias Exmeralda.Chats.{LLM, Message, Session, Source}
+  alias Exmeralda.Accounts.User
 
   @message_preload [:source_chunks]
 
@@ -33,6 +34,10 @@ defmodule Exmeralda.Chats do
     |> Repo.preload(messages: [@message_preload])
   end
 
+  defp session_scope(user_id) do
+    from s in Session, where: s.user_id == ^user_id, preload: :library
+  end
+
   @doc """
   Gets a single message.
   """
@@ -40,14 +45,17 @@ defmodule Exmeralda.Chats do
     Repo.get!(Message, id) |> Repo.preload(@message_preload)
   end
 
-  defp session_scope(user_id) do
-    from s in Session, where: s.user_id == ^user_id, preload: :library
-  end
-
   @doc """
   Starts a session.
   """
-  def start_session(user, attrs \\ %{}) do
+  @type start_session_attrs :: %{
+          ingestion_id: Ingestion.id(),
+          prompt: String.t()
+        }
+
+  @spec start_session(User.t(), start_session_attrs()) ::
+          {:ok, Session.t()} | {:error, Ecto.Changeset.t()}
+  def start_session(user, attrs) do
     Multi.new()
     |> Multi.insert(:session, Session.create_changeset(%Session{user_id: user.id}, attrs))
     |> Multi.insert(:message, fn %{session: session} ->
@@ -65,12 +73,22 @@ defmodule Exmeralda.Chats do
     end
   end
 
+  @doc """
+  Continues a session.
+  """
+  @type continue_session_attrs :: %{
+          index: integer(),
+          content: String.t()
+        }
+
+  @spec continue_session(Session.t(), continue_session_attrs()) ::
+          {:ok, Session.t()} | {:error, Ecto.Changeset.t()}
   def continue_session(session, params) do
     Multi.new()
     |> Multi.put(:session, session)
     |> Multi.put(:previous_messages, all_messages(session))
     |> Multi.insert(:message, fn %{session: session} ->
-      %Message{role: :user, session: session} |> Message.changeset(params)
+      %Message{role: :user, session_id: session.id} |> Message.changeset(params)
     end)
     |> assistant_message()
     |> Repo.transaction()
@@ -97,7 +115,7 @@ defmodule Exmeralda.Chats do
       %Message{
         role: :assistant,
         content: "",
-        session: session,
+        session_id: session.id,
         index: message.index + 1,
         incomplete: true
       }
@@ -111,6 +129,8 @@ defmodule Exmeralda.Chats do
          assistant_message: assistant_message,
          session: session
        }) do
+    session = Repo.preload(session, [:ingestion])
+
     handler = %{
       on_llm_new_delta: fn _model, %LangChain.MessageDelta{} = data ->
         send_session_update(session, {:message_delta, assistant_message.id, data.content})
@@ -128,7 +148,7 @@ defmodule Exmeralda.Chats do
     }
 
     Task.Supervisor.start_child(Exmeralda.TaskSupervisor, fn ->
-      {chunks, generation} = build_generation(message, session.library_id)
+      {chunks, generation} = build_generation(message, session.ingestion.library_id)
       insert_sources(session, chunks, assistant_message)
 
       LLM.stream_responses(
@@ -164,6 +184,7 @@ defmodule Exmeralda.Chats do
   @doc """
   Deletes a session.
   """
+  @spec delete_session(Session.t()) :: {:ok, Session.t()}
   def delete_session(%Session{} = session) do
     Repo.delete(session)
   end

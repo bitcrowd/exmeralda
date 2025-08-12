@@ -6,8 +6,6 @@ defmodule Exmeralda.Repo.Migrations.AddIngestionIdToChatSessions do
       add :ingestion_id, references(:ingestions, on_delete: :delete_all), null: true
     end
 
-    flush()
-
     execute("""
       UPDATE
         chat_sessions
@@ -16,22 +14,39 @@ defmodule Exmeralda.Repo.Migrations.AddIngestionIdToChatSessions do
       FROM
         ingestions
       WHERE
-        chat_sessions.ingestion_id IS NULL
-        AND chat_sessions.library_id = ingestions.library_id;
+        chat_sessions.library_id = ingestions.library_id;
     """)
 
-    flush()
+    alter table("chat_sessions") do
+      modify :ingestion_id, references(:ingestions, on_delete: :delete_all),
+        null: false,
+        from: references(:ingestions, on_delete: :delete_all)
 
-    execute("""
-      ALTER TABLE
-        chat_sessions ALTER COLUMN ingestion_id
-      SET
-        NOT NULL;
-    """)
+      remove :library_id
+    end
   end
 
   def down do
     alter table("chat_sessions") do
+      add :library_id, references(:libraries, on_delete: :delete_all), null: true
+    end
+
+    execute("""
+      UPDATE
+        chat_sessions
+      SET
+        library_id = ingestions.library_id
+      FROM
+        ingestions
+      WHERE
+        chat_sessions.ingestion_id = ingestions.id;
+    """)
+
+    alter table("chat_sessions") do
+      modify :library_id, references(:libraries, on_delete: :delete_all),
+        null: false,
+        from: references(:libraries, on_delete: :delete_all)
+
       remove :ingestion_id
     end
   end

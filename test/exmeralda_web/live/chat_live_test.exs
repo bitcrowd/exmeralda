@@ -1,5 +1,5 @@
 defmodule ExmeraldaWeb.ChatLiveTest do
-  use ExmeraldaWeb.ConnCase
+  use ExmeraldaWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   alias Exmeralda.{Repo, Chats.Session}
@@ -73,6 +73,9 @@ defmodule ExmeraldaWeb.ChatLiveTest do
 
       html = render(index_live)
       assert html =~ "You underestimate my power!"
+
+      wait_for_generation_task()
+
       assert Repo.aggregate(Session, :count) == 2
     end
 

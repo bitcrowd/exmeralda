@@ -1,7 +1,7 @@
 defmodule Exmeralda.Chats.Session do
   use Exmeralda.Schema
   alias Exmeralda.Accounts.User
-  alias Exmeralda.Topics.{Ingestion, Library}
+  alias Exmeralda.Topics.Ingestion
   alias Exmeralda.Chats.Message
 
   @title_max_length 255
@@ -10,9 +10,9 @@ defmodule Exmeralda.Chats.Session do
     field :title, :string
     field :prompt, :string, virtual: true
     belongs_to :user, User
-    belongs_to :library, Library
     belongs_to :ingestion, Ingestion
     has_many :messages, Message, preload_order: [asc: :index]
+    has_one :library, through: [:ingestion, :library]
 
     timestamps()
   end
@@ -21,8 +21,8 @@ defmodule Exmeralda.Chats.Session do
   def create_changeset(session, attrs) do
     changeset =
       session
-      |> cast(attrs, [:library_id, :ingestion_id, :prompt])
-      |> validate_required([:library_id, :ingestion_id, :prompt])
+      |> cast(attrs, [:ingestion_id, :prompt])
+      |> validate_required([:ingestion_id, :prompt])
 
     title =
       changeset

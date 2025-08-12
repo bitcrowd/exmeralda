@@ -26,6 +26,7 @@ defmodule Exmeralda.DataCase do
       import Exmeralda.DataCase
       import Exmeralda.Factory
       import BitcrowdEcto.Assertions
+      import BitcrowdEcto.Random, only: [uuid: 0]
 
       alias Exmeralda.Repo
     end
@@ -58,5 +59,16 @@ defmodule Exmeralda.DataCase do
         opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       end)
     end)
+  end
+
+  # https://elixirforum.com/t/dbconnection-error-owner-pid-exited-while-testing-async-function/54953/4
+  # https://dockyard.com/blog/2024/06/06/a-better-solution-for-waiting-for-async-tasks-in-tests
+  def wait_for_generation_task do
+    pids = Task.Supervisor.children(Exmeralda.TaskSupervisor)
+
+    for pid <- pids do
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, _, _, _}, 100_000
+    end
   end
 end

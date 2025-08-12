@@ -5,7 +5,7 @@ defmodule Exmeralda.Factory do
     %Exmeralda.Chats.Session{
       title: "A fancy session",
       user: build(:user),
-      library: build(:library)
+      ingestion: build(:ingestion)
     }
   end
 
@@ -77,6 +77,13 @@ defmodule Exmeralda.Factory do
       embedding: Enum.map(1..768, fn _ -> :rand.uniform() end),
       source: "file.ex",
       type: :code
+    }
+  end
+
+  def chat_source_factory do
+    %Exmeralda.Chats.Source{
+      chunk: build(:chunk),
+      message: build(:message)
     }
   end
 end
