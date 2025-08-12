@@ -129,11 +129,12 @@ defmodule Exmeralda.Topics do
   @doc """
   Returns the latest ingestion in state :ready for a library.
   """
+  @spec current_ingestion(Library.t()) :: Library.t() | nil
   def current_ingestion(%Library{id: library_id}) do
     Repo.one(
       from i in Ingestion,
         where: i.library_id == ^library_id and i.state == :ready,
-        order_by: [desc: :updated_at],
+        order_by: [desc: :inserted_at],
         limit: 1
     )
   end

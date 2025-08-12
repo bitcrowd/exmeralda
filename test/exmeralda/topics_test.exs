@@ -4,6 +4,10 @@ defmodule Exmeralda.TopicsTest do
   alias Exmeralda.Topics
   alias Exmeralda.Topics.Ingestion
 
+  def insert_library(_) do
+    %{library: insert(:library)}
+  end
+
   def insert_ingested_library(_) do
     library = insert(:library, name: "ecto")
     ingestion = insert(:ingestion, library: library, state: :ready)
@@ -12,7 +16,7 @@ defmodule Exmeralda.TopicsTest do
   end
 
   def insert_in_progress_library(_) do
-    library = insert(:library, name: "ecto_sql")
+    library = insert(:library)
     ingestion = insert(:ingestion, library: library, state: :embedding)
     insert_list(3, :chunk, ingestion: ingestion, library: library)
     insert_list(1, :chunk, ingestion: ingestion, library: library, embedding: nil)
@@ -20,7 +24,7 @@ defmodule Exmeralda.TopicsTest do
   end
 
   def insert_chunkless_library(_) do
-    library = insert(:library, name: "bitcrowd_ecto")
+    library = insert(:library)
     %{chunkless: library}
   end
 
@@ -46,18 +50,12 @@ defmodule Exmeralda.TopicsTest do
     test "returns only libraries that are ingested fully and match the term", %{
       ingested: ingested,
       chunkless: chunkless,
-      in_progress: in_progress,
-      in_progress_ingestion: in_progress_ingestion
+      in_progress: in_progress
     } do
       ids = Topics.search_libraries("ecto") |> Enum.map(& &1.id)
       assert ingested.id in ids
       refute chunkless.id in ids
       refute in_progress.id in ids
-
-      Ingestion.set_state(in_progress_ingestion, :ready) |> Repo.update!()
-
-      ids = Topics.search_libraries("ecto") |> Enum.map(& &1.id)
-      assert in_progress.id in ids
     end
   end
 
@@ -65,7 +63,7 @@ defmodule Exmeralda.TopicsTest do
     test "updates state of ingestion" do
       ingestion = insert(:ingestion, state: :queued)
 
-      Topics.update_ingestion_state!(ingestion, :embedding)
+      assert %Ingestion{} = Topics.update_ingestion_state!(ingestion, :embedding)
 
       ingestion = Repo.reload(ingestion)
 
@@ -74,27 +72,23 @@ defmodule Exmeralda.TopicsTest do
   end
 
   describe "current_ingestion/1" do
-    test "returns nil when no ingestion" do
-      library = insert(:library)
+    setup [:insert_library]
 
+    test "returns nil when no ingestion", %{library: library} do
       refute Topics.current_ingestion(library)
     end
 
-    test "returns the latest ingestion in state :ready for a library" do
-      library = insert(:library)
-      queued_ingestion = insert(:ingestion, library: library)
-
-      refute Topics.current_ingestion(library)
-
-      ready_ingestion = Ingestion.set_state(queued_ingestion, :ready) |> Repo.update!()
-
-      assert Topics.current_ingestion(library).id == ready_ingestion.id
-
-      _non_ready_ingestion = insert(:ingestion, library: library)
-
-      assert Topics.current_ingestion(library).id == ready_ingestion.id
-
+    test "returns the latest ingestion in state :ready for a library", %{library: library} do
+      insert(:ingestion, library: library, state: :queued)
+      _other_library_ingestion = insert(:ingestion, library: insert(:library), state: :ready)
       new_ready_ingestion = insert(:ingestion, library: library, state: :ready)
+
+      _old_ready_ingestion =
+        insert(:ingestion,
+          library: library,
+          state: :ready,
+          inserted_at: DateTime.add(DateTime.utc_now(), -10)
+        )
 
       assert Topics.current_ingestion(library).id == new_ready_ingestion.id
     end

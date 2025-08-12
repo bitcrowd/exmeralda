@@ -31,7 +31,7 @@ defmodule Exmeralda.Factory do
 
   def library_factory do
     %Exmeralda.Topics.Library{
-      name: "ecto",
+      name: sequence(:library_name, &"library-#{&1}"),
       version: "3.12.5",
       dependencies: [
         build(:library_dependency, name: "decimal", version_requirement: "~> 2.0"),
