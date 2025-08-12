@@ -2,6 +2,8 @@ defmodule Exmeralda.Rag.Ollama do
   @moduledoc false
   @behaviour Rag.Ai.Provider
 
+  require Logger
+
   @type t :: %__MODULE__{
           embeddings_url: String.t() | nil,
           embeddings_model: String.t() | nil
@@ -25,8 +27,9 @@ defmodule Exmeralda.Rag.Ollama do
       {:ok, %Req.Response{status: 200} = response} ->
         {:ok, get_embeddings(response)}
 
-      {:ok, %Req.Response{status: status}} ->
-        {:error, "HTTP request failed with status code #{status}"}
+      {:ok, %Req.Response{status: status, body: body}} ->
+        Logger.error("HTTP request failed with status code #{status}, body: #{inspect(body)}")
+        {:error, "HTTP request failed with status code #{status}, body: #{inspect(body)}"}
 
       {:error, reason} ->
         {:error, reason}
