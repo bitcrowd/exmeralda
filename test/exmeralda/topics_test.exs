@@ -2,7 +2,7 @@ defmodule Exmeralda.TopicsTest do
   use Exmeralda.DataCase
 
   alias Exmeralda.Topics
-  alias Exmeralda.Topics.Ingestion
+  alias Exmeralda.Topics.{Ingestion, Library}
 
   def insert_library(_) do
     %{library: insert(:library)}
@@ -189,6 +189,37 @@ defmodule Exmeralda.TopicsTest do
       assert length(chunks) == 2
       assert meta.total_count == 3
       assert meta.total_pages == 2
+    end
+  end
+
+  describe "create_library/1" do
+    test "creates a library and an ingestion, starts worker and broadcasts ingestion created" do
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "ingestions")
+
+      params = %{name: "ecto", version: "1.0.0"}
+
+      assert_count_differences(Repo, [{Library, 1}, {Ingestion, 1}], fn ->
+        assert {:ok, %{library: library, ingestion: ingestion}} = Topics.create_library(params)
+
+        assert %{name: "ecto", version: "1.0.0", dependencies: []} = library
+        assert ingestion.library_id == library.id
+        assert ingestion.state == :queued
+        assert ingestion.job_id
+      end)
+
+      [%{id: ingestion_id, job_id: job_id}] = Repo.all(Ingestion)
+
+      assert_enqueued(
+        id: job_id,
+        worker: Exmeralda.Topics.IngestLibraryWorker,
+        args: %{ingestion_id: ingestion_id}
+      )
+
+      assert_receive {:ingestion_created, %{id: ^ingestion_id}}
+    end
+
+    test "returns a changeset when the params are invalid" do
+      assert {:error, %Ecto.Changeset{}} = Topics.create_library(%{})
     end
   end
 end

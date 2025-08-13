@@ -22,6 +22,7 @@ defmodule Exmeralda.Topics.Ingestion do
 
     belongs_to :library, Library
     has_many :chunks, Chunk
+    belongs_to :job, Oban.Job, foreign_key: :job_id, type: :integer
 
     timestamps()
   end
@@ -36,5 +37,9 @@ defmodule Exmeralda.Topics.Ingestion do
   @doc false
   def set_state(ingestion, state) do
     change(ingestion, state: state)
+  end
+
+  def set_ingestion_job_id(ingestion, job_id) do
+    change(ingestion, job_id: job_id)
   end
 end

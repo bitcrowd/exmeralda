@@ -81,14 +81,47 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Schedules library ingestion
+  Creates a library and ingestion, schedules the ingestion.
   """
+  @spec create_library(map()) ::
+          {:ok, %{library: Library.t(), ingestion: Ingestion.t()}} | {:error, Ecto.Changeset.t()}
   def create_library(params) do
-    changeset = new_library_changeset(params)
+    Repo.transact(fn ->
+      with {:ok, library} <- do_create_library(params),
+           {:ok, ingestion} <- create_ingestion(library),
+           {:ok, oban_job} <- schedule_ingestion_worker(ingestion),
+           {:ok, updated_ingestion} <- set_ingestion_job_id(ingestion, oban_job) do
+        broadcast("ingestions", {:ingestion_created, %{id: ingestion.id}})
 
-    with {:ok, library} <- Ecto.Changeset.apply_action(changeset, :create) do
-      library |> Map.take([:name, :version]) |> IngestLibraryWorker.new() |> Oban.insert()
-    end
+        {:ok, %{library: library, ingestion: updated_ingestion}}
+      end
+    end)
+  end
+
+  defp do_create_library(params) do
+    params
+    |> new_library_changeset()
+    |> Repo.insert()
+  end
+
+  defp create_ingestion(library) do
+    Ingestion.changeset(%{library_id: library.id, state: :queued})
+    |> Repo.insert()
+  end
+
+  defp schedule_ingestion_worker(ingestion) do
+    IngestLibraryWorker.new(%{ingestion_id: ingestion.id})
+    |> Oban.insert()
+  end
+
+  defp set_ingestion_job_id(ingestion, oban_job) do
+    ingestion
+    |> Ingestion.set_ingestion_job_id(oban_job.id)
+    |> Repo.update()
+  end
+
+  defp broadcast(topic, event) do
+    Phoenix.PubSub.broadcast(Exmeralda.PubSub, topic, event)
   end
 
   @doc """
