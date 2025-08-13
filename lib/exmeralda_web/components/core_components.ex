@@ -603,4 +603,47 @@ defmodule ExmeraldaWeb.CoreComponents do
     />
     """
   end
+
+  attr :title, :string, required: true
+  slot :actions
+  slot :inner_block
+
+  def header(assigns) do
+    ~H"""
+    <div class="flex place-content-between">
+      <div class="flex">
+        <h2 class="text-2xl font-bold pb-4">
+          {@title}
+        </h2>
+        <div class="ml-2">
+          {render_slot(@inner_block)}
+        </div>
+      </div>
+      <ul :if={@actions != []} class="flex gap-3">
+        <li :for={action <- @actions}>
+          {render_slot(action)}
+        </li>
+      </ul>
+    </div>
+    """
+  end
+
+  slot :items do
+    attr :title, :string, required: true
+    attr :href, :string, required: true
+    attr :icon_name, :string
+  end
+
+  def breadcrumbs(assigns) do
+    ~H"""
+    <div class="breadcrumbs text-sm mb-4">
+      <ul>
+        <li :for={item <- @items}>
+          <.icon :if={item[:icon_name]} name={item.icon_name} class="mr-2" />
+          <a href={item.href}>{item.title}</a>
+        </li>
+      </ul>
+    </div>
+    """
+  end
 end

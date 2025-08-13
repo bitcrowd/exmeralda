@@ -4,6 +4,18 @@ defmodule Exmeralda.Topics.Ingestion do
   alias Exmeralda.Topics.Chunk
   alias Exmeralda.Topics.Library
 
+  @derive {
+    Flop.Schema,
+    filterable: [:state],
+    sortable: [:state, :inserted_at, :updated_at],
+    default_limit: 20,
+    max_limit: 100,
+    default_order: %{
+      order_by: [:inserted_at],
+      order_directions: [:desc]
+    }
+  }
+
   schema "ingestions" do
     field :state, Ecto.Enum,
       values: [:queued, :preprocessing, :chunking, :embedding, :failed, :ready]

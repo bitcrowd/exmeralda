@@ -85,6 +85,7 @@ defmodule ExmeraldaWeb.Router do
         on_mount: [{ExmeraldaWeb.UserAuth, :ensure_authenticated}] do
         live "/", LibraryLive.Index, :index
         live "/library/:id", LibraryLive.Show, :show
+        live "/library/:library_id/ingestions/:id", IngestionLive.Show, :show
       end
     end
   end

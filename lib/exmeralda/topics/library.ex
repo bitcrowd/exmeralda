@@ -3,11 +3,17 @@ defmodule Exmeralda.Topics.Library do
 
   alias Exmeralda.Topics.{Dependency, Chunk, Ingestion}
 
-  @derive {Flop.Schema,
-           filterable: [:name, :version],
-           sortable: [:name, :version],
-           default_limit: 20,
-           max_limit: 100}
+  @derive {
+    Flop.Schema,
+    filterable: [:name, :version],
+    sortable: [:name, :version, :inserted_at],
+    default_limit: 20,
+    max_limit: 100,
+    default_order: %{
+      order_by: [:inserted_at],
+      order_directions: [:desc]
+    }
+  }
 
   schema "libraries" do
     field :name, :string

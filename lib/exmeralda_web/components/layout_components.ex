@@ -43,7 +43,7 @@ defmodule ExmeraldaWeb.LayoutComponents do
       </:side>
       {render_slot(@inner_block)}
     </.drawer>
-    <div :if={!assigns[:drawer]}>
+    <div :if={!assigns[:drawer]} class="p-5">
       {render_slot(@inner_block)}
     </div>
     """
