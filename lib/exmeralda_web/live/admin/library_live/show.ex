@@ -1,12 +1,13 @@
 defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
   use ExmeraldaWeb, :live_view
   import ExmeraldaWeb.Admin.Helper
+  import ExmeraldaWeb.Shared.Helper
   alias Exmeralda.Topics
 
   @impl true
   def handle_params(params, _url, socket) do
     library = Topics.get_library!(params["id"])
-    {:ok, {ingestions, meta}} = Topics.list_ingestions(library, params)
+    {:ok, {ingestions, meta}} = Topics.list_ingestions_for_library(library, params)
 
     socket =
       socket
@@ -98,7 +99,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
       >
         <:col :let={ingestion} label="ID" field={:id}>{ingestion.id}</:col>
         <:col :let={ingestion} label="State" field={:state}>
-          <.ingestion_state state={ingestion.state} />
+          <.ingestion_state_badge state={ingestion.state} />
         </:col>
         <:col :let={ingestion} label="Created At" field={:inserted_at}>
           {datetime(ingestion.inserted_at)}

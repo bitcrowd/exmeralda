@@ -1,6 +1,7 @@
 defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
   use ExmeraldaWeb, :live_view
   import ExmeraldaWeb.Admin.Helper
+  import ExmeraldaWeb.Shared.Helper
   alias Exmeralda.Topics
 
   @impl true
@@ -8,7 +9,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
     library = Topics.get_library!(params["library_id"])
     ingestion = Topics.get_ingestion!(params["id"])
     stats = Topics.get_ingestion_stats(ingestion)
-    {:ok, {chunks, meta}} = Topics.list_ingestion_chunks(ingestion, params)
+    {:ok, {chunks, meta}} = Topics.list_chunks_for_ingestion(ingestion, params)
 
     socket =
       socket
@@ -47,7 +48,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
       </.breadcrumbs>
 
       <.header title={"Ingestion ##{@ingestion.id} for #{library_title(@library)}"}>
-        <.ingestion_state state={@ingestion.state} />
+        <.ingestion_state_badge state={@ingestion.state} />
       </.header>
 
       <div class="stats shadow">

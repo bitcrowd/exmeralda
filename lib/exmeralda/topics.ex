@@ -134,13 +134,74 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
+  Gets ingestions together with the latest associated Oban job for `scope` with Flop support for pagination, filtering, and sorting.
+  """
+  def list_ingestions_with_latest_job(scope \\ Ingestion, params) do
+    with {:ok, flop} <- Flop.validate(params, replace_invalid_params: true, for: Ingestion) do
+      job_query =
+        from(Oban.Job,
+          where: fragment("args->>'ingestion_id' = ?::text", parent_as(:ingestion).id),
+          order_by: [desc: :attempted_at],
+          limit: 1
+        )
+
+      flop = maybe_add_pagination(flop)
+
+      {:ok,
+       scope
+       |> Flop.query(flop)
+       |> from(as: :ingestion)
+       |> preload(:library)
+       |> join(:left_lateral, [i], j in subquery(job_query),
+         on: fragment("args->>'ingestion_id' = ?::text", i.id)
+       )
+       |> select([i, j], {i, j})
+       |> Flop.run(flop, for: Ingestion)}
+    end
+  end
+
+  defp maybe_add_pagination(flop) do
+    if flop.first || flop.last || flop.page do
+      flop
+    else
+      %{flop | first: 10}
+    end
+  end
+
+  @doc """
+  Gets ingestions for `scope` with Flop support for pagination, filtering, and sorting.
+  """
+  def list_ingestions(scope \\ Ingestion, params) do
+    scope
+    |> preload(:library)
+    |> Flop.validate_and_run(params, replace_invalid_params: true, for: Ingestion)
+  end
+
+  @doc """
   Gets all ingestions for a library with Flop support for pagination, filtering, and sorting.
   """
-  def list_ingestions(%Library{id: library_id}, params) do
+  def list_ingestions_for_library(%Library{id: library_id}, params) do
+    from(i in Ingestion, where: i.library_id == ^library_id)
+    |> list_ingestions(params)
+  end
+
+  @doc """
+  Gets the latest ingestions.
+  """
+  def latest_ingestions(params) do
+    from(i in Ingestion, order_by: [desc: :updated_at], preload: :library)
+    |> list_ingestions(params)
+  end
+
+  @doc """
+  Gets ingestions that are not ready yet.
+  """
+  def list_not_ready_ingestions() do
     from(i in Ingestion,
-      where: i.library_id == ^library_id
+      where: i.state != :ready,
+      preload: :library
     )
-    |> Flop.validate_and_run(params, replace_invalid_params: true, for: Ingestion)
+    |> Repo.all()
   end
 
   @doc """
@@ -167,7 +228,7 @@ defmodule Exmeralda.Topics do
   @doc """
   Lists chunks for an ingestion.
   """
-  def list_ingestion_chunks(%Ingestion{id: id}, params) do
+  def list_chunks_for_ingestion(%Ingestion{id: id}, params) do
     from(c in Chunk, where: c.ingestion_id == ^id)
     |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
   end
