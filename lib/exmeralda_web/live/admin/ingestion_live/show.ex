@@ -109,14 +109,4 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
     </.navbar_layout>
     """
   end
-
-  def percent(%{total: 0} = assigns) do
-    ~H"0%"
-  end
-
-  def percent(%{total: total, value: value} = assigns) do
-    assigns = assign(assigns, percent: div(value * 100, total))
-
-    ~H"{@percent}%"
-  end
 end
