@@ -3,6 +3,7 @@ defmodule ExmeraldaWeb.ChatLive.Index do
 
   alias Exmeralda.Chats
   alias ExmeraldaWeb.ChatLive.{Chat, StartChat}
+  alias ExmeraldaWeb.ChatLive.Ingestions.Index, as: ListIngestions
   alias Phoenix.PubSub
 
   @impl true
@@ -29,6 +30,12 @@ defmodule ExmeraldaWeb.ChatLive.Index do
   defp apply_action(socket, :new, _params) do
     socket
     |> assign(:page_title, gettext("New Session"))
+    |> assign(:current_session, nil)
+  end
+
+  defp apply_action(socket, :list_ingestions, _params) do
+    socket
+    |> assign(:page_title, gettext("Current Ingestions"))
     |> assign(:current_session, nil)
   end
 

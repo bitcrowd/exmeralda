@@ -71,8 +71,8 @@ defmodule ExmeraldaWeb.Router do
       ] do
       live "/chat/start", ChatLive.Index, :new
       live "/chat/:id", ChatLive.Index, :show
+      live "/ingestions", ChatLive.Index, :list_ingestions
       live "/library/new", LibraryLive.Index, :new
-      live "/ingestions", IngestionLive.Index, :index
     end
   end
 

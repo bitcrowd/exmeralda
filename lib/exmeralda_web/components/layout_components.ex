@@ -61,16 +61,6 @@ defmodule ExmeraldaWeb.LayoutComponents do
           </div>
           <div>
             <a
-              href={~p"/ingestions"}
-              class="p-6 m-2 rounded-lg flex items-center gap-2 text-gray-500 text-sm group hover:bg-white dark:bg-base-300"
-            >
-              <.icon
-                name="hero-beaker-solid"
-                class="text-black dark:text-white dark:group-hover:text-black"
-              /> {gettext("Latest Library Updates")}
-            </a>
-            <hr class="mx-2 border-base-100" />
-            <a
               href="https://github.com/bitcrowd/exmeralda/"
               class="p-4 m-2 rounded-lg flex items-center gap-2 text-gray-500 text-sm group hover:bg-white dark:bg-base-300"
             >
