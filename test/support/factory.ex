@@ -5,7 +5,7 @@ defmodule Exmeralda.Factory do
     %Exmeralda.Chats.Session{
       title: "A fancy session",
       user: build(:user),
-      library: build(:library)
+      ingestion: build(:ingestion)
     }
   end
 
@@ -31,7 +31,7 @@ defmodule Exmeralda.Factory do
 
   def library_factory do
     %Exmeralda.Topics.Library{
-      name: "ecto",
+      name: sequence(:library_name, &"library-#{&1}"),
       version: "3.12.5",
       dependencies: [
         build(:library_dependency, name: "decimal", version_requirement: "~> 2.0"),
@@ -77,6 +77,13 @@ defmodule Exmeralda.Factory do
       embedding: Enum.map(1..768, fn _ -> :rand.uniform() end),
       source: "file.ex",
       type: :code
+    }
+  end
+
+  def chat_source_factory do
+    %Exmeralda.Chats.Source{
+      chunk: build(:chunk),
+      message: build(:message)
     }
   end
 end

@@ -1,19 +1,23 @@
 defmodule ExmeraldaWeb.ChatLiveTest do
-  use ExmeraldaWeb.ConnCase
+  use ExmeraldaWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
   alias Exmeralda.{Repo, Chats.Session}
 
   defp insert_library(_) do
-    %{library: insert(:library, name: "ecto")}
+    library = insert(:library, name: "ecto")
+    ingestion = insert(:ingestion, library: library, state: :ready)
+
+    %{library: library, ingestion: ingestion}
   end
 
-  defp insert_session(%{user: user, library: library}) do
+  defp insert_session(%{user: user, library: library, ingestion: ingestion}) do
     %{
       session:
         insert(:chat_session,
           user: user,
           library: library,
+          ingestion: ingestion,
           messages: [
             build(:message, role: :user, index: 0, session: nil),
             build(:message, role: :assistant, index: 1, session: nil)
@@ -69,6 +73,9 @@ defmodule ExmeraldaWeb.ChatLiveTest do
 
       html = render(index_live)
       assert html =~ "You underestimate my power!"
+
+      wait_for_generation_task()
+
       assert Repo.aggregate(Session, :count) == 2
     end
 

@@ -30,6 +30,7 @@ defmodule ExmeraldaWeb.ConnCase do
       import Phoenix.ConnTest
       import ExmeraldaWeb.ConnCase
       import Exmeralda.Factory
+      import BitcrowdEcto.Random, only: [uuid: 0]
     end
   end
 
@@ -47,5 +48,16 @@ defmodule ExmeraldaWeb.ConnCase do
     conn
     |> Phoenix.ConnTest.init_test_session(%{})
     |> Plug.Conn.put_session(:user_id, user.id)
+  end
+
+  # https://elixirforum.com/t/dbconnection-error-owner-pid-exited-while-testing-async-function/54953/4
+  # https://dockyard.com/blog/2024/06/06/a-better-solution-for-waiting-for-async-tasks-in-tests
+  def wait_for_generation_task do
+    pids = Task.Supervisor.children(Exmeralda.TaskSupervisor)
+
+    for pid <- pids do
+      ref = Process.monitor(pid)
+      assert_receive {:DOWN, ^ref, _, _, _}, 100_000
+    end
   end
 end

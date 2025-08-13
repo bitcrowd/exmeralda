@@ -13,7 +13,7 @@ defmodule Exmeralda.Topics do
       order_by: [desc: :inserted_at],
       limit: 10
     )
-    |> with_chunks_ready()
+    |> with_ingestion_ready()
     |> Repo.all()
   end
 
@@ -38,19 +38,16 @@ defmodule Exmeralda.Topics do
         desc: :version
       ]
     )
-    |> with_chunks_ready()
+    |> with_ingestion_ready()
     |> Repo.all()
   end
 
-  defp with_chunks_ready(query) do
+  defp with_ingestion_ready(query) do
     where(
       query,
       [l],
-      not exists(
-        from c in Chunk,
-          where: c.library_id == parent_as(:library).id and is_nil(c.embedding),
-          select: 1,
-          limit: 1
+      exists(
+        from i in Ingestion, where: i.library_id == parent_as(:library).id and i.state == :ready
       )
     )
   end
@@ -127,6 +124,19 @@ defmodule Exmeralda.Topics do
   """
   def new_library_changeset(params \\ %{}) do
     Library.changeset(%Library{}, params)
+  end
+
+  @doc """
+  Returns the latest ingestion in state :ready for a library.
+  """
+  @spec current_ingestion(Library.t()) :: Library.t() | nil
+  def current_ingestion(%Library{id: library_id}) do
+    Repo.one(
+      from i in Ingestion,
+        where: i.library_id == ^library_id and i.state == :ready,
+        order_by: [desc: :inserted_at],
+        limit: 1
+    )
   end
 
   @doc """
