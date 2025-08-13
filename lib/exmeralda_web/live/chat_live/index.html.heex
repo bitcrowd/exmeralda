@@ -4,11 +4,23 @@
       <li>
         <.button
           phx-click={JS.patch(~p"/") |> no_active_chat()}
-          class="btn-lg justify-start gap-4"
+          class={["btn btn-lg justify-start gap-4", @live_action == :new && "btn-outline"]}
         >
           <.icon name="hero-chat-bubble-bottom-center" />
           {gettext("Start new chat")}
         </.button>
+      </li>
+      <li>
+        <a
+          href={~p"/ingestions"}
+          class={[
+            "btn btn-lg justify-start gap-4",
+            @live_action == :list_ingestions && "btn-outline"
+          ]}
+        >
+          <.icon name="hero-beaker" />
+          {gettext("Latest Library Updates")}
+        </a>
       </li>
     </ul>
     <h2 class="sr-only">{gettext("Chats")}</h2>
@@ -53,5 +65,11 @@
     id="chat"
     user={@current_user}
     session={@current_session}
+  />
+  <.live_component
+    :if={@live_action == :list_ingestions}
+    module={ListIngestions}
+    id="list-ingestions"
+    user={@current_user}
   />
 </.navbar_layout>

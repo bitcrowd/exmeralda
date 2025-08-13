@@ -222,7 +222,7 @@ defmodule ExmeraldaWeb.CoreComponents do
       <.button phx-click="go" class="ml-2">Send!</.button>
   """
   attr :type, :string, default: nil
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
   attr :rest, :global, include: ~w(disabled form name value)
 
   slot :inner_block, required: true
@@ -667,55 +667,6 @@ defmodule ExmeraldaWeb.CoreComponents do
   def empty(assigns) do
     ~H"""
     <p>{gettext("None")}</p>
-    """
-  end
-
-  attr :id, :string, default: nil
-  attr :target, :string, default: nil
-  attr :on_change, :string, default: "update-filter"
-
-  attr :meta, Flop.Meta, required: true
-  attr :state, :atom, required: true
-  attr :name, :any
-  attr :label, :string, default: nil
-  attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
-
-  attr :rest, :global
-
-  def ingestion_state_filter_toggle(%{meta: meta} = assigns) do
-    assigns =
-      assigns
-      |> assign(form: Phoenix.Component.to_form(meta), meta: nil)
-      |> assign_new(:checked, fn ->
-        Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
-      end)
-
-    ~H"""
-    <.form
-      for={@form}
-      id={@id}
-      phx-target={@target}
-      phx-change={@on_change}
-      phx-submit={@on_change}
-      {@rest}
-    >
-      <.filter_fields :let={i} form={@form} fields={[:state]}>
-        <div>
-          <label class="flex items-center gap-4 text-sm leading-6">
-            {@label}
-            <input type="hidden" name={i.field.name} value="false" disabled={@rest[:disabled]} />
-            <input
-              type="checkbox"
-              id={i.field.id}
-              name={i.field.name}
-              value={@state}
-              checked={@checked}
-              class="toggle toggle-success toggle-lg"
-            />
-          </label>
-        </div>
-      </.filter_fields>
-    </.form>
     """
   end
 end
