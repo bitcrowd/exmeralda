@@ -29,7 +29,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
     {:noreply,
      push_patch(socket,
        to:
-         ~p"/admin/library/#{socket.assigns.library.id}/ingestion/#{socket.assigns.ingestion.id}?#{params}"
+         ~p"/admin/library/#{socket.assigns.library.id}/ingestions/#{socket.assigns.ingestion.id}?#{params}"
      )}
   end
 
@@ -96,7 +96,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
       <Flop.Phoenix.table
         items={@chunks}
         meta={@meta}
-        path={~p"/admin/library/#{@library.id}/ingestion/#{@ingestion.id}"}
+        path={~p"/admin/library/#{@library.id}/ingestions/#{@ingestion.id}"}
         opts={[table_attrs: [class: "table"]]}
       >
         <:col :let={chunk} label="Type" field={:type}>{chunk.type}</:col>
@@ -109,7 +109,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
         </:col>
       </Flop.Phoenix.table>
 
-      <.pagination meta={@meta} path={~p"/admin/library/#{@library.id}/ingestion/#{@ingestion.id}"} />
+      <.pagination meta={@meta} path={~p"/admin/library/#{@library.id}/ingestions/#{@ingestion.id}"} />
     </.navbar_layout>
     """
   end

@@ -109,7 +109,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
         <:col :let={ingestion} label="Actions">
           <.link
             class="btn btn-primary btn-sm"
-            navigate={~p"/admin/library/#{@library.id}/ingestion/#{ingestion.id}"}
+            navigate={~p"/admin/library/#{@library.id}/ingestions/#{ingestion.id}"}
           >
             Show
           </.link>
