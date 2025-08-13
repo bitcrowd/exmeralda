@@ -1,6 +1,7 @@
 defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
   use ExmeraldaWeb, :live_view
   import ExmeraldaWeb.Admin.Helper
+  import ExmeraldaWeb.Shared.Helper
   alias Exmeralda.Topics
 
   @impl true
@@ -49,7 +50,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
       </.breadcrumbs>
 
       <.header title={"Ingestion ##{@ingestion.id} for #{library_title(@library)}"}>
-        <.ingestion_state state={@ingestion.state} />
+        <.ingestion_state_badge state={@ingestion.state} />
       </.header>
 
       <.list>

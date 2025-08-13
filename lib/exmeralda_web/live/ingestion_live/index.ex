@@ -1,6 +1,6 @@
 defmodule ExmeraldaWeb.IngestionLive.Index do
   use ExmeraldaWeb, :live_view
-
+  import ExmeraldaWeb.Shared.Helper
   alias Exmeralda.Topics
 
   @impl true
@@ -72,9 +72,7 @@ defmodule ExmeraldaWeb.IngestionLive.Index do
               thead_th_attrs={[class: "text-center"]}
               tbody_td_attrs={[class: "text-center"]}
             >
-              <.ingestion_state_badge state={ingestion.state}>
-                {ingestion.state}
-              </.ingestion_state_badge>
+              <.ingestion_state_badge state={ingestion.state} />
             </:col>
             <:col :let={{_id, {_ingestion, job}}}>
               <span :if={job && job.state == "executing"} class="loading loading-spinner" />
