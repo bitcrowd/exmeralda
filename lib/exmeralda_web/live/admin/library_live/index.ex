@@ -26,6 +26,12 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Index do
   def render(assigns) do
     ~H"""
     <.navbar_layout user={@current_user}>
+      <.breadcrumbs>
+        <:items title="Libraries" href={~p"/admin"} icon_name="hero-inbox-stack-micro" />
+      </.breadcrumbs>
+
+      <.header title="Libraries" />
+
       <.filter_form
         class="grid grid-cols-4 gap-4 p-4"
         fields={[

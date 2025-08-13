@@ -72,7 +72,7 @@ defmodule ExmeraldaWeb do
 
   def component do
     quote do
-      use Phoenix.LiveComponent
+      use Phoenix.Component
 
       unquote(html_helpers())
     end

@@ -1,6 +1,6 @@
 defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
   use ExmeraldaWeb, :live_view
-
+  import ExmeraldaWeb.Admin.Helper
   alias Exmeralda.Topics
 
   @impl true
@@ -37,61 +37,42 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
   def render(assigns) do
     ~H"""
     <.navbar_layout user={@current_user}>
-      <.link class="btn m-3" navigate={~p"/admin/library/#{@library.id}"} title="Back">
-        <.icon name="hero-arrow-left" />
-      </.link>
+      <.breadcrumbs>
+        <:items title="Libraries" href={~p"/admin"} icon_name="hero-inbox-stack-micro" />
+        <:items title={library_title(@library)} href={~p"/admin/library/#{@library.id}"} />
+      </.breadcrumbs>
 
-      <h2 class="text-2xl font-bold p-4">
-        Ingestion #{@ingestion.id} for {@library.name} {@library.version}
-      </h2>
+      <.header title={"Ingestion #{@ingestion.id}"} />
 
       <div class="stats shadow">
-        <div class="stat">
-          <div class="stat-figure text-primary">
-            <.icon name="hero-bolt" />
-          </div>
-          <div class="stat-title">Total Chunks</div>
-          <div class="stat-value text-primary">{total = @stats[:chunks_total]}</div>
-        </div>
+        <.stat icon_name="hero-bolt" title="Total Chunks" value={@stats[:chunks_total]} />
 
-        <div class="stat">
-          <div class="stat-figure text-secondary">
-            <.icon name="hero-book-open" />
-          </div>
-          <div class="stat-title">Embedded chunks</div>
-          <div class="stat-value text-secondary">
-            {embedding = @stats[:chunks_embedding]}
-            <div class="stat-desc">
-              <.percent value={embedding} total={total} />
-            </div>
-          </div>
-        </div>
+        <.stat
+          icon_name="hero-book-open"
+          title="Embedded chunks"
+          value={@stats[:chunks_embedding]}
+          text_variant="text-secondary"
+          value_variant="text-secondary"
+          total={@stats[:chunks_total]}
+        />
 
-        <div class="stat">
-          <div class="stat-figure text-secondary">
-            <.icon name="hero-book-open" />
-          </div>
-          <div class="stat-title">Chunks from docs</div>
-          <div class="stat-value text-secondary">
-            {docs = Keyword.get(@stats[:chunks_type], :docs, 0)}
-            <div class="stat-desc">
-              <.percent value={docs} total={total} />
-            </div>
-          </div>
-        </div>
+        <.stat
+          icon_name="hero-book-open"
+          title="Chunks from docs"
+          value={Keyword.get(@stats[:chunks_type], :docs, 0)}
+          text_variant="text-secondary"
+          value_variant="text-secondary"
+          total={@stats[:chunks_total]}
+        />
 
-        <div class="stat">
-          <div class="stat-figure text-secondary">
-            <.icon name="hero-code-bracket" />
-          </div>
-          <div class="stat-title">Chunks from code</div>
-          <div class="stat-value">
-            {code = Keyword.get(@stats[:chunks_type], :code, 0)}
-          </div>
-          <div class="stat-desc">
-            <.percent value={code} total={total} />
-          </div>
-        </div>
+        <.stat
+          icon_name="hero-code-bracket"
+          title="Chunks from code"
+          value={Keyword.get(@stats[:chunks_type], :code, 0)}
+          text_variant="text-secondary"
+          value_variant=""
+          total={@stats[:chunks_total]}
+        />
       </div>
 
       <.filter_form

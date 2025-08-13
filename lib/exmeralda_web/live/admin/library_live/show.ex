@@ -1,6 +1,6 @@
 defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
   use ExmeraldaWeb, :live_view
-
+  import ExmeraldaWeb.Admin.Helper
   alias Exmeralda.Topics
 
   @impl true
@@ -10,7 +10,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
 
     socket =
       socket
-      |> assign(:page_title, "#{library.name} #{library.version}")
+      |> assign(:page_title, library_title(library))
       |> assign(:library, library)
       |> assign(:ingestions, ingestions)
       |> assign(:meta, meta)
@@ -43,14 +43,13 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
   def render(assigns) do
     ~H"""
     <.navbar_layout user={@current_user}>
-      <.link class="btn m-3" navigate={~p"/admin"} title="Back">
-        <.icon name="hero-arrow-left" />
-      </.link>
+      <.breadcrumbs>
+        <:items title="Libraries" href={~p"/admin"} icon_name="hero-inbox-stack-micro" />
+        <:items title={library_title(@library)} href={~p"/admin/library/#{@library.id}"} />
+      </.breadcrumbs>
 
-      <h2 class="text-2xl font-bold p-4">Ingestions for {@library.name} {@library.version}</h2>
-
-      <ul class="flex p-5 gap-3">
-        <li>
+      <.header title={"Ingestions for #{library_title(@library)}"}>
+        <:actions>
           <.link
             class="btn btn-warning"
             phx-click="reingest"
@@ -58,8 +57,8 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
           >
             <.icon name="hero-arrow-path" /> Re-Ingest
           </.link>
-        </li>
-        <li>
+        </:actions>
+        <:actions>
           <.link
             class="btn btn-error"
             phx-click="delete"
@@ -67,11 +66,11 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
           >
             <.icon name="hero-trash" /> Delete
           </.link>
-        </li>
-      </ul>
+        </:actions>
+      </.header>
 
       <.filter_form
-        class="grid grid-cols-4 gap-4 p-4"
+        class="grid grid-cols-4 gap-4 pb-4"
         fields={[
           state: [
             label: gettext("State"),
