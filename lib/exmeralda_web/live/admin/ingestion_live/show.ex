@@ -40,9 +40,13 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
       <.breadcrumbs>
         <:items title="Libraries" href={~p"/admin"} icon_name="hero-inbox-stack-micro" />
         <:items title={library_title(@library)} href={~p"/admin/library/#{@library.id}"} />
+        <:items
+          title={"Ingestion ##{@ingestion.id}"}
+          href={~p"/admin/library/#{@library.id}/ingestions/#{@ingestion.id}"}
+        />
       </.breadcrumbs>
 
-      <.header title={"Ingestion #{@ingestion.id}"}>
+      <.header title={"Ingestion ##{@ingestion.id} for #{library_title(@library)}"}>
         <.ingestion_state state={@ingestion.state} />
       </.header>
 
