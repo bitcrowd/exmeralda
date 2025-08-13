@@ -42,7 +42,9 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
         <:items title={library_title(@library)} href={~p"/admin/library/#{@library.id}"} />
       </.breadcrumbs>
 
-      <.header title={"Ingestion #{@ingestion.id}"} />
+      <.header title={"Ingestion #{@ingestion.id}"}>
+        <.ingestion_state state={@ingestion.state} />
+      </.header>
 
       <div class="stats shadow">
         <.stat icon_name="hero-bolt" title="Total Chunks" value={@stats[:chunks_total]} />
@@ -78,7 +80,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
       <.filter_form
         class="grid grid-cols-4 gap-4 p-4"
         fields={[
-          type: [label: gettext("Type"), type: "select", options: ["code", "docs"]],
+          type: [label: gettext("Type"), type: "select", options: ["", "code", "docs"]],
           source: [
             label: gettext("Source"),
             op: :ilike_and

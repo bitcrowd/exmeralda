@@ -1,6 +1,6 @@
 defmodule ExmeraldaWeb.Admin.LibraryLive.Index do
   use ExmeraldaWeb, :live_view
-
+  import ExmeraldaWeb.Admin.Helper
   alias Exmeralda.Topics
 
   @impl true
@@ -55,6 +55,9 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Index do
       >
         <:col :let={library} label="Name" field={:name}>{library.name}</:col>
         <:col :let={library} label="Version" field={:version}>{library.version}</:col>
+        <:col :let={library} label="Created At" field={:inserted_at}>
+          {datetime(library.inserted_at)}
+        </:col>
         <:col :let={library} label="Actions">
           <.link class="btn btn-primary" navigate={~p"/admin/library/#{library.id}"}>
             {gettext("Show")}

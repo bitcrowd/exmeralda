@@ -29,5 +29,22 @@ defmodule ExmeraldaWeb.Admin.Helper do
 
   defp percent(%{total: total, value: value}), do: div(value * 100, total)
 
+  attr :state, :atom, required: true
+
+  def ingestion_state(assigns) do
+    ~H"""
+    <span class={["badge", ingestion_state_class(@state)]}>
+      {@state}
+    </span>
+    """
+  end
+
+  defp ingestion_state_class(:ready), do: "badge-success"
+  defp ingestion_state_class(:failed), do: "badge-error"
+  defp ingestion_state_class(:queued), do: "badge-info"
+  defp ingestion_state_class(_), do: "badge-warning"
+
   def library_title(library), do: "#{library.name} #{library.version}"
+
+  def datetime(datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M")
 end

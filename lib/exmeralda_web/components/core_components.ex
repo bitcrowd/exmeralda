@@ -606,13 +606,19 @@ defmodule ExmeraldaWeb.CoreComponents do
 
   attr :title, :string, required: true
   slot :actions
+  slot :inner_block
 
   def header(assigns) do
     ~H"""
     <div class="flex place-content-between">
-      <h2 class="text-2xl font-bold pb-4">
-        {@title}
-      </h2>
+      <div class="flex">
+        <h2 class="text-2xl font-bold pb-4">
+          {@title}
+        </h2>
+        <div class="ml-2">
+          {render_slot(@inner_block)}
+        </div>
+      </div>
       <ul :if={@actions != []} class="flex gap-3">
         <li :for={action <- @actions}>
           {render_slot(action)}

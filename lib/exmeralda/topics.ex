@@ -4,7 +4,7 @@ defmodule Exmeralda.Topics do
   import Ecto.Query
 
   def list_libraries(params) do
-    Flop.validate_and_run(Library, params, replace_invalid_params: true)
+    Flop.validate_and_run(Library, params, replace_invalid_params: true, for: Library)
   end
 
   def last_libraries() do
