@@ -114,7 +114,7 @@ defmodule Exmeralda.Topics do
     |> Oban.insert()
   end
 
-  defp set_ingestion_job_id(ingestion, oban_job) do
+  def set_ingestion_job_id(ingestion, oban_job) do
     ingestion
     |> Ingestion.set_ingestion_job_id(oban_job.id)
     |> Repo.update()
@@ -127,6 +127,7 @@ defmodule Exmeralda.Topics do
   @doc """
   Schedules library ingestion for an existing library.
   """
+  # TODO: in a transaction
   def reingest_library(library) do
     IngestLibraryWorker.new(%{library_id: library.id}) |> Oban.insert()
   end
@@ -159,11 +160,21 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Updates the state of an ingestion.
+  Updates the state of an ingestion and broadcasts the update.
   """
   def update_ingestion_state!(ingestion, state) do
-    Ingestion.set_state(ingestion, state)
-    |> Repo.update!()
+    ingestion =
+      ingestion
+      |> Ingestion.set_state(state)
+      |> Repo.update!()
+
+    Phoenix.PubSub.broadcast(
+      Exmeralda.PubSub,
+      "ingestions",
+      {:ingestion_state_updated, %{id: ingestion.id}}
+    )
+
+    ingestion
   end
 
   @doc """

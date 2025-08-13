@@ -12,7 +12,39 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
     %{chunks: chunks, library: library, ingestion: ingestion}
   end
 
-  describe "perform/1" do
+  describe "perform/1 with library_id when the ingestion does not exist" do
+    test "cancels the job" do
+      assert perform_job(GenerateEmbeddingsWorker, %{library_id: uuid(), ingestion_id: uuid()}) ==
+               {:cancel, :ingestion_not_found}
+    end
+  end
+
+  describe "perform/1 with library_id when the ingestion does not belong to the library" do
+    test "cancels the job" do
+      ingestion = insert(:ingestion, state: :embedding)
+
+      assert perform_job(GenerateEmbeddingsWorker, %{
+               library_id: uuid(),
+               ingestion_id: ingestion.id
+             }) == {:cancel, :ingestion_not_found}
+    end
+  end
+
+  for state <- [:queued, :preprocessing, :chunking, :failed, :ready] do
+    describe "perform/1 with library_id when ingestion is in state #{state}" do
+      test "cancels the worker" do
+        ingestion = insert(:ingestion, state: unquote(state))
+
+        assert perform_job(GenerateEmbeddingsWorker, %{
+                 ingestion_id: ingestion.id,
+                 library_id: ingestion.library_id
+               }) ==
+                 {:cancel, {:ingestion_in_invalid_state, unquote(state)}}
+      end
+    end
+  end
+
+  describe "perform/1 with library_id" do
     setup [:insert_library]
 
     test "generates embeddings for a library", %{
@@ -49,8 +81,6 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
       library: library,
       ingestion: ingestion
     } do
-      assert ingestion.state == :embedding
-
       assert :ok =
                perform_job(GenerateEmbeddingsWorker, %{
                  library_id: library.id,
@@ -62,6 +92,27 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
       ingestion = Repo.reload(ingestion)
 
       assert ingestion.state == :ready
+    end
+  end
+
+  describe "perform/1 with chunk_ids when the ingestion does not exist" do
+    test "cancels the job" do
+      assert perform_job(GenerateEmbeddingsWorker, %{chunk_ids: [uuid()], ingestion_id: uuid()}) ==
+               {:cancel, :ingestion_not_found}
+    end
+  end
+
+  for state <- [:queued, :preprocessing, :chunking, :failed, :ready] do
+    describe "perform/1 with chunk_ids when ingestion is in state #{state}" do
+      test "cancels the worker" do
+        ingestion = insert(:ingestion, state: unquote(state))
+
+        assert perform_job(GenerateEmbeddingsWorker, %{
+                 chunk_ids: [uuid()],
+                 ingestion_id: ingestion.id
+               }) ==
+                 {:cancel, {:ingestion_in_invalid_state, unquote(state)}}
+      end
     end
   end
 end

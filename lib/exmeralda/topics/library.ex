@@ -33,7 +33,6 @@ defmodule Exmeralda.Topics.Library do
     |> validate_required([:name, :version])
     |> validate_format(:name, ~r/^[a-z][a-z0-9_]*?[a-z0-9]$/)
     |> validate_version()
-    |> cast_embed(:dependencies)
     |> unique_constraint([:name, :version])
   end
 
@@ -44,5 +43,11 @@ defmodule Exmeralda.Topics.Library do
         :error -> [version: {"has invalid format", [validation: :version]}]
       end
     end)
+  end
+
+  def set_dependencies_changeset(library, dependencies) do
+    library
+    |> cast(%{dependencies: dependencies}, [])
+    |> cast_embed(:dependencies)
   end
 end

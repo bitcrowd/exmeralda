@@ -60,14 +60,18 @@ defmodule Exmeralda.TopicsTest do
   end
 
   describe "update_ingestion_state!/2" do
-    test "updates state of ingestion" do
+    test "updates state of ingestion and broadcasts state updated" do
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "ingestions")
+
       ingestion = insert(:ingestion, state: :queued)
 
-      assert %Ingestion{} = Topics.update_ingestion_state!(ingestion, :embedding)
+      assert %Ingestion{id: ingestion_id} = Topics.update_ingestion_state!(ingestion, :embedding)
 
       ingestion = Repo.reload(ingestion)
 
       assert ingestion.state == :embedding
+
+      assert_receive {:ingestion_state_updated, %{id: ^ingestion_id}}
     end
   end
 
