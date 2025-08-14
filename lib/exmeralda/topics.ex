@@ -87,9 +87,8 @@ defmodule Exmeralda.Topics do
           {:ok, %{library: Library.t(), ingestion: Ingestion.t()}} | {:error, Ecto.Changeset.t()}
   def create_library(params) do
     Repo.transact(fn ->
-      with {:ok, library} <- do_create_library(params),
-           {:ok, %{library: library, ingestion: ingestion}} <- create_ingestion(library) do
-        {:ok, %{library: library, ingestion: ingestion}}
+      with {:ok, library} <- do_create_library(params) do
+        create_ingestion(library)
       end
     end)
   end
