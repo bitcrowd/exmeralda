@@ -63,18 +63,18 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
 
       <.header title={"Ingestions for #{library_title(@library)}"}>
         <:actions>
-          <.link class="btn btn-warning" phx-click="reingest">
+          <.button class="btn btn-warning" phx-click="reingest">
             <.icon name="hero-arrow-path" /> Re-Ingest
-          </.link>
+          </.button>
         </:actions>
         <:actions>
-          <.link
+          <.button
             class="btn btn-error"
             phx-click="delete"
             data-confirm="This will delete all chats associated to this library as well! Are you sure?"
           >
             <.icon name="hero-trash" /> Delete
-          </.link>
+          </.button>
         </:actions>
       </.header>
 
