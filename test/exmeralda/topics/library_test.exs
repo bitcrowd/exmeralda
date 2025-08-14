@@ -16,31 +16,16 @@ defmodule Exmeralda.Topics.LibraryTest do
   end
 
   describe "changeset/2" do
-    test "casts embeds properly" do
-      changeset =
-        Library.changeset(%Library{}, %{
-          name: "ecto",
-          version: "1.0.0",
-          dependencies: [
-            %{
-              name: "jason",
-              version_requirement: "~> 1.0"
-            },
-            %{
-              name: "telemetry",
-              version_requirement: "~> 0.5 or ~> 1.0"
-            }
-          ]
-        })
-        |> assert_changes(:name, "ecto")
-        |> assert_changes(:version, "1.0.0")
-        |> assert_changes(:dependencies)
+    test "works with valid attrs" do
+      Library.changeset(%Library{}, params_for(:library))
+      |> assert_changeset_valid()
+    end
 
-      assert [jason, _telementry] = changeset.changes[:dependencies]
-
-      assert jason
-             |> assert_changes(:name, "jason")
-             |> assert_changes(:version_requirement, "~> 1.0")
+    test "validates required field" do
+      Library.changeset(%Library{}, %{})
+      |> refute_changeset_valid()
+      |> assert_required_error_on(:name)
+      |> assert_required_error_on(:version)
     end
 
     test "validates names" do
@@ -59,26 +44,45 @@ defmodule Exmeralda.Topics.LibraryTest do
       changeset =
         Library.changeset(%Library{}, %{
           name: "ecto",
-          version: "xxx",
-          dependencies: []
+          version: "xxx"
         })
 
       refute changeset.valid?
       assert_error_on(changeset, :version, :version)
     end
+  end
+
+  describe "set_dependencies_changeset/2" do
+    test "casts embeds properly" do
+      changeset =
+        Library.set_dependencies_changeset(%Library{}, [
+          %{
+            name: "jason",
+            version_requirement: "~> 1.0"
+          },
+          %{
+            name: "telemetry",
+            version_requirement: "~> 0.5 or ~> 1.0"
+          }
+        ])
+        |> assert_changeset_valid()
+        |> assert_changes(:dependencies)
+
+      assert [jason, _telementry] = changeset.changes[:dependencies]
+
+      assert jason
+             |> assert_changes(:name, "jason")
+             |> assert_changes(:version_requirement, "~> 1.0")
+    end
 
     test "validates version embeds" do
       changeset =
-        Library.changeset(%Library{}, %{
-          name: "ecto",
-          version: "1.0.0",
-          dependencies: [
-            %{
-              name: "telemetry",
-              version_requirement: "xxx"
-            }
-          ]
-        })
+        Library.set_dependencies_changeset(%Library{}, [
+          %{
+            name: "telemetry",
+            version_requirement: "xxx"
+          }
+        ])
 
       refute changeset.valid?
 

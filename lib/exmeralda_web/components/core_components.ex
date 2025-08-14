@@ -646,4 +646,27 @@ defmodule ExmeraldaWeb.CoreComponents do
     </div>
     """
   end
+
+  slot :item, required: true do
+    attr :title, :string, required: true
+  end
+
+  def list(assigns) do
+    ~H"""
+    <div>
+      <dl class="divide-y divide-zinc-100">
+        <div :for={item <- @item} class="flex gap-4 py-4 text-sm leading-6 sm:gap-8">
+          <dt class="w-1/4 font-bold">{item.title}</dt>
+          <dd>{render_slot(item)}</dd>
+        </div>
+      </dl>
+    </div>
+    """
+  end
+
+  def empty(assigns) do
+    ~H"""
+    <p>{gettext("None")}</p>
+    """
+  end
 end

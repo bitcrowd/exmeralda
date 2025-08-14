@@ -81,28 +81,73 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Schedules library ingestion
+  Creates a library and ingestion, schedules the ingestion.
   """
+  @spec create_library(map()) ::
+          {:ok, %{library: Library.t(), ingestion: Ingestion.t()}} | {:error, Ecto.Changeset.t()}
   def create_library(params) do
-    changeset = new_library_changeset(params)
+    Repo.transact(fn ->
+      with {:ok, library} <- do_create_library(params) do
+        create_ingestion(library)
+      end
+    end)
+  end
 
-    with {:ok, library} <- Ecto.Changeset.apply_action(changeset, :create) do
-      library |> Map.take([:name, :version]) |> IngestLibraryWorker.new() |> Oban.insert()
+  defp do_create_library(params) do
+    params
+    |> new_library_changeset()
+    |> Repo.insert()
+  end
+
+  defp create_ingestion(library) do
+    if !Repo.in_transaction?(), do: raise("not in a transaction")
+
+    with {:ok, ingestion} <- do_create_ingestion(library),
+         {:ok, oban_job} <- schedule_ingestion_worker(ingestion),
+         {:ok, updated_ingestion} <- set_ingestion_job_id(ingestion, oban_job),
+         :ok <- broadcast("ingestions", {:ingestion_created, %{id: ingestion.id}}) do
+      {:ok, %{library: library, ingestion: updated_ingestion}}
     end
+  end
+
+  defp do_create_ingestion(library) do
+    Ingestion.changeset(%{library_id: library.id, state: :queued})
+    |> Repo.insert()
+  end
+
+  defp schedule_ingestion_worker(ingestion) do
+    IngestLibraryWorker.new(%{ingestion_id: ingestion.id})
+    |> Oban.insert()
+  end
+
+  def set_ingestion_job_id(ingestion, oban_job) do
+    ingestion
+    |> Ingestion.set_ingestion_job_id(oban_job.id)
+    |> Repo.update()
+  end
+
+  defp broadcast(topic, event) do
+    Phoenix.PubSub.broadcast(Exmeralda.PubSub, topic, event)
   end
 
   @doc """
   Schedules library ingestion for an existing library.
   """
-  def reingest_library(library) do
-    IngestLibraryWorker.new(%{library_id: library.id}) |> Oban.insert()
+  @spec reingest_library(Library.id()) :: {:ok, Ingestion.t()} | {:error, {:not_found, Library}}
+  def reingest_library(library_id) do
+    Repo.transact(fn ->
+      with {:ok, library} <- Repo.fetch(Library, library_id),
+           {:ok, %{ingestion: ingestion}} <- create_ingestion(library) do
+        {:ok, ingestion}
+      end
+    end)
   end
 
   @doc """
   Deletes a libray.
   """
   def delete_library(library) do
-    library |> Repo.delete()
+    Repo.delete(library, allow_stale: true)
   end
 
   @doc """
@@ -126,11 +171,21 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Updates the state of an ingestion.
+  Updates the state of an ingestion and broadcasts the update.
   """
   def update_ingestion_state!(ingestion, state) do
-    Ingestion.set_state(ingestion, state)
-    |> Repo.update!()
+    ingestion =
+      ingestion
+      |> Ingestion.set_state(state)
+      |> Repo.update!()
+
+    Phoenix.PubSub.broadcast(
+      Exmeralda.PubSub,
+      "ingestions",
+      {:ingestion_state_updated, %{id: ingestion.id}}
+    )
+
+    ingestion
   end
 
   @doc """
@@ -146,8 +201,9 @@ defmodule Exmeralda.Topics do
   @doc """
   Gets a single ingestion.
   """
-  def get_ingestion!(id) do
-    Repo.get!(Ingestion, id)
+  def get_ingestion!(id, opts \\ []) do
+    preloads = Keyword.get(opts, :preloads)
+    Repo.get!(Ingestion, id) |> Repo.preload(preloads)
   end
 
   @doc """
@@ -163,6 +219,26 @@ defmodule Exmeralda.Topics do
         chunks |> group_by([c], c.type) |> select([c], {c.type, count(c.id)}) |> Repo.all()
     }
   end
+
+  @doc """
+  Gets the number of embedding chunk jobs that are completed.
+  """
+  def get_embedding_chunks_jobs(%{state: :embedding} = ingestion) do
+    query =
+      from(oj in Oban.Job,
+        where:
+          oj.worker == "Exmeralda.Topics.GenerateEmbeddingsWorker" and
+            fragment("args->>'ingestion_id' = ?::text", ^ingestion.id) and
+            fragment("args->>'parent_job_id' = ?::text", ^to_string(ingestion.job_id))
+      )
+
+    %{
+      total: Repo.aggregate(query, :count),
+      completed: Repo.aggregate(where(query, [oj], oj.state == "completed"), :count)
+    }
+  end
+
+  def get_embedding_chunks_jobs(_), do: nil
 
   @doc """
   Lists chunks for an ingestion.

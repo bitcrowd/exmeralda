@@ -6,8 +6,9 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
   @impl true
   def handle_params(params, _url, socket) do
     library = Topics.get_library!(params["library_id"])
-    ingestion = Topics.get_ingestion!(params["id"])
+    ingestion = Topics.get_ingestion!(params["id"], preloads: [:job])
     stats = Topics.get_ingestion_stats(ingestion)
+    embedding_job_stats = Topics.get_embedding_chunks_jobs(ingestion)
     {:ok, {chunks, meta}} = Topics.list_ingestion_chunks(ingestion, params)
 
     socket =
@@ -16,6 +17,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
       |> assign(:library, library)
       |> assign(:ingestion, ingestion)
       |> assign(:stats, stats)
+      |> assign(:embedding_job_stats, embedding_job_stats)
       |> assign(:chunks, chunks)
       |> assign(:meta, meta)
 
@@ -50,7 +52,26 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
         <.ingestion_state state={@ingestion.state} />
       </.header>
 
-      <div class="stats shadow">
+      <.list>
+        <:item title={gettext("ID")}>{@ingestion.id}</:item>
+        <:item title={gettext("Current Oban Job")}>
+          <%= if @ingestion.job_id do %>
+            <div>
+              <.ingestion_step ingestion={@ingestion} embedding_job_stats={@embedding_job_stats} />
+              <a class="link pr-4" href={~p"/oban/jobs/#{@ingestion.job_id}"}>
+                View job {@ingestion.job_id}
+              </a>
+              <.ingestion_job_state state={@ingestion.job.state} />
+            </div>
+          <% else %>
+            <.empty />
+          <% end %>
+        </:item>
+        <:item title={gettext("Inserted At")}>{datetime(@ingestion.inserted_at)}</:item>
+        <:item title={gettext("Updated At")}>{datetime(@ingestion.updated_at)}</:item>
+      </.list>
+
+      <div class="stats shadow mt-4">
         <.stat icon_name="hero-bolt" title="Total Chunks" value={@stats[:chunks_total]} />
 
         <.stat
