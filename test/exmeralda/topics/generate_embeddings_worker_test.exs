@@ -115,4 +115,65 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
       end
     end
   end
+
+  describe "perform/1 with chunk_ids when generating the embeddings fails" do
+    setup [:insert_library]
+
+    test "marks the ingestion as failed", %{
+      library: library,
+      ingestion: ingestion
+    } do
+      # This chunk will cause Exmeralda.Rag.Fake to raise
+      insert(:chunk,
+        ingestion: ingestion,
+        library: library,
+        embedding: nil,
+        content: "please raise when running this embedding"
+      )
+
+      assert :ok =
+               perform_job(GenerateEmbeddingsWorker, %{
+                 library_id: library.id,
+                 ingestion_id: ingestion.id
+               })
+
+      workers = all_enqueued(worker: GenerateEmbeddingsWorker)
+
+      chunk_ids = Enum.map(workers, & &1.args["chunk_ids"])
+
+      [6, 20] = chunk_ids |> Enum.map(&length/1) |> Enum.sort()
+      assert from(c in Chunk, where: is_nil(c.embedding)) |> Repo.aggregate(:count) == 26
+
+      # One GenerateEmbeddingsWorker has failed!
+      %{success: 1, failure: 1} = Oban.drain_queue(queue: :ingest)
+
+      # The chunks for this worker are still missing the embedding
+      assert from(c in Chunk, where: is_nil(c.embedding)) |> Repo.aggregate(:count) == 6
+
+      # and the ingestion is still embedding
+      ingestion = Repo.reload(ingestion)
+      assert ingestion.state == :embedding
+
+      # Let's retry the job again...
+      for _n <- 1..18 do
+        retry_job()
+        %{success: 0, failure: 1} = Oban.drain_queue(queue: :ingest)
+      end
+
+      # One last attempt
+      retry_job()
+      %{success: 0, failure: 0, discard: 1} = Oban.drain_queue(queue: :ingest)
+
+      # and the ingestion has failed
+      ingestion = Repo.reload(ingestion)
+      assert ingestion.state == :failed
+    end
+  end
+
+  defp retry_job do
+    {:ok, 1} =
+      Oban.Job
+      |> Ecto.Query.where(state: "retryable")
+      |> Oban.retry_all_jobs()
+  end
 end

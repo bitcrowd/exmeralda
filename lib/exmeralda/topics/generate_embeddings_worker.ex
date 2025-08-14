@@ -40,12 +40,11 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorker do
     end
   end
 
-  def perform(%Oban.Job{args: %{"chunk_ids" => ids, "ingestion_id" => ingestion_id}}) do
+  def perform(%Oban.Job{args: %{"chunk_ids" => ids, "ingestion_id" => ingestion_id}} = job) do
     Repo.transact(fn ->
-      with {:ok, ingestion} <- fetch_ingestion(ingestion_id) do
-        from(c in Chunk, where: c.id in ^ids)
-        |> Repo.all()
-        |> Rag.generate_embeddings()
+      with {:ok, ingestion} <- fetch_ingestion(ingestion_id),
+           {:ok, embeddings} <- generate_embeddings(ingestion, ids) do
+        embeddings
         |> Enum.map(&Chunk.set_embedding(Map.put(&1, :embedding, nil), &1.embedding))
         |> Enum.each(&Repo.update!/1)
 
@@ -62,6 +61,13 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorker do
 
       {:error, {:ingestion_in_invalid_state, state}} ->
         {:cancel, {:ingestion_in_invalid_state, state}}
+
+      {:error, {:generate_embeddings, ingestion, error}} ->
+        if job.attempt >= job.max_attempts do
+          Topics.update_ingestion_state!(ingestion, :failed)
+        end
+
+        {:error, {:generate_embeddings, inspect(error)}}
 
       {:ok, _} ->
         :ok
@@ -86,6 +92,20 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorker do
 
   defp check_library_id(ingestion, nil), do: {:ok, Repo.preload(ingestion, [:library])}
   defp check_library_id(_, _), do: {:error, :ingestion_not_found}
+
+  defp generate_embeddings(ingestion, chunk_ids) do
+    try do
+      embeddings =
+        from(c in Chunk, where: c.id in ^chunk_ids)
+        |> Repo.all()
+        |> Rag.generate_embeddings()
+
+      {:ok, embeddings}
+    rescue
+      error ->
+        {:error, {:generate_embeddings, ingestion, error}}
+    end
+  end
 
   defp all_chunks_embedded?(ingestion_id) do
     query = from(c in Chunk, where: c.ingestion_id == ^ingestion_id and is_nil(c.embedding))

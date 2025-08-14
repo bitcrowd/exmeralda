@@ -5,6 +5,8 @@ defmodule Exmeralda.Rag.Fake do
   @type t :: %__MODULE__{}
   defstruct embeddings_model: "fake"
 
+  @raise_for_chunk "please raise when running this embedding"
+
   @impl Rag.Ai.Provider
   def new(attrs) do
     struct!(__MODULE__, attrs)
@@ -12,7 +14,11 @@ defmodule Exmeralda.Rag.Fake do
 
   @impl Rag.Ai.Provider
   def generate_embeddings(%__MODULE__{}, texts, _opts) do
-    {:ok, Enum.map(texts, fn _ -> Enum.map(1..768, fn _ -> :rand.uniform() end) end)}
+    if @raise_for_chunk in texts do
+      raise KeyError
+    else
+      {:ok, Enum.map(texts, fn _ -> Enum.map(1..768, fn _ -> :rand.uniform() end) end)}
+    end
   end
 
   @impl Rag.Ai.Provider
