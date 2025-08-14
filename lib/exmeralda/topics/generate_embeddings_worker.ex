@@ -10,14 +10,21 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorker do
   @embeddings_batch_size 20
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"library_id" => library_id, "ingestion_id" => ingestion_id}}) do
+  def perform(%Oban.Job{
+        id: id,
+        args: %{"library_id" => library_id, "ingestion_id" => ingestion_id}
+      }) do
     Repo.transact(fn ->
       with {:ok, ingestion} <- fetch_ingestion(ingestion_id, library_id: library_id) do
         {:ok,
          from(c in Chunk, where: c.library_id == ^library_id, select: c.id)
          |> Repo.all()
          |> Enum.chunk_every(@embeddings_batch_size)
-         |> Enum.map(&__MODULE__.new(%{chunk_ids: &1, ingestion_id: ingestion.id}))
+         |> Enum.map(
+           # Passing the parent job_id so it's easier to find which children chunk jobs
+           # were enqueued by this worker.
+           &__MODULE__.new(%{chunk_ids: &1, ingestion_id: ingestion.id, parent_job_id: id})
+         )
          |> Oban.insert_all()}
       end
     end)
@@ -33,7 +40,6 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorker do
     end
   end
 
-  # TODO: Maybe pass parent job ID as argument to identify child jobs
   def perform(%Oban.Job{args: %{"chunk_ids" => ids, "ingestion_id" => ingestion_id}}) do
     Repo.transact(fn ->
       with {:ok, ingestion} <- fetch_ingestion(ingestion_id) do

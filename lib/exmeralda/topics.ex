@@ -202,8 +202,9 @@ defmodule Exmeralda.Topics do
   @doc """
   Gets a single ingestion.
   """
-  def get_ingestion!(id) do
-    Repo.get!(Ingestion, id)
+  def get_ingestion!(id, opts \\ []) do
+    preloads = Keyword.get(opts, :preloads)
+    Repo.get!(Ingestion, id) |> Repo.preload(preloads)
   end
 
   @doc """
@@ -219,6 +220,26 @@ defmodule Exmeralda.Topics do
         chunks |> group_by([c], c.type) |> select([c], {c.type, count(c.id)}) |> Repo.all()
     }
   end
+
+  @doc """
+  Gets the number of embedding chunk jobs that are completed.
+  """
+  def get_embedding_chunks_jobs(%{state: :embedding} = ingestion) do
+    query =
+      from(oj in Oban.Job,
+        where:
+          oj.worker == "Exmeralda.Topics.GenerateEmbeddingsWorker" and
+            fragment("args->>'ingestion_id' = ?::text", ^ingestion.id) and
+            fragment("args->>'parent_job_id' = ?::text", ^to_string(ingestion.job_id))
+      )
+
+    %{
+      total: Repo.aggregate(query, :count),
+      completed: Repo.aggregate(where(query, [oj], oj.state == "completed"), :count)
+    }
+  end
+
+  def get_embedding_chunks_jobs(_), do: nil
 
   @doc """
   Lists chunks for an ingestion.
