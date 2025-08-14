@@ -1,27 +1,34 @@
 defmodule Exmeralda.Topics.IngestionTest do
   use Exmeralda.DataCase
-
-  import BitcrowdEcto.Random
-  import Ecto.Changeset
-
   alias Exmeralda.Topics.Ingestion
 
   describe "changeset/2" do
     test "works" do
-      changeset = Ingestion.changeset(%{state: :queued, library_id: uuid()})
-
-      assert changeset.valid?
+      %{state: :queued, library_id: uuid()}
+      |> Ingestion.changeset()
+      |> assert_changeset_valid()
     end
   end
 
   describe "set_state/2" do
-    test "sets state of ingestion" do
-      ingestion = %Ingestion{library_id: uuid(), state: :queued}
+    for {from, to} <- [
+          {:queued, :embedding},
+          {:embedding, :ready},
+          {:queued, :failed},
+          {:embedding, :failed}
+        ] do
+      test "sets state of ingestion from #{from} to #{to}" do
+        build(:ingestion, state: unquote(from))
+        |> Ingestion.set_state(unquote(to))
+        |> assert_changeset_valid()
+        |> assert_changes(:state, unquote(to))
+      end
+    end
 
-      changeset = Ingestion.set_state(ingestion, :ready)
-
-      assert changeset.valid?
-      assert get_change(changeset, :state) == :ready
+    test "errors for invalid transitions" do
+      build(:ingestion, state: :ready)
+      |> Ingestion.set_state(:queued)
+      |> refute_changeset_valid()
     end
   end
 end

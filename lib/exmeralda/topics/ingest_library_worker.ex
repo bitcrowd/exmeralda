@@ -29,7 +29,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
         {:cancel, {:ingestion_in_invalid_state, state}}
 
       {:error, {:repo_not_found, url, ingestion}} ->
-        # TODO: we should probably persist the error on the ingestion...
+        # TODO: we should probably persist the error on the ingestion.
         Topics.update_ingestion_state!(ingestion, :failed)
         {:discard, {:repo_not_found, url}}
 

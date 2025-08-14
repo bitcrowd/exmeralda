@@ -19,6 +19,7 @@ defmodule Exmeralda.Topics.Ingestion do
   schema "ingestions" do
     field :state, Ecto.Enum,
       # TODO: Consider prod ingestion in preprocessing or chunking states!!
+      # TODO: Get rid of preprocessing and chunking states
       values: [:queued, :preprocessing, :chunking, :embedding, :failed, :ready]
 
     belongs_to :library, Library
@@ -36,9 +37,16 @@ defmodule Exmeralda.Topics.Ingestion do
   end
 
   @doc false
+  @state_transitions [
+    {:queued, :embedding},
+    {:embedding, :ready},
+    {:queued, :failed},
+    {:embedding, :failed}
+  ]
   def set_state(ingestion, state) do
-    # TODO: validate state transitions
-    change(ingestion, state: state)
+    ingestion
+    |> change(state: state)
+    |> validate_transition(:state, @state_transitions)
   end
 
   def set_ingestion_job_id(ingestion, job_id) do
