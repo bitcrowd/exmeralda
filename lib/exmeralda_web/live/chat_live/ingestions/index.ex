@@ -4,14 +4,23 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
   alias Exmeralda.Topics
 
   @impl true
-  def mount(socket) do
-    {:ok,
-     stream_configure(socket, :ingestions,
-       dom_id: fn {ingestion, _job} -> "ingestions-#{ingestion.id}" end
-     )}
+  def update(%{event: :ingestion_created, ingestion: ingestion}, socket) do
+    ingestions = socket.assigns.ingestions
+    {:ok, assign(socket, :ingestions, [{ingestion, nil} | ingestions])}
   end
 
-  @impl true
+  def update(%{event: :ingestion_state_updated, ingestion: updated_ingestion}, socket) do
+    ingestions =
+      socket.assigns.ingestions
+      |> Enum.map(fn {ingestion, job} ->
+        if ingestion.id == updated_ingestion.id,
+          do: {updated_ingestion, nil},
+          else: {ingestion, job}
+      end)
+
+    {:ok, assign(socket, :ingestions, ingestions)}
+  end
+
   def update(params, socket) do
     {:ok, {ingestions_with_job, meta}} = Topics.list_ingestions_with_latest_job(params)
 
@@ -19,7 +28,7 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
       socket
       |> assign(:page_title, "Latest Library Updates")
       |> assign(:meta, meta)
-      |> stream(:ingestions, ingestions_with_job, reset: true)
+      |> assign(:ingestions, ingestions_with_job)
 
     {:ok, socket}
   end
@@ -51,19 +60,19 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
 
       <div class="overflow-x-auto">
         <Flop.Phoenix.table
-          items={@streams.ingestions}
+          items={@ingestions}
           meta={@meta}
           path={~p"/ingestions"}
           opts={[table_attrs: [class: "table md:table-fixed"]]}
         >
-          <:col :let={{_id, {ingestion, _job}}} label="Name" field={:name}>
+          <:col :let={{ingestion, _job}} label="Name" field={:name}>
             {ingestion.library.name}
           </:col>
-          <:col :let={{_id, {ingestion, _job}}} label="Version" field={:version}>
+          <:col :let={{ingestion, _job}} label="Version" field={:version}>
             {ingestion.library.version}
           </:col>
           <:col
-            :let={{_id, {ingestion, _job}}}
+            :let={{ingestion, _job}}
             label="State"
             field={nil}
             thead_th_attrs={[class: "text-center"]}
@@ -71,7 +80,7 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
           >
             <.ingestion_state_badge state={ingestion.state} />
           </:col>
-          <:col :let={{_id, {_ingestion, job}}}>
+          <%!-- <:col :let={{_ingestion, job}}>
             <span :if={job && job.state == "executing"} class="loading loading-spinner" />
             <div
               :if={job && job.state in ["discarded", "cancelled"]}
@@ -80,7 +89,7 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
               <.icon name="hero-exclamation-circle" />
               {gettext("We're investigating")}
             </div>
-          </:col>
+          </:col> --%>
         </Flop.Phoenix.table>
         <.pagination meta={@meta} path={~p"/ingestions"} />
       </div>

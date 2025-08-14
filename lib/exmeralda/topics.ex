@@ -105,7 +105,11 @@ defmodule Exmeralda.Topics do
     with {:ok, ingestion} <- do_create_ingestion(library),
          {:ok, oban_job} <- schedule_ingestion_worker(ingestion),
          {:ok, updated_ingestion} <- set_ingestion_job_id(ingestion, oban_job),
-         :ok <- broadcast("ingestions", {:ingestion_created, %{id: ingestion.id}}) do
+         :ok <-
+           broadcast(
+             "ingestions",
+             {:ingestion_created, Repo.preload(updated_ingestion, [:library])}
+           ) do
       {:ok, %{library: library, ingestion: updated_ingestion}}
     end
   end
@@ -182,7 +186,7 @@ defmodule Exmeralda.Topics do
     Phoenix.PubSub.broadcast(
       Exmeralda.PubSub,
       "ingestions",
-      {:ingestion_state_updated, %{id: ingestion.id}}
+      {:ingestion_state_updated, Repo.preload(ingestion, [:library])}
     )
 
     ingestion

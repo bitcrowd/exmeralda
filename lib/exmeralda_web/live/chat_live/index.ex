@@ -8,8 +8,10 @@ defmodule ExmeraldaWeb.ChatLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    if connected?(socket),
-      do: PubSub.subscribe(Exmeralda.PubSub, "user-#{socket.assigns.current_user.id}")
+    if connected?(socket) do
+      PubSub.subscribe(Exmeralda.PubSub, "user-#{socket.assigns.current_user.id}")
+      PubSub.subscribe(Exmeralda.PubSub, "ingestions")
+    end
 
     {:ok, stream(socket, :sessions, Chats.list_sessions(socket.assigns.current_user), at: -1)}
   end
@@ -50,6 +52,26 @@ defmodule ExmeraldaWeb.ChatLive.Index do
     if current_session && current_session.id == session_id do
       send_update(Chat, id: "chat", session_update: data)
     end
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:ingestion_created, ingestion}, socket) do
+    send_update(ListIngestions,
+      id: "list_ingestions",
+      event: :ingestion_created,
+      ingestion: ingestion
+    )
+
+    {:noreply, socket}
+  end
+
+  def handle_info({:ingestion_state_updated, ingestion}, socket) do
+    send_update(ListIngestions,
+      id: "list_ingestions",
+      event: :ingestion_state_updated,
+      ingestion: ingestion
+    )
 
     {:noreply, socket}
   end
