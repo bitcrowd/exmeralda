@@ -44,7 +44,6 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
 
   @impl true
   def handle_event("delete", _params, socket) do
-    # TODO: handle not found and stale records
     Topics.delete_library(socket.assigns.library)
 
     {:noreply,
