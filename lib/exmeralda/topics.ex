@@ -88,12 +88,8 @@ defmodule Exmeralda.Topics do
   def create_library(params) do
     Repo.transact(fn ->
       with {:ok, library} <- do_create_library(params),
-           {:ok, ingestion} <- create_ingestion(library),
-           {:ok, oban_job} <- schedule_ingestion_worker(ingestion),
-           {:ok, updated_ingestion} <- set_ingestion_job_id(ingestion, oban_job) do
-        broadcast("ingestions", {:ingestion_created, %{id: ingestion.id}})
-
-        {:ok, %{library: library, ingestion: updated_ingestion}}
+           {:ok, %{library: library, ingestion: ingestion}} <- create_ingestion(library) do
+        {:ok, %{library: library, ingestion: ingestion}}
       end
     end)
   end
@@ -105,6 +101,17 @@ defmodule Exmeralda.Topics do
   end
 
   defp create_ingestion(library) do
+    if !Repo.in_transaction?(), do: raise("not in a transaction")
+
+    with {:ok, ingestion} <- do_create_ingestion(library),
+         {:ok, oban_job} <- schedule_ingestion_worker(ingestion),
+         {:ok, updated_ingestion} <- set_ingestion_job_id(ingestion, oban_job),
+         :ok <- broadcast("ingestions", {:ingestion_created, %{id: ingestion.id}}) do
+      {:ok, %{library: library, ingestion: updated_ingestion}}
+    end
+  end
+
+  defp do_create_ingestion(library) do
     Ingestion.changeset(%{library_id: library.id, state: :queued})
     |> Repo.insert()
   end
@@ -127,9 +134,14 @@ defmodule Exmeralda.Topics do
   @doc """
   Schedules library ingestion for an existing library.
   """
-  # TODO: in a transaction
-  def reingest_library(library) do
-    IngestLibraryWorker.new(%{library_id: library.id}) |> Oban.insert()
+  @spec reingest_library(Library.id()) :: {:ok, Ingestion.t()} | {:error, {:not_found, Library}}
+  def reingest_library(library_id) do
+    Repo.transact(fn ->
+      with {:ok, library} <- Repo.fetch(Library, library_id),
+           {:ok, %{ingestion: ingestion}} <- create_ingestion(library) do
+        {:ok, ingestion}
+      end
+    end)
   end
 
   @doc """

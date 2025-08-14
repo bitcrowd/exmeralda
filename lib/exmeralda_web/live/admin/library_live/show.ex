@@ -26,12 +26,25 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
 
   @impl true
   def handle_event("reingest", _params, socket) do
-    Topics.reingest_library(socket.assigns.library)
-    {:noreply, put_flash(socket, :info, gettext("Reingestion is now in queue!"))}
+    %{library: library} = socket.assigns
+
+    {:noreply,
+     case Topics.reingest_library(library.id) do
+       {:ok, _ingestion} ->
+         socket
+         |> put_flash(:info, gettext("Reingestion is now in queue!"))
+         |> push_patch(to: ~p"/admin/library/#{library.id}")
+
+       {:error, {:not_found, _}} ->
+         socket
+         |> put_flash(:error, gettext("Library not found"))
+         |> push_navigate(to: ~p"/admin")
+     end}
   end
 
   @impl true
   def handle_event("delete", _params, socket) do
+    # TODO: handle not found and stale records
     Topics.delete_library(socket.assigns.library)
 
     {:noreply,
@@ -50,11 +63,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
 
       <.header title={"Ingestions for #{library_title(@library)}"}>
         <:actions>
-          <.link
-            class="btn btn-warning"
-            phx-click="reingest"
-            data-confirm="This will delete all source references to the library! Are you sure?"
-          >
+          <.link class="btn btn-warning" phx-click="reingest">
             <.icon name="hero-arrow-path" /> Re-Ingest
           </.link>
         </:actions>

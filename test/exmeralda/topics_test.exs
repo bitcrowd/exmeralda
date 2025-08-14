@@ -226,4 +226,34 @@ defmodule Exmeralda.TopicsTest do
       assert {:error, %Ecto.Changeset{}} = Topics.create_library(%{})
     end
   end
+
+  describe "reingest_library/1" do
+    test "errors if the library is not found" do
+      assert Topics.reingest_library(uuid()) == {:error, {:not_found, Library}}
+    end
+
+    test "creates an ingestion, starts worker and broadcasts ingestion created" do
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "ingestions")
+
+      library = insert(:library)
+
+      assert_count_differences(Repo, [{Library, 0}, {Ingestion, 1}], fn ->
+        assert {:ok, ingestion} = Topics.reingest_library(library.id)
+
+        assert ingestion.library_id == library.id
+        assert ingestion.state == :queued
+        assert ingestion.job_id
+      end)
+
+      [%{id: ingestion_id, job_id: job_id}] = Repo.all(Ingestion)
+
+      assert_enqueued(
+        id: job_id,
+        worker: Exmeralda.Topics.IngestLibraryWorker,
+        args: %{ingestion_id: ingestion_id}
+      )
+
+      assert_receive {:ingestion_created, %{id: ^ingestion_id}}
+    end
+  end
 end
