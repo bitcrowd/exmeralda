@@ -126,7 +126,7 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
           :chunks_embedding_running
         ]
       }
-      class="flex gap-2"
+      class="flex gap-2 items-center"
     >
       <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
       <p class="italic text-xs text-gray-500">{current_step_message(@current_step)}</p>

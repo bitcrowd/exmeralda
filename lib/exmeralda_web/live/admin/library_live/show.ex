@@ -7,7 +7,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
   @impl true
   def handle_params(params, _url, socket) do
     library = Topics.get_library!(params["id"])
-    {:ok, {ingestions, meta}} = Topics.list_ingestions_for_library(library, params)
+    {:ok, {ingestions, meta}} = Topics.list_ingestions(library, params)
 
     socket =
       socket
