@@ -1,6 +1,6 @@
 defmodule ExmeraldaWeb.ChatLive.StartChat do
   use ExmeraldaWeb, :live_component
-
+  import ExmeraldaWeb.Shared.Helper
   alias Exmeralda.Topics
   alias Exmeralda.Chats
 
@@ -80,17 +80,24 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
 
   @impl true
   def update(assigns, socket) do
+    %{params: params} = assigns
+    libraries = Topics.last_libraries()
+
     {:ok,
      socket
      |> assign(assigns)
-     |> assign_new(:libraries, fn ->
-       Topics.last_libraries()
-     end)
-     |> assign_new(:selected_library, fn -> nil end)
+     |> assign_new(:libraries, fn -> libraries end)
+     |> assign_new(:selected_library, fn -> find_library(params, libraries) end)
      |> assign_new(:form, fn ->
        to_form(Chats.new_session_changeset())
      end)}
   end
+
+  defp find_library(%{"selected_library" => selected_library}, libraries) do
+    Enum.find(libraries, &(&1.id == selected_library))
+  end
+
+  defp find_library(_, _), do: nil
 
   @impl true
   def handle_event("start", %{"session" => session_params}, socket) do
@@ -142,11 +149,4 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
   end
 
   defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
-
-  defp library(assigns) do
-    ~H"""
-    {@library.name}
-    <div class="badge badge-primary">{@library.version}</div>
-    """
-  end
 end

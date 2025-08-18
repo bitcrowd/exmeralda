@@ -210,12 +210,16 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Gets the latest ingestions.
+  Gets the latest ingestions in given states.
   """
-  # TODO: This is not the latest ones as the limit does not apply
-  def latest_ingestions(params) do
-    from(i in Ingestion, order_by: [desc: :inserted_at], preload: [:library, :job])
-    |> list_ingestions(params)
+  def last_ingestions(states) do
+    from(i in Ingestion,
+      where: i.state in ^states,
+      order_by: [desc: :inserted_at],
+      preload: [:library, :job],
+      limit: 10
+    )
+    |> Repo.all()
   end
 
   @doc """

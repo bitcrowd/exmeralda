@@ -29,10 +29,11 @@ defmodule ExmeraldaWeb.ChatLive.Index do
     |> assign(:current_session, session)
   end
 
-  defp apply_action(socket, :new, _params) do
+  defp apply_action(socket, :new, params) do
     socket
     |> assign(:page_title, gettext("New Session"))
     |> assign(:current_session, nil)
+    |> assign(:params, params)
   end
 
   defp apply_action(socket, :list_ingestions, _params) do

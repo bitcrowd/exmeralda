@@ -5,30 +5,44 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
 
   @impl true
   def update(%{event: :ingestion_created, ingestion: ingestion}, socket) do
-    ingestions = socket.assigns.ingestions
-    {:ok, assign(socket, :ingestions, [ingestion | ingestions])}
+    ongoing_ingestions = socket.assigns.ongoing_ingestions
+    {:ok, assign(socket, :ongoing_ingestions, [ingestion | ongoing_ingestions])}
   end
 
-  def update(%{event: :ingestion_state_updated, ingestion: updated_ingestion}, socket) do
-    ingestions =
-      socket.assigns.ingestions
-      |> Enum.map(fn ingestion ->
-        if ingestion.id == updated_ingestion.id,
-          do: updated_ingestion,
-          else: ingestion
-      end)
+  def update(%{event: :ingestion_state_updated, ingestion: ingestion}, socket) do
+    %{ready_ingestions: ready_ingestions, ongoing_ingestions: ongoing_ingestions} = socket.assigns
 
-    {:ok, assign(socket, :ingestions, ingestions)}
+    socket =
+      if ingestion.state in [:ready, :failed] do
+        socket
+        |> assign(:ongoing_ingestions, Enum.reject(ongoing_ingestions, &(&1.id == ingestion.id)))
+        |> assign(:ready_ingestions, [ingestion | ready_ingestions])
+      else
+        assign(
+          socket,
+          :ongoing_ingestions,
+          Enum.map(
+            ongoing_ingestions,
+            &if(&1.id == ingestion.id,
+              do: ingestion,
+              else: &1
+            )
+          )
+        )
+      end
+
+    {:ok, socket}
   end
 
-  def update(params, socket) do
-    {:ok, {ingestions, meta}} = Topics.latest_ingestions(params)
-
+  def update(_params, socket) do
     socket =
       socket
       |> assign(:page_title, "Latest Library Updates")
-      |> assign(:meta, meta)
-      |> assign(:ingestions, ingestions)
+      |> assign(
+        :ongoing_ingestions,
+        Topics.last_ingestions([:queued, :preprocessing, :chunking, :embedding])
+      )
+      |> assign(:ready_ingestions, Topics.last_ingestions([:ready, :failed]))
 
     {:ok, socket}
   end
@@ -42,43 +56,57 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <article class="max-w-4xl mx-auto p-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 p-4 justify-between">
-        <h2 class="text-2xl font-bold">
+    <article class="mt-4 mx-8">
+      <div class="grid grid-cols-1 sm:grid-cols-2 justify-between">
+        <h2 class="text-xl pb-4 font-bold">
           {gettext("Latest Library Updates")}
         </h2>
-        <%!-- <.ingestion_state_filter_toggle
-          class="justify-self-end"
-          state={:ready}
-          label={gettext("Only ready")}
-          checked={checked?(@meta)}
-          meta={@meta}
-          id="ingestion-filter-form"
-          target={@myself}
-        /> --%>
       </div>
 
-      <div class="overflow-x-auto">
-        <Flop.Phoenix.table
-          items={@ingestions}
-          meta={@meta}
-          path={~p"/ingestions"}
-          opts={[table_attrs: [class: "table md:table-fixed"]]}
-        >
-          <:col :let={ingestion} label="Name" field={:name}>
-            {ingestion.library.name}
-          </:col>
-          <:col :let={ingestion} label="Version" field={:version}>
-            {ingestion.library.version}
-          </:col>
-          <:col :let={ingestion} label="State" field={:state}>
-            <.ingestion_state_badge state={ingestion.state} />
-          </:col>
-          <:col :let={ingestion}>
-            <.ingestion_job_state ingestion={ingestion} />
-          </:col>
-        </Flop.Phoenix.table>
-        <.pagination meta={@meta} path={~p"/ingestions"} />
+      <div class="flex">
+        <div class="w-2/3">
+          <h3 class="text-lg mb-2">
+            <.icon name="hero-cube-transparent-mini" />
+            {gettext("Ongoing...")}
+          </h3>
+          <.table items={@ongoing_ingestions}>
+            <:col :let={ingestion} label="Name">
+              {ingestion.library.name}
+            </:col>
+            <:col :let={ingestion} label="Version">
+              {ingestion.library.version}
+            </:col>
+            <:col :let={ingestion} label="State">
+              <.ingestion_state_badge state={ingestion.state} />
+            </:col>
+            <:col :let={ingestion} label="Job state" label_class="sr-only">
+              <.ingestion_job_state ingestion={ingestion} />
+            </:col>
+          </.table>
+        </div>
+
+        <div class="w-1/3">
+          <h3 class="text-lg mb-2 pl-2">
+            <.icon name="hero-cube-mini" />
+            {gettext("Last processed libraries")}
+          </h3>
+          <ul class="menu px-0 w-full">
+            <li :for={ingestion <- @ready_ingestions}>
+              <%= if ingestion.state == :failed do %>
+                <div
+                  class="flex place-content-between tooltip text-gray-300"
+                  data-tip={gettext("We're investigating")}
+                >
+                  <.library library={ingestion.library} badge_class="badge-error" />
+                </div>
+              <% else %>
+                <.link patch={~p"/chat/start?selected_library=#{ingestion.library.id}"}>
+                  <.library library={ingestion.library} />
+                </.link>
+              <% end %>
+            </li>
+          </ul>
+        </div>
       </div>
     </article>
     """
@@ -100,15 +128,8 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
       }
       class="flex gap-2"
     >
-      <span class="loading loading-spinner" />
+      <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
       <p class="italic text-xs text-gray-500">{current_step_message(@current_step)}</p>
-    </div>
-    <div
-      :if={@current_step in [:cancelled, :discarded, :failed_while_chunking, :failed_while_embedding]}
-      class="flex flex-row items-center gap-2 text-error "
-    >
-      <.icon name="hero-exclamation-circle" />
-      {gettext("We're investigating")}
     </div>
     """
   end
@@ -119,56 +140,5 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
   defp current_step_message(:chunking_running),
     do: gettext("Fetching library documents and dependencies...")
 
-  defp current_step_message(step), do: gettext("Processing the library embeddings...")
-
-  defp checked?(meta), do: !!Flop.Filter.get(meta.flop.filters, :state)
-
-  #   attr :id, :string, default: nil
-  #   attr :target, :string, default: nil
-  #   attr :on_change, :string, default: "update-filter"
-
-  #   attr :meta, Flop.Meta, required: true
-  #   attr :state, :atom, required: true
-  #   attr :name, :any
-  #   attr :label, :string, default: nil
-  #   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
-
-  #   attr :rest, :global
-
-  #   def ingestion_state_filter_toggle(%{meta: meta} = assigns) do
-  #     assigns =
-  #       assigns
-  #       |> assign(form: Phoenix.Component.to_form(meta), meta: nil)
-  #       |> assign_new(:checked, fn ->
-  #         Phoenix.HTML.Form.normalize_value("checkbox", assigns[:value])
-  #       end)
-
-  #     ~H"""
-  #     <.form
-  #       for={@form}
-  #       id={@id}
-  #       phx-target={@target}
-  #       phx-change={@on_change}
-  #       phx-submit={@on_change}
-  #       {@rest}
-  #     >
-  #       <.filter_fields :let={i} form={@form} fields={[:state]}>
-  #         <div>
-  #           <label class="flex items-center gap-4 text-sm leading-6">
-  #             {@label}
-  #             <input type="hidden" name={i.field.name} value="false" disabled={@rest[:disabled]} />
-  #             <input
-  #               type="checkbox"
-  #               id={i.field.id}
-  #               name={i.field.name}
-  #               value={@state}
-  #               checked={@checked}
-  #               class="toggle toggle-success toggle-lg"
-  #             />
-  #           </label>
-  #         </div>
-  #       </.filter_fields>
-  #     </.form>
-  #     """
-  #   end
+  defp current_step_message(_step), do: gettext("Processing the library embeddings...")
 end

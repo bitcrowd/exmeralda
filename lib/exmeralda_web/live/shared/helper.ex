@@ -53,4 +53,15 @@ defmodule ExmeraldaWeb.Shared.Helper do
   def find_current_step(%{job: %{state: "cancelled"}}), do: :cancelled
   def find_current_step(%{job: %{state: "discarded"}}), do: :discarded
   def find_current_step(_), do: :unknown
+
+  attr :library, :map, required: true
+  attr :badge_class, :string, default: ""
+  attr :class, :string, default: ""
+
+  def library(assigns) do
+    ~H"""
+    {@library.name}
+    <span class={["badge badge-primary", @badge_class]}>{@library.version}</span>
+    """
+  end
 end

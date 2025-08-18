@@ -664,9 +664,43 @@ defmodule ExmeraldaWeb.CoreComponents do
     """
   end
 
+  attr :class, :string, default: ""
+
   def empty(assigns) do
     ~H"""
-    <p>{gettext("None")}</p>
+    <p class={@class}>{gettext("None")}</p>
+    """
+  end
+
+  attr :items, :list, required: true
+  attr :class, :string, default: ""
+
+  slot :col, required: true do
+    attr(:label, :string)
+    attr(:class, :string)
+    attr(:label_class, :string)
+  end
+
+  def table(assigns) do
+    ~H"""
+    <%= if @items == [] do %>
+      <.empty class="text-sm" />
+    <% else %>
+      <div class="overflow-x-auto overflow-y-hidden">
+        <table class={["table", @class]}>
+          <thead>
+            <tr>
+              <th :for={col <- @col} class={col[:label_class]}>{col.label}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={item <- @items}>
+              <td :for={col <- @col} class={col[:class]}>{render_slot(col, item)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
     """
   end
 end
