@@ -71,7 +71,8 @@ defmodule Exmeralda.TopicsTest do
 
       assert ingestion.state == :embedding
 
-      assert_receive {:ingestion_state_updated, %{id: ^ingestion_id}}
+      assert_receive {:ingestion_state_updated, %{id: ^ingestion_id} = ingestion}
+      assert_preloaded(ingestion, [:job])
     end
   end
 

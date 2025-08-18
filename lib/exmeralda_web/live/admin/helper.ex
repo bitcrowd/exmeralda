@@ -59,54 +59,40 @@ defmodule ExmeraldaWeb.Admin.Helper do
     """
   end
 
-  defp find_current_step(%{state: :queued, job: %{state: state}}, _)
-       when state in ["scheduled", "available"],
-       do: gettext("Ingestion is queued.")
+  defp find_current_step(ingestion, embedding_job_stats) do
+    case ExmeraldaWeb.Shared.Helper.find_current_step(ingestion) do
+      :ingestion_queued ->
+        gettext("Ingestion is queued.")
 
-  defp find_current_step(%{state: :queued, job: %{state: state}}, _)
-       when state in ["executing", "retryable"],
-       do: gettext("Fetching documents and chunking...")
+      :chunking_running ->
+        gettext("Fetching documents and chunking...")
 
-  defp find_current_step(%{state: :embedding, job: %{state: state}}, _)
-       when state in ["scheduled", "available"],
-       do: gettext("Embedding is queued.")
+      :embedding_queued ->
+        gettext("Embedding is queued.")
 
-  defp find_current_step(%{state: :embedding, job: %{state: state}}, _)
-       when state in ["executing", "retryable"],
-       do: gettext("Generating embeddings...")
+      :embedding_running ->
+        gettext("Generating embeddings...")
 
-  # The parent GenerateEmbeddingsWorker has run and all the chunk children
-  # worker are now running
-  defp find_current_step(%{state: :embedding, job: %{state: "completed"}}, %{
-         total: total,
-         completed: completed
-       }) do
-    gettext("Generating embeddings for chunks... Completed workers: %{completed}/%{total}",
-      completed: completed,
-      total: total
-    )
+      :chunks_embedding_running ->
+        gettext("Generating embeddings for chunks... Completed workers: %{completed}/%{total}",
+          completed: embedding_job_stats.completed,
+          total: embedding_job_stats.total
+        )
+
+      :failed_while_chunking ->
+        gettext("Failed when fetching documents or chunking")
+
+      :failed_while_embedding ->
+        gettext("Failed when embedding")
+
+      :cancelled ->
+        gettext("The job was cancelled.")
+
+      :discarded ->
+        gettext("The job was discarded.")
+
+      :ready ->
+        gettext("Done!")
+    end
   end
-
-  defp find_current_step(
-         %{
-           state: :failed,
-           job: %{worker: "Exmeralda.Topics.IngestLibraryWorker"}
-         },
-         _
-       ),
-       do: gettext("Failed when fetching documents or chunking")
-
-  defp find_current_step(
-         %{
-           state: :failed,
-           job: %{worker: "Exmeralda.Topics.GenerateEmbeddingsWorker"}
-         },
-         _
-       ),
-       do: gettext("Failed when embedding")
-
-  defp find_current_step(%{state: :ready}, _), do: gettext("Done!")
-  defp find_current_step(%{job: %{state: "cancelled"}}, _), do: gettext("The job was cancelled.")
-  defp find_current_step(%{job: %{state: "discarded"}}, _), do: gettext("The job was discarded.")
-  defp find_current_step(_, _), do: gettext("Unknown")
 end

@@ -6,29 +6,29 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
   @impl true
   def update(%{event: :ingestion_created, ingestion: ingestion}, socket) do
     ingestions = socket.assigns.ingestions
-    {:ok, assign(socket, :ingestions, [{ingestion, nil} | ingestions])}
+    {:ok, assign(socket, :ingestions, [ingestion | ingestions])}
   end
 
   def update(%{event: :ingestion_state_updated, ingestion: updated_ingestion}, socket) do
     ingestions =
       socket.assigns.ingestions
-      |> Enum.map(fn {ingestion, job} ->
+      |> Enum.map(fn ingestion ->
         if ingestion.id == updated_ingestion.id,
-          do: {updated_ingestion, nil},
-          else: {ingestion, job}
+          do: updated_ingestion,
+          else: ingestion
       end)
 
     {:ok, assign(socket, :ingestions, ingestions)}
   end
 
   def update(params, socket) do
-    {:ok, {ingestions_with_job, meta}} = Topics.list_ingestions_with_latest_job(params)
+    {:ok, {ingestions, meta}} = Topics.latest_ingestions(params)
 
     socket =
       socket
       |> assign(:page_title, "Latest Library Updates")
       |> assign(:meta, meta)
-      |> assign(:ingestions, ingestions_with_job)
+      |> assign(:ingestions, ingestions)
 
     {:ok, socket}
   end
@@ -65,37 +65,61 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
           path={~p"/ingestions"}
           opts={[table_attrs: [class: "table md:table-fixed"]]}
         >
-          <:col :let={{ingestion, _job}} label="Name" field={:name}>
+          <:col :let={ingestion} label="Name" field={:name}>
             {ingestion.library.name}
           </:col>
-          <:col :let={{ingestion, _job}} label="Version" field={:version}>
+          <:col :let={ingestion} label="Version" field={:version}>
             {ingestion.library.version}
           </:col>
-          <:col
-            :let={{ingestion, _job}}
-            label="State"
-            field={nil}
-            thead_th_attrs={[class: "text-center"]}
-            tbody_td_attrs={[class: "text-center"]}
-          >
+          <:col :let={ingestion} label="State" field={:state}>
             <.ingestion_state_badge state={ingestion.state} />
           </:col>
-          <%!-- <:col :let={{_ingestion, job}}>
-            <span :if={job && job.state == "executing"} class="loading loading-spinner" />
-            <div
-              :if={job && job.state in ["discarded", "cancelled"]}
-              class="flex flex-row items-center gap-2 text-error "
-            >
-              <.icon name="hero-exclamation-circle" />
-              {gettext("We're investigating")}
-            </div>
-          </:col> --%>
+          <:col :let={ingestion}>
+            <.ingestion_job_state ingestion={ingestion} />
+          </:col>
         </Flop.Phoenix.table>
         <.pagination meta={@meta} path={~p"/ingestions"} />
       </div>
     </article>
     """
   end
+
+  defp ingestion_job_state(assigns) do
+    assigns = assign_new(assigns, :current_step, fn -> find_current_step(assigns[:ingestion]) end)
+
+    ~H"""
+    <div
+      :if={
+        @current_step in [
+          :ingestion_queued,
+          :chunking_running,
+          :embedding_queued,
+          :embedding_running,
+          :chunks_embedding_running
+        ]
+      }
+      class="flex gap-2"
+    >
+      <span class="loading loading-spinner" />
+      <p class="italic text-xs text-gray-500">{current_step_message(@current_step)}</p>
+    </div>
+    <div
+      :if={@current_step in [:cancelled, :discarded, :failed_while_chunking, :failed_while_embedding]}
+      class="flex flex-row items-center gap-2 text-error "
+    >
+      <.icon name="hero-exclamation-circle" />
+      {gettext("We're investigating")}
+    </div>
+    """
+  end
+
+  defp current_step_message(:ingestion_queued), do: gettext("The library will soon be processed")
+
+  # Only shown with a page reload as this doesn't match any state update.
+  defp current_step_message(:chunking_running),
+    do: gettext("Fetching library documents and dependencies...")
+
+  defp current_step_message(step), do: gettext("Processing the library embeddings...")
 
   defp checked?(meta), do: !!Flop.Filter.get(meta.flop.filters, :state)
 

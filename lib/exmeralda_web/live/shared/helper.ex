@@ -15,4 +15,42 @@ defmodule ExmeraldaWeb.Shared.Helper do
   defp ingestion_state_class(:failed), do: "badge-error"
   defp ingestion_state_class(:queued), do: "badge-info"
   defp ingestion_state_class(_), do: "badge-warning"
+
+  def find_current_step(%{state: :queued, job: %{state: state}})
+      when state in ["scheduled", "available"],
+      do: :ingestion_queued
+
+  def find_current_step(%{state: :queued, job: %{state: state}})
+      when state in ["executing", "retryable"],
+      do: :chunking_running
+
+  def find_current_step(%{state: :embedding, job: %{state: state}})
+      when state in ["scheduled", "available"],
+      do: :embedding_queued
+
+  def find_current_step(%{state: :embedding, job: %{state: state}})
+      when state in ["executing", "retryable"],
+      do: :embedding_running
+
+  # The parent GenerateEmbeddingsWorker has run and all the chunk children
+  # worker are now running
+  def find_current_step(%{state: :embedding, job: %{state: "completed"}}),
+    do: :chunks_embedding_running
+
+  def find_current_step(%{
+        state: :failed,
+        job: %{worker: "Exmeralda.Topics.IngestLibraryWorker"}
+      }),
+      do: :failed_while_chunking
+
+  def find_current_step(%{
+        state: :failed,
+        job: %{worker: "Exmeralda.Topics.GenerateEmbeddingsWorker"}
+      }),
+      do: :failed_while_embedding
+
+  def find_current_step(%{state: :ready}), do: :ready
+  def find_current_step(%{job: %{state: "cancelled"}}), do: :cancelled
+  def find_current_step(%{job: %{state: "discarded"}}), do: :discarded
+  def find_current_step(_), do: :unknown
 end

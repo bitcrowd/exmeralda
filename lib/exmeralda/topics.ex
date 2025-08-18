@@ -108,7 +108,7 @@ defmodule Exmeralda.Topics do
          :ok <-
            broadcast(
              "ingestions",
-             {:ingestion_created, Repo.preload(updated_ingestion, [:library])}
+             {:ingestion_created, Repo.preload(updated_ingestion, [:library, :job])}
            ) do
       {:ok, %{library: library, ingestion: updated_ingestion}}
     end
@@ -186,45 +186,10 @@ defmodule Exmeralda.Topics do
     Phoenix.PubSub.broadcast(
       Exmeralda.PubSub,
       "ingestions",
-      {:ingestion_state_updated, Repo.preload(ingestion, [:library])}
+      {:ingestion_state_updated, Repo.preload(ingestion, [:library, :job])}
     )
 
     ingestion
-  end
-
-  @doc """
-  Gets ingestions together with the latest associated Oban job for `scope` with Flop support for pagination, filtering, and sorting.
-  """
-  def list_ingestions_with_latest_job(scope \\ Ingestion, params) do
-    with {:ok, flop} <- Flop.validate(params, replace_invalid_params: true, for: Ingestion) do
-      job_query =
-        from(Oban.Job,
-          where: fragment("args->>'ingestion_id' = ?::text", parent_as(:ingestion).id),
-          order_by: [desc: :attempted_at],
-          limit: 1
-        )
-
-      flop = maybe_add_pagination(flop)
-
-      {:ok,
-       scope
-       |> Flop.query(flop)
-       |> from(as: :ingestion)
-       |> preload(:library)
-       |> join(:left_lateral, [i], j in subquery(job_query),
-         on: fragment("args->>'ingestion_id' = ?::text", i.id)
-       )
-       |> select([i, j], {i, j})
-       |> Flop.run(flop, for: Ingestion)}
-    end
-  end
-
-  defp maybe_add_pagination(flop) do
-    if flop.first || flop.last || flop.page do
-      flop
-    else
-      %{flop | first: 10}
-    end
   end
 
   @doc """
@@ -247,20 +212,10 @@ defmodule Exmeralda.Topics do
   @doc """
   Gets the latest ingestions.
   """
+  # TODO: This is not the latest ones as the limit does not apply
   def latest_ingestions(params) do
-    from(i in Ingestion, order_by: [desc: :updated_at], preload: :library)
+    from(i in Ingestion, order_by: [desc: :inserted_at], preload: [:library, :job])
     |> list_ingestions(params)
-  end
-
-  @doc """
-  Gets ingestions that are not ready yet.
-  """
-  def list_not_ready_ingestions() do
-    from(i in Ingestion,
-      where: i.state != :ready,
-      preload: :library
-    )
-    |> Repo.all()
   end
 
   @doc """
