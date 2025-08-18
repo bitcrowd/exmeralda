@@ -48,12 +48,6 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
   end
 
   @impl true
-  def handle_event("update-filter", params, socket) do
-    params = Map.delete(params, "_target")
-    {:noreply, push_patch(socket, to: ~p"/ingestions?#{params}")}
-  end
-
-  @impl true
   def render(assigns) do
     ~H"""
     <article class="mt-4 mx-8">
