@@ -75,11 +75,6 @@ defmodule Exmeralda.Topics do
     Repo.get!(Library, id)
   end
 
-  def list_chunks(%Library{id: id}, params) do
-    from(c in Chunk, where: c.library_id == ^id)
-    |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
-  end
-
   @doc """
   Creates a library and ingestion, schedules the ingestion.
   """
