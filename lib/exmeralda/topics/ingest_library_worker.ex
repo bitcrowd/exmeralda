@@ -74,12 +74,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
     chunks
     |> Enum.chunk_every(@insert_batch_size)
     |> Enum.each(fn batch ->
-      batch =
-        Enum.map(
-          batch,
-          &Map.merge(&1, %{ingestion_id: ingestion.id, library_id: ingestion.library_id})
-        )
-
+      batch = Enum.map(batch, &Map.merge(&1, %{ingestion_id: ingestion.id}))
       Repo.insert_all(Chunk, batch)
     end)
 

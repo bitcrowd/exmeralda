@@ -45,11 +45,11 @@ defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
       assert perform_job(IngestLibraryWorker, %{ingestion_id: ingestion.id}) == :ok
 
       # ingestion moves to the next step
-      ingestion = Repo.reload(ingestion)
+      ingestion = Repo.reload(ingestion) |> Repo.preload([:chunks])
       assert ingestion.state == :embedding
 
       # library got dependencies assigned
-      library = Repo.reload(library) |> Repo.preload([:chunks])
+      library = Repo.reload(library)
 
       assert library.dependencies
              |> Enum.map(&{&1.name, &1.version_requirement, optional: &1.optional})
@@ -65,15 +65,15 @@ defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
              ]
 
       # Chunks were created
-      assert length(library.chunks) > 350 and length(library.chunks) < 450
-      docs = library.chunks |> Enum.filter(&(&1.type == :docs))
-      code = library.chunks |> Enum.filter(&(&1.type == :code))
+      assert length(ingestion.chunks) > 350 and length(ingestion.chunks) < 450
+      docs = ingestion.chunks |> Enum.filter(&(&1.type == :docs))
+      code = ingestion.chunks |> Enum.filter(&(&1.type == :code))
       assert length(docs) > 300 && length(docs) < 400
       assert length(code) > 50 && length(code) < 150
       assert Enum.all?(code, &String.starts_with?(&1.content, "# "))
 
       for source <- ["Rag.Telemetry.html", "mix.exs"] do
-        assert chunk = Enum.find(library.chunks, &(&1.source == source))
+        assert chunk = Enum.find(ingestion.chunks, &(&1.source == source))
         refute chunk.embedding
         assert is_binary(chunk.content)
       end
