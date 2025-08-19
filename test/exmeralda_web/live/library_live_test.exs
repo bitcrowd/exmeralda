@@ -50,7 +50,7 @@ defmodule ExmeraldaWeb.LibraryLiveTest do
       assert html =~
                "Your new library will be available in a few minutes! Thanks for participating."
 
-      assert html =~ "Choose a library, and ask me anything about it."
+      assert html =~ "Current Ingestions"
 
       library =
         Repo.get_by!(Library, name: "ecto", version: "3.13.0") |> Repo.preload(:ingestions)

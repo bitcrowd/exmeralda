@@ -71,7 +71,8 @@ defmodule Exmeralda.TopicsTest do
 
       assert ingestion.state == :embedding
 
-      assert_receive {:ingestion_state_updated, %{id: ^ingestion_id}}
+      assert_receive {:ingestion_state_updated, %{id: ^ingestion_id} = ingestion}
+      assert_preloaded(ingestion, [:job])
     end
   end
 
@@ -99,12 +100,13 @@ defmodule Exmeralda.TopicsTest do
   end
 
   describe "list_ingestions/2" do
-    setup [:insert_ingested_library, :insert_chunkless_library]
+    setup [:insert_ingested_library]
 
-    test "returns ingestions for a library with Flop support", %{
+    test "returns all ingestions with Flop support", %{
       ingested: library,
       ingested_library_ingestion: library_ingestion
     } do
+      _other_library_ingestion = insert(:ingestion)
       {:ok, {ingestions, meta}} = Topics.list_ingestions(library, %{})
 
       assert [ingestion] = ingestions
@@ -128,15 +130,14 @@ defmodule Exmeralda.TopicsTest do
       assert meta.total_count == 1
     end
 
-    test "supports pagination", %{
-      chunkless: library
-    } do
+    test "supports pagination", %{ingested: library} do
       insert_list(3, :ingestion, library: library)
 
-      {:ok, {ingestions, meta}} = Topics.list_ingestions(library, %{"page_size" => "2"})
+      {:ok, {ingestions, meta}} =
+        Topics.list_ingestions(library, %{"page_size" => "2"})
 
       assert length(ingestions) == 2
-      assert meta.total_count == 3
+      assert meta.total_count == 4
       assert meta.total_pages == 2
     end
   end
@@ -165,13 +166,13 @@ defmodule Exmeralda.TopicsTest do
     end
   end
 
-  describe "list_ingestion_chunks/2" do
+  describe "list_chunks_for_ingestion/2" do
     setup :insert_ingested_library
 
     test "returns chunks for an ingestion with Flop support", %{
       ingested_library_ingestion: ingestion
     } do
-      {:ok, {chunks, meta}} = Topics.list_ingestion_chunks(ingestion, %{})
+      {:ok, {chunks, meta}} = Topics.list_chunks_for_ingestion(ingestion, %{})
 
       assert length(chunks) == 3
       assert meta.total_count == 3
@@ -179,7 +180,7 @@ defmodule Exmeralda.TopicsTest do
 
     test "filters chunks by type", %{ingested_library_ingestion: ingestion} do
       {:ok, {chunks, meta}} =
-        Topics.list_ingestion_chunks(ingestion, %{
+        Topics.list_chunks_for_ingestion(ingestion, %{
           "filters" => [%{"field" => "type", "value" => "code"}]
         })
 
@@ -188,7 +189,7 @@ defmodule Exmeralda.TopicsTest do
     end
 
     test "supports pagination", %{ingested_library_ingestion: ingestion} do
-      {:ok, {chunks, meta}} = Topics.list_ingestion_chunks(ingestion, %{"page_size" => "2"})
+      {:ok, {chunks, meta}} = Topics.list_chunks_for_ingestion(ingestion, %{"page_size" => "2"})
 
       assert length(chunks) == 2
       assert meta.total_count == 3
@@ -254,6 +255,18 @@ defmodule Exmeralda.TopicsTest do
       )
 
       assert_receive {:ingestion_created, %{id: ^ingestion_id}}
+    end
+  end
+
+  describe "last_ingestions/1" do
+    test "returns the last 10 ingestions in the given states" do
+      library = insert(:library)
+      insert_list(10, :ingestion, library: library, state: :ready)
+      insert(:ingestion, library: library, state: :failed)
+
+      result = Topics.last_ingestions([:ready])
+      assert length(result) == 10
+      assert Enum.all?(result, &(&1.state == :ready))
     end
   end
 end

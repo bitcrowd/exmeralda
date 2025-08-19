@@ -105,7 +105,11 @@ defmodule Exmeralda.Topics do
     with {:ok, ingestion} <- do_create_ingestion(library),
          {:ok, oban_job} <- schedule_ingestion_worker(ingestion),
          {:ok, updated_ingestion} <- set_ingestion_job_id(ingestion, oban_job),
-         :ok <- broadcast("ingestions", {:ingestion_created, %{id: ingestion.id}}) do
+         :ok <-
+           broadcast(
+             "ingestions",
+             {:ingestion_created, Repo.preload(updated_ingestion, [:library, :job])}
+           ) do
       {:ok, %{library: library, ingestion: updated_ingestion}}
     end
   end
@@ -182,7 +186,7 @@ defmodule Exmeralda.Topics do
     Phoenix.PubSub.broadcast(
       Exmeralda.PubSub,
       "ingestions",
-      {:ingestion_state_updated, %{id: ingestion.id}}
+      {:ingestion_state_updated, Repo.preload(ingestion, [:library, :job])}
     )
 
     ingestion
@@ -192,10 +196,21 @@ defmodule Exmeralda.Topics do
   Gets all ingestions for a library with Flop support for pagination, filtering, and sorting.
   """
   def list_ingestions(%Library{id: library_id}, params) do
-    from(i in Ingestion,
-      where: i.library_id == ^library_id
-    )
+    from(i in Ingestion, where: i.library_id == ^library_id)
     |> Flop.validate_and_run(params, replace_invalid_params: true, for: Ingestion)
+  end
+
+  @doc """
+  Gets the latest ingestions in given states.
+  """
+  def last_ingestions(states) do
+    from(i in Ingestion,
+      where: i.state in ^states,
+      order_by: [desc: :inserted_at],
+      preload: [:library, :job],
+      limit: 10
+    )
+    |> Repo.all()
   end
 
   @doc """
@@ -243,7 +258,7 @@ defmodule Exmeralda.Topics do
   @doc """
   Lists chunks for an ingestion.
   """
-  def list_ingestion_chunks(%Ingestion{id: id}, params) do
+  def list_chunks_for_ingestion(%Ingestion{id: id}, params) do
     from(c in Chunk, where: c.ingestion_id == ^id)
     |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
   end
