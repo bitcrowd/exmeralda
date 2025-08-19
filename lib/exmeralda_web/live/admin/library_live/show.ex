@@ -87,8 +87,6 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
             options: [
               {"All states", ""},
               {"Queued", "queued"},
-              {"Preprocessing", "preprocessing"},
-              {"Chunking", "chunking"},
               {"Embedding", "embedding"},
               {"Failed", "failed"},
               {"Ready", "ready"}

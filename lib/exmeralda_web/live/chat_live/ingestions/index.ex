@@ -40,7 +40,7 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
       |> assign(:page_title, "Latest Library Updates")
       |> assign(
         :ongoing_ingestions,
-        Topics.last_ingestions([:queued, :preprocessing, :chunking, :embedding])
+        Topics.last_ingestions([:queued, :embedding])
       )
       |> assign(:ready_ingestions, Topics.last_ingestions([:ready, :failed]))
 

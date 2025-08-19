@@ -12,7 +12,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
     end
   end
 
-  for state <- [:preprocessing, :chunking, :embedding, :failed, :ready] do
+  for state <- [:embedding, :failed, :ready] do
     describe "perform/1 when ingestion is in state #{state}" do
       test "cancels the worker" do
         ingestion = insert(:ingestion, state: unquote(state))
