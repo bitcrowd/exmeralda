@@ -1,7 +1,7 @@
 defmodule Exmeralda.Topics.Library do
   use Exmeralda.Schema
 
-  alias Exmeralda.Topics.{Dependency, Chunk, Ingestion}
+  alias Exmeralda.Topics.{Dependency, Ingestion}
 
   @derive {
     Flop.Schema,
@@ -20,7 +20,6 @@ defmodule Exmeralda.Topics.Library do
     field :version, :string
     embeds_many :dependencies, Dependency, on_replace: :delete
 
-    has_many :chunks, Chunk
     has_many :ingestions, Ingestion
 
     timestamps()

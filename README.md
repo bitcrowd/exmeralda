@@ -63,3 +63,13 @@ Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 - http://localhost:4000/dev/mailbox for the Swoosh dev mailbox
 - http://localhost:4000/oban for the Oban dashboard
 - http://localhost:4000/admin for our admin interface
+
+## Deployment
+
+The deployment is done with [Fly.io](https://fly.io/docs/elixir/).
+
+Follow [this guide](https://fly.io/docs/elixir/the-basics/iex-into-running-app/) to run an IEx console on production:
+
+```sh
+fly ssh console --pty -C "/app/bin/exmeralda remote"
+```

@@ -17,7 +17,7 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorker do
     Repo.transact(fn ->
       with {:ok, ingestion} <- fetch_ingestion(ingestion_id, library_id: library_id) do
         {:ok,
-         from(c in Chunk, where: c.library_id == ^library_id, select: c.id)
+         from(c in Chunk, where: c.ingestion_id == ^ingestion_id, select: c.id)
          |> Repo.all()
          |> Enum.chunk_every(@embeddings_batch_size)
          |> Enum.map(

@@ -148,7 +148,7 @@ defmodule Exmeralda.Chats do
     }
 
     Task.Supervisor.start_child(Exmeralda.TaskSupervisor, fn ->
-      {chunks, generation} = build_generation(message, session.ingestion.library_id)
+      {chunks, generation} = build_generation(message, session.ingestion.id)
       insert_sources(session, chunks, assistant_message)
 
       LLM.stream_responses(
@@ -158,8 +158,8 @@ defmodule Exmeralda.Chats do
     end)
   end
 
-  defp build_generation(message, library_id) do
-    scope = from c in Chunk, where: c.library_id == ^library_id
+  defp build_generation(message, ingestion_id) do
+    scope = from c in Chunk, where: c.ingestion_id == ^ingestion_id
 
     Rag.build_generation(scope, message.content, ref: message)
   end
