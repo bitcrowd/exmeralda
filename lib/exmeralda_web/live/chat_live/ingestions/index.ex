@@ -51,36 +51,36 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
   def render(assigns) do
     ~H"""
     <article class="mt-4 mx-8">
-      <div class="grid grid-cols-1 sm:grid-cols-2 justify-between">
-        <h2 class="text-xl pb-4 font-bold">
-          {gettext("Latest Library Updates")}
-        </h2>
-      </div>
+      <h2 class="text-xl pb-4 font-bold">
+        {gettext("Latest Library Updates")}
+      </h2>
 
-      <div class="flex">
-        <div class="w-2/3">
+      <div class="lg:flex">
+        <div class="lg:w-2/3 mb-4 mr-4">
           <h3 class="text-lg mb-2">
             <.icon name="hero-cube-transparent-mini" />
             {gettext("Ongoing...")}
           </h3>
-          <.table items={@ongoing_ingestions}>
-            <:col :let={ingestion} label="Name">
-              {ingestion.library.name}
-            </:col>
-            <:col :let={ingestion} label="Version">
-              {ingestion.library.version}
-            </:col>
-            <:col :let={ingestion} label="State">
-              <.ingestion_state_badge state={ingestion.state} />
-            </:col>
-            <:col :let={ingestion} label="Job state" label_class="sr-only">
-              <.ingestion_job_state ingestion={ingestion} />
-            </:col>
-          </.table>
+          <div class="ml-2">
+            <.table items={@ongoing_ingestions}>
+              <:col :let={ingestion} label="Name">
+                {ingestion.library.name}
+              </:col>
+              <:col :let={ingestion} label="Version">
+                {ingestion.library.version}
+              </:col>
+              <:col :let={ingestion} label="State">
+                <.ingestion_state_badge state={ingestion.state} />
+              </:col>
+              <:col :let={ingestion} label="Job state" label_class="sr-only">
+                <.ingestion_job_state ingestion={ingestion} />
+              </:col>
+            </.table>
+          </div>
         </div>
 
-        <div class="w-1/3">
-          <h3 class="text-lg mb-2 pl-2">
+        <div class="lg:w-1/3">
+          <h3 class="text-lg mb-2 lg:pl-2">
             <.icon name="hero-cube-mini" />
             {gettext("Last processed libraries")}
           </h3>
