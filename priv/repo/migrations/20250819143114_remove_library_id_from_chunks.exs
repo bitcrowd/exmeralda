@@ -28,5 +28,7 @@ defmodule Exmeralda.Repo.Migrations.RemoveLibraryIdFromChunks do
         null: false,
         from: references(:libraries, on_delete: :delete_all)
     end
+
+    create index("chunks", [:library_id])
   end
 end

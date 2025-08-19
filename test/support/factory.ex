@@ -20,6 +20,7 @@ defmodule Exmeralda.Factory do
 
   def reaction_factory do
     %Exmeralda.Chats.Reaction{
+      ingestion: build(:ingestion),
       message: build(:message),
       user: build(:user),
       type: :upvote
