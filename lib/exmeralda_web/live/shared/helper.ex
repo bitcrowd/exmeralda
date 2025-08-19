@@ -16,6 +16,7 @@ defmodule ExmeraldaWeb.Shared.Helper do
   defp ingestion_state_class(:queued), do: "badge-info"
   defp ingestion_state_class(_), do: "badge-warning"
 
+  # credo:disable-for-lines:20 Credo.Check.Refactor.CyclomaticComplexity
   def find_current_step(%{state: :queued, job: %{state: state}})
       when state in ["scheduled", "available"],
       do: :ingestion_queued

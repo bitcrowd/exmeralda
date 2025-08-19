@@ -59,6 +59,7 @@ defmodule ExmeraldaWeb.Admin.Helper do
     """
   end
 
+  # credo:disable-for-lines:63 Credo.Check.Refactor.CyclomaticComplexity
   defp find_current_step(ingestion, embedding_job_stats) do
     case ExmeraldaWeb.Shared.Helper.find_current_step(ingestion) do
       :ingestion_queued ->
