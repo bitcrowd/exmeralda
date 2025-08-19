@@ -17,10 +17,7 @@ defmodule Exmeralda.Topics.Ingestion do
   }
 
   schema "ingestions" do
-    field :state, Ecto.Enum,
-      # TODO: Consider prod ingestion in preprocessing or chunking states
-      # TODO: Get rid of preprocessing and chunking states
-      values: [:queued, :preprocessing, :chunking, :embedding, :failed, :ready]
+    field :state, Ecto.Enum, values: [:queued, :embedding, :failed, :ready]
 
     belongs_to :library, Library
     has_many :chunks, Chunk

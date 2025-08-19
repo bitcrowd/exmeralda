@@ -37,7 +37,7 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
     end
   end
 
-  for state <- [:queued, :preprocessing, :chunking, :failed, :ready] do
+  for state <- [:queued, :failed, :ready] do
     describe "perform/1 with library_id when ingestion is in state #{state}" do
       test "cancels the worker" do
         ingestion = insert(:ingestion, state: unquote(state))
@@ -109,7 +109,7 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
     end
   end
 
-  for state <- [:queued, :preprocessing, :chunking, :failed, :ready] do
+  for state <- [:queued, :failed, :ready] do
     describe "perform/1 with chunk_ids when ingestion is in state #{state}" do
       test "cancels the worker" do
         ingestion = insert(:ingestion, state: unquote(state))
