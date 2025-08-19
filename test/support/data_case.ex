@@ -27,6 +27,7 @@ defmodule Exmeralda.DataCase do
       import Exmeralda.Factory
       import BitcrowdEcto.Assertions
       import BitcrowdEcto.Random, only: [uuid: 0]
+      import Swoosh.TestAssertions
 
       alias Exmeralda.Repo
     end

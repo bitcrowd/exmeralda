@@ -36,8 +36,10 @@ defmodule ExmeraldaWeb.LibraryLive.Index do
   end
 
   def handle_event("save", %{"library" => params}, socket) do
+    %{current_user: user} = socket.assigns
+
     socket =
-      case Topics.create_library(params) do
+      case Topics.create_library(user, params) do
         {:ok, _} ->
           socket
           |> put_flash(

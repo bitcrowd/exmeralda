@@ -4,6 +4,10 @@ defmodule Exmeralda.TopicsTest do
   alias Exmeralda.Topics
   alias Exmeralda.Topics.{Ingestion, Library}
 
+  def insert_user(_) do
+    %{user: insert(:user)}
+  end
+
   def insert_library(_) do
     %{library: insert(:library)}
   end
@@ -197,14 +201,18 @@ defmodule Exmeralda.TopicsTest do
     end
   end
 
-  describe "create_library/1" do
-    test "creates a library and an ingestion, starts worker and broadcasts ingestion created" do
+  describe "create_library/2" do
+    setup [:insert_user]
+
+    test "creates a library and an ingestion, starts ingestion worker, broadcasts ingestion created and notifies the user",
+         %{user: user} do
       Phoenix.PubSub.subscribe(Exmeralda.PubSub, "ingestions")
 
       params = %{name: "ecto", version: "1.0.0"}
 
       assert_count_differences(Repo, [{Library, 1}, {Ingestion, 1}], fn ->
-        assert {:ok, %{library: library, ingestion: ingestion}} = Topics.create_library(params)
+        assert {:ok, %{library: library, ingestion: ingestion}} =
+                 Topics.create_library(user, params)
 
         assert %{name: "ecto", version: "1.0.0", dependencies: []} = library
         assert ingestion.library_id == library.id
@@ -212,7 +220,7 @@ defmodule Exmeralda.TopicsTest do
         assert ingestion.job_id
       end)
 
-      [%{id: ingestion_id, job_id: job_id}] = Repo.all(Ingestion)
+      [%{id: ingestion_id, library_id: library_id, job_id: job_id}] = Repo.all(Ingestion)
 
       assert_enqueued(
         id: job_id,
@@ -220,11 +228,19 @@ defmodule Exmeralda.TopicsTest do
         args: %{ingestion_id: ingestion_id}
       )
 
+      assert_enqueued(
+        worker: Exmeralda.Topics.DeliverIngestionInProgressEmailWorker,
+        args: %{user_id: user.id, library_id: library_id}
+      )
+
       assert_receive {:ingestion_created, %{id: ^ingestion_id}}
     end
 
-    test "returns a changeset when the params are invalid" do
-      assert {:error, %Ecto.Changeset{}} = Topics.create_library(%{})
+    test "returns a changeset when the params are invalid", %{user: user} do
+      assert {:error, %Ecto.Changeset{}} = Topics.create_library(user, %{})
+
+      refute_enqueued(worker: Exmeralda.Topics.IngestLibraryWorker)
+      refute_enqueued(worker: Exmeralda.Topics.DeliverIngestionInProgressEmailWorker)
     end
   end
 

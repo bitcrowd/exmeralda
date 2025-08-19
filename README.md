@@ -58,3 +58,8 @@ Be aware that the seeded libraries are not that useful to chat with, since it is
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 
+## Dev tools
+
+- http://localhost:4000/dev/mailbox for the Swoosh dev mailbox
+- http://localhost:4000/oban for the Oban dashboard
+- http://localhost:4000/admin for our admin interface
