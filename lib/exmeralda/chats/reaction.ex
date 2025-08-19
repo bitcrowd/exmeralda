@@ -17,13 +17,4 @@ defmodule Exmeralda.Chats.Reaction do
 
     timestamps()
   end
-
-  @fields [:message_id, :user_id, :ingestion_id, :type]
-
-  @doc false
-  def changeset(message \\ %__MODULE__{}, attrs) do
-    message
-    |> cast(attrs, @fields)
-    |> validate_required(@fields)
-  end
 end

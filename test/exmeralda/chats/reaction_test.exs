@@ -1,6 +1,5 @@
 defmodule Exmeralda.Chats.ReactionTest do
   use Exmeralda.DataCase
-  alias Exmeralda.Chats.Reaction
   alias Exmeralda.Repo
 
   describe "table" do
@@ -61,24 +60,6 @@ defmodule Exmeralda.Chats.ReactionTest do
       refute reaction.message_id
       refute reaction.user_id
       assert reaction.ingestion_id
-    end
-  end
-
-  describe "changeset/2" do
-    test "is valid with valid params" do
-      %{user_id: uuid(), message_id: uuid(), ingestion_id: uuid(), type: :upvote}
-      |> Reaction.changeset()
-      |> assert_changeset_valid()
-    end
-
-    test "is invalid with invalid params" do
-      %{}
-      |> Reaction.changeset()
-      |> refute_changeset_valid()
-      |> assert_required_error_on(:ingestion_id)
-      |> assert_required_error_on(:message_id)
-      |> assert_required_error_on(:type)
-      |> assert_required_error_on(:user_id)
     end
   end
 end

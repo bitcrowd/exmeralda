@@ -57,29 +57,11 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
 
   @impl true
   def handle_event("upvote", %{"value" => message_id}, socket) do
-    user_id = socket.assigns.session.user_id
-
-    case Chats.toggle_reaction(message_id, user_id, :upvote) do
-      {:ok, _reaction} ->
-        message = Chats.get_message!(message_id)
-        {:noreply, stream_insert(socket, :messages, message, update_only: true)}
-
-      {:error, _error} ->
-        {:noreply, socket}
-    end
+    handle_vote(socket, message_id, :upvote)
   end
 
   def handle_event("downvote", %{"value" => message_id}, socket) do
-    user_id = socket.assigns.session.user_id
-
-    case Chats.toggle_reaction(message_id, user_id, :downvote) do
-      {:ok, _reaction} ->
-        message = Chats.get_message!(message_id)
-        {:noreply, stream_insert(socket, :messages, message, update_only: true)}
-
-      {:error, _error} ->
-        {:noreply, socket}
-    end
+    handle_vote(socket, message_id, :downvote)
   end
 
   def handle_event("send", %{"message" => message_params}, socket) do
@@ -103,6 +85,14 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
          socket
          |> assign(:form, changeset |> to_form())}
     end
+  end
+
+  defp handle_vote(socket, message_id, type) do
+    %{session: session} = socket.assigns.session
+
+    Chats.upsert_reaction!(message_id, session, type)
+    message = Chats.get_message!(message_id)
+    {:noreply, stream_insert(socket, :messages, message, update_only: true)}
   end
 
   @impl true
@@ -164,6 +154,7 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
           </div>
           <div class="chat-footer p-2 gap-4">
             <div :if={message.role == :assistant}>
+              <%!-- TODO: show different buttons and action if user removes the vote --%>
               <.button
                 id="upvote"
                 class={[

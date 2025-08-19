@@ -2,7 +2,7 @@ defmodule Exmeralda.ChatsTest do
   use Exmeralda.DataCase, async: false
 
   alias Exmeralda.Chats
-  alias Exmeralda.Chats.{Message, Session}
+  alias Exmeralda.Chats.{Message, Session, Reaction}
   alias Exmeralda.Repo
 
   def insert_user(_) do
@@ -213,24 +213,37 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
-  defp create_user_and_session(_context) do
-    user = insert(:user)
-    session = insert(:chat_session, user: user)
+  describe "upsert_reaction!/3" do
+    setup [:insert_user]
 
-    %{user: user, session: session}
-  end
+    test "creates new reaction for message and user", %{user: user} do
+      ingestion = insert(:ingestion)
+      session = insert(:chat_session, user: user, ingestion: ingestion)
+      message = insert(:message, session: session)
+      _other_message = insert(:message, session: session)
 
-  defp create_message(%{session: session}) do
-    message = insert(:message, session: session)
+      # Some other records
+      other_session = insert(:chat_session, user: user, ingestion: ingestion)
+      _other_message = insert(:message, session: other_session)
 
-    %{message: message}
-  end
+      assert_count_differences(Repo, [{Reaction, 1}], fn ->
+        assert %Reaction{} = reaction = Chats.upsert_reaction!(message.id, session, :upvote)
+        assert reaction.message_id == message.id
+        assert reaction.ingestion_id == ingestion.id
+        assert reaction.user_id == user.id
+        assert reaction.type == :upvote
+      end)
 
-  describe "create_reaction/3" do
-    setup [:create_user_and_session, :create_message]
+      # Now upsert the vote -> no new reaction is created
+      assert_count_differences(Repo, [{Reaction, 0}], fn ->
+        assert %Reaction{} =
+                 upserted_reaction = Chats.upsert_reaction!(message.id, session, :downvote)
 
-    test "creates new reaction for message and user", %{message: message, user: user} do
-      assert {:ok, _reaction} = Chats.create_reaction(message, user, :upvote)
+        assert upserted_reaction.message_id == message.id
+        assert upserted_reaction.ingestion_id == ingestion.id
+        assert upserted_reaction.user_id == user.id
+        assert upserted_reaction.type == :downvote
+      end)
     end
   end
 end

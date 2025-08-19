@@ -211,31 +211,18 @@ defmodule Exmeralda.Chats do
   end
 
   @doc """
-  Creates a reaction for a message and user.
+  Upserts a reaction for a message in a session.
   """
-  def create_reaction(message_id, user_id, type) do
-    Reaction.changeset(%{message_id: message_id, user_id: user_id, type: type})
-    |> Repo.insert()
-  end
-
-  @doc """
-  Toggles a reaction for a message and user:
-  - if there is no current reaction, a new reaction will be created.
-  - if the current reaction is of `type`, it will be deleted.
-  - if the current reaction is not of `type`, it will be deleted and a new reaction of `type` will be created.
-  """
-  def toggle_reaction(message_id, user_id, type) do
-    case get_reaction(message_id, user_id) do
-      nil ->
-        create_reaction(message_id, user_id, type)
-
-      %{type: ^type} = reaction ->
-        Repo.delete(reaction)
-
-      reaction ->
-        with {:ok, _reaction} <- Repo.delete(reaction) do
-          create_reaction(message_id, user_id, type)
-        end
-    end
+  def upsert_reaction!(message_id, session, type) do
+    Repo.insert!(
+      %Reaction{
+        message_id: message_id,
+        user_id: session.user_id,
+        ingestion_id: session.ingestion_id,
+        type: type
+      },
+      on_conflict: [set: [type: type]],
+      conflict_target: [:message_id, :user_id]
+    )
   end
 end
