@@ -121,6 +121,6 @@ defmodule ExmeraldaWeb.LayoutComponents do
   end
 
   def full_screen_height(assigns) do
-    if Map.has_key?(assigns, :inside_navbar), do: "min-h-[calc(100vh-4rem)]", else: "h-screen"
+    if Map.has_key?(assigns, :inside_navbar), do: "h-[calc(100vh-4rem)]", else: "h-screen"
   end
 end
