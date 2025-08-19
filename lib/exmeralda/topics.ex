@@ -1,7 +1,16 @@
 defmodule Exmeralda.Topics do
-  alias Exmeralda.Repo
-  alias Exmeralda.Topics.{IngestLibraryWorker, Library, Chunk, Ingestion}
   import Ecto.Query
+  alias Exmeralda.Repo
+
+  alias Exmeralda.Topics.{
+    IngestLibraryWorker,
+    DeliverIngestionInProgressEmailWorker,
+    Library,
+    Chunk,
+    Ingestion
+  }
+
+  alias Exmeralda.Accounts.User
 
   def list_libraries(params) do
     Flop.validate_and_run(Library, params, replace_invalid_params: true, for: Library)
@@ -78,12 +87,14 @@ defmodule Exmeralda.Topics do
   @doc """
   Creates a library and ingestion, schedules the ingestion.
   """
-  @spec create_library(map()) ::
+  @spec create_library(User.t(), map()) ::
           {:ok, %{library: Library.t(), ingestion: Ingestion.t()}} | {:error, Ecto.Changeset.t()}
-  def create_library(params) do
+  def create_library(user, params) do
     Repo.transact(fn ->
-      with {:ok, library} <- do_create_library(params) do
-        create_ingestion(library)
+      with {:ok, library} <- do_create_library(params),
+           {:ok, ingestion} <- create_ingestion(library),
+           :ok <- notify_user(user, library) do
+        {:ok, %{library: library, ingestion: ingestion}}
       end
     end)
   end
@@ -105,7 +116,7 @@ defmodule Exmeralda.Topics do
              "ingestions",
              {:ingestion_created, Repo.preload(updated_ingestion, [:library, :job])}
            ) do
-      {:ok, %{library: library, ingestion: updated_ingestion}}
+      {:ok, updated_ingestion}
     end
   end
 
@@ -125,6 +136,13 @@ defmodule Exmeralda.Topics do
     |> Repo.update()
   end
 
+  defp notify_user(user, library) do
+    DeliverIngestionInProgressEmailWorker.new(%{user_id: user.id, library_id: library.id})
+    |> Oban.insert()
+
+    :ok
+  end
+
   defp broadcast(topic, event) do
     Phoenix.PubSub.broadcast(Exmeralda.PubSub, topic, event)
   end
@@ -136,7 +154,7 @@ defmodule Exmeralda.Topics do
   def reingest_library(library_id) do
     Repo.transact(fn ->
       with {:ok, library} <- Repo.fetch(Library, library_id),
-           {:ok, %{ingestion: ingestion}} <- create_ingestion(library) do
+           {:ok, ingestion} <- create_ingestion(library) do
         {:ok, ingestion}
       end
     end)
