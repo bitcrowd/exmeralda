@@ -153,9 +153,8 @@ defmodule Exmeralda.Topics do
   @spec reingest_library(Library.id()) :: {:ok, Ingestion.t()} | {:error, {:not_found, Library}}
   def reingest_library(library_id) do
     Repo.transact(fn ->
-      with {:ok, library} <- Repo.fetch(Library, library_id),
-           {:ok, ingestion} <- create_ingestion(library) do
-        {:ok, ingestion}
+      with {:ok, library} <- Repo.fetch(Library, library_id) do
+        create_ingestion(library)
       end
     end)
   end
