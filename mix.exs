@@ -51,7 +51,7 @@ defmodule Exmeralda.MixProject do
        app: false,
        compile: false,
        depth: 1},
-      {:swoosh, "~> 1.5"},
+      {:swoosh, "~> 1.19"},
       {:gen_smtp, "~> 1.3"},
       {:bitcrowd_ecto, "~> 1.0"},
       {:finch, "~> 0.13"},
