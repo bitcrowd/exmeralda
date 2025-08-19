@@ -51,35 +51,12 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
   def render(assigns) do
     ~H"""
     <article class="mt-4 mx-8">
-      <h2 class="text-xl pb-4 font-bold">
+      <h2 class="text-xl pb-4 font-bold lg:pl-2">
         {gettext("Latest Library Updates")}
       </h2>
 
       <div class="lg:flex">
-        <div class="lg:w-2/3 mb-4 mr-4">
-          <h3 class="text-lg mb-2">
-            <.icon name="hero-cube-transparent-mini" />
-            {gettext("Ongoing...")}
-          </h3>
-          <div class="ml-2">
-            <.table items={@ongoing_ingestions}>
-              <:col :let={ingestion} label="Name">
-                {ingestion.library.name}
-              </:col>
-              <:col :let={ingestion} label="Version">
-                {ingestion.library.version}
-              </:col>
-              <:col :let={ingestion} label="State">
-                <.ingestion_state_badge state={ingestion.state} />
-              </:col>
-              <:col :let={ingestion} label="Job state" label_class="sr-only">
-                <.ingestion_job_state ingestion={ingestion} />
-              </:col>
-            </.table>
-          </div>
-        </div>
-
-        <div class="lg:w-1/3">
+        <div class="lg:w-1/3 mr-8 mb-4">
           <h3 class="text-lg mb-2 lg:pl-2">
             <.icon name="hero-cube-mini" />
             {gettext("Last processed libraries")}
@@ -100,6 +77,29 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
               <% end %>
             </li>
           </ul>
+        </div>
+
+        <div class="lg:w-2/3">
+          <h3 class="text-lg mb-2">
+            <.icon name="hero-cube-transparent-mini" />
+            {gettext("Ongoing...")}
+          </h3>
+          <div>
+            <.table items={@ongoing_ingestions}>
+              <:col :let={ingestion} label="Name">
+                {ingestion.library.name}
+              </:col>
+              <:col :let={ingestion} label="Version">
+                {ingestion.library.version}
+              </:col>
+              <:col :let={ingestion} label="State">
+                <.ingestion_state_badge state={ingestion.state} />
+              </:col>
+              <:col :let={ingestion} label="Job state" label_class="sr-only">
+                <.ingestion_job_state ingestion={ingestion} />
+              </:col>
+            </.table>
+          </div>
         </div>
       </div>
     </article>
