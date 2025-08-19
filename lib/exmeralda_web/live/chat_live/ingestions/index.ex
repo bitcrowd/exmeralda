@@ -51,13 +51,18 @@ defmodule ExmeraldaWeb.ChatLive.Ingestions.Index do
   def render(assigns) do
     ~H"""
     <article class="mt-4 mx-8">
-      <h2 class="text-xl pb-4 font-bold lg:pl-2">
-        {gettext("Latest Library Updates")}
-      </h2>
+      <.header title={gettext("Latest Library Updates")}>
+        <:actions>
+          <.link class="btn" navigate={~p"/library/new"}>
+            <.icon name="hero-plus" />
+            {gettext("Add new library")}
+          </.link>
+        </:actions>
+      </.header>
 
-      <div class="lg:flex">
+      <div class="lg:flex mt-4">
         <div class="lg:w-1/3 mr-8 mb-4">
-          <h3 class="text-lg mb-2 lg:pl-2">
+          <h3 class="text-lg mb-2">
             <.icon name="hero-cube-mini" />
             {gettext("Last processed libraries")}
           </h3>
