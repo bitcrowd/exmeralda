@@ -172,12 +172,12 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
               </ul>
             </details>
           </div>
-          <div class="chat-footer p-2 gap-4">
-            <div :if={message.role == :assistant}>
-              <.vote_button message={message} type={:upvote} target={@myself} />
-              <.vote_button message={message} type={:downvote} target={@myself} />
-            </div>
-            <span :if={message.incomplete} class="opacity-50 loading loading-dots loading-xs"></span>
+          <div :if={message.incomplete} class="chat-footer opacity-50">
+            <span class="loading loading-dots loading-xs"></span>
+          </div>
+          <div :if={!message.incomplete && message.role == :assistant} class="chat-footer p-2">
+            <.vote_button message={message} type={:upvote} target={@myself} />
+            <.vote_button message={message} type={:downvote} target={@myself} />
           </div>
         </div>
       </div>
