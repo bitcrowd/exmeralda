@@ -277,15 +277,15 @@ defmodule Exmeralda.ChatsTest do
   end
 
   describe "delete_reaction/1 when the reaction does not exist" do
-    test "returns an error" do
-      assert Chats.delete_reaction(uuid()) == {:error, {:not_found, Reaction}}
+    test "returns ok" do
+      assert Chats.delete_reaction(uuid()) == :ok
     end
   end
 
   describe "delete_reaction/1" do
     test "deletes the reaction" do
       reaction = insert(:reaction)
-      assert {:ok, _} = Chats.delete_reaction(reaction.id)
+      assert Chats.delete_reaction(reaction.id) == :ok
       refute Repo.reload(reaction)
     end
   end

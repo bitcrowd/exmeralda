@@ -239,12 +239,15 @@ defmodule Exmeralda.Chats do
   @doc """
   Deletes a reaction.
   """
-  @spec delete_reaction(Reaction.id()) :: {:ok, Reaction.t()} | {:error, {:not_found, Reaction}}
+  @spec delete_reaction(Reaction.id()) :: :ok
   def delete_reaction(reaction_id) do
-    Repo.transact(fn ->
-      with {:ok, reaction} <- Repo.fetch(Reaction, reaction_id) do
-        {:ok, Repo.delete!(reaction)}
-      end
-    end)
+    case Repo.fetch(Reaction, reaction_id) do
+      {:ok, reaction} ->
+        Repo.delete(reaction, allow_stale: true)
+        :ok
+
+      _ ->
+        :ok
+    end
   end
 end
