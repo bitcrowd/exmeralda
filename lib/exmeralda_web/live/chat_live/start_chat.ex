@@ -108,13 +108,19 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
     case Chats.start_session(socket.assigns.user, params) do
       {:ok, session} ->
         notify_parent({:start, Map.put(session, :library, socket.assigns.selected_library)})
-
-        {:noreply,
-         socket
-         |> push_patch(to: ~p"/chat/#{session.id}")}
+        {:noreply, push_patch(socket, to: ~p"/chat/#{session.id}")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
+
+      {:error, {:not_found, _}} ->
+        {:noreply,
+         socket
+         |> put_flash(
+           :error,
+           gettext("This library does not exist anymore! Try adding it again.")
+         )
+         |> push_navigate(to: ~p"/chat/start")}
     end
   end
 

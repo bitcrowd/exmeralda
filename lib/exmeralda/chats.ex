@@ -66,9 +66,12 @@ defmodule Exmeralda.Chats do
         }
 
   @spec start_session(User.t(), start_session_attrs()) ::
-          {:ok, Session.t()} | {:error, Ecto.Changeset.t()}
-  def start_session(user, attrs) do
+          {:ok, Session.t()} | {:error, Ecto.Changeset.t()} | {:error, {:not_found, Ingestion}}
+  def start_session(user, %{"ingestion_id" => ingestion_id} = attrs) do
     Multi.new()
+    |> Multi.run(:ingestion, fn _, _ ->
+      Repo.fetch(Ingestion, ingestion_id, lock: :no_key_update)
+    end)
     |> Multi.insert(:session, Session.create_changeset(%Session{user_id: user.id}, attrs))
     |> Multi.insert(:message, fn %{session: session} ->
       %Message{role: :user, content: session.prompt, index: 0, session: session}
@@ -80,8 +83,8 @@ defmodule Exmeralda.Chats do
       {:ok, %{session: session, message: message, assistant_message: assistant_message}} ->
         {:ok, Map.put(session, :messages, [message, Map.put(assistant_message, :sources, [])])}
 
-      {:error, :session, changeset, _} ->
-        {:error, changeset}
+      {:error, step, error, _} when step in [:session, :ingestion] ->
+        {:error, error}
     end
   end
 

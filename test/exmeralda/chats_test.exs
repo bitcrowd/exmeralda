@@ -3,6 +3,7 @@ defmodule Exmeralda.ChatsTest do
 
   alias Exmeralda.Chats
   alias Exmeralda.Chats.{Message, Session, Reaction}
+  alias Exmeralda.Topics.Ingestion
   alias Exmeralda.Repo
 
   def insert_user(_) do
@@ -134,13 +135,17 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
-  describe "start_session/1" do
+  describe "start_session/2" do
     setup [:insert_user]
 
     test "errors with a changeset for invalid attrs", %{user: user} do
-      assert {:error, changeset} = Chats.start_session(user, %{})
-      assert_required_error_on(changeset, :ingestion_id)
+      assert {:error, changeset} = Chats.start_session(user, %{"ingestion_id" => uuid()})
       assert_required_error_on(changeset, :prompt)
+    end
+
+    test "errors if the ingestion does not exist", %{user: user} do
+      assert Chats.start_session(user, %{"ingestion_id" => uuid(), "prompt" => "Hello"}) ==
+               {:error, {:not_found, Ingestion}}
     end
 
     test "creates a session, a message", %{user: user} do
@@ -149,7 +154,7 @@ defmodule Exmeralda.ChatsTest do
 
       assert_count_differences(Repo, [{Session, 1}, {Message, 2}], fn ->
         assert {:ok, session} =
-                 Chats.start_session(user, %{ingestion_id: ingestion.id, prompt: "Hello"})
+                 Chats.start_session(user, %{"ingestion_id" => ingestion.id, "prompt" => "Hello"})
 
         assert session.ingestion_id == ingestion.id
         assert session.title == "Hello"
