@@ -206,7 +206,7 @@ defmodule Exmeralda.Chats do
   end
 
   @doc """
-  Upserts a reaction for a message in a session.
+  Upserts a reaction for a message.
   """
   @spec upsert_reaction(Message.id(), atom()) ::
           {:ok, Message.t()}
