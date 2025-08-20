@@ -148,7 +148,6 @@ defmodule ExmeraldaWeb.ChatLiveTest do
       assert chat_live |> element(".e2e-upvote-message-#{message.id}") |> render_click()
 
       [reaction] = Repo.all(Reaction)
-      assert reaction.user_id == user.id
       assert reaction.message_id == message.id
       assert reaction.type == :upvote
 

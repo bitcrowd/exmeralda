@@ -21,7 +21,6 @@ defmodule Exmeralda.Factory do
   def reaction_factory do
     %Exmeralda.Chats.Reaction{
       message: build(:message),
-      user: build(:user),
       type: :upvote
     }
   end

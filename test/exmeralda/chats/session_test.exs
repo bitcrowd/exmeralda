@@ -34,4 +34,25 @@ defmodule Exmeralda.Chats.SessionTest do
       |> assert_changes(:title, sliced_prompt)
     end
   end
+
+  describe "nilify behaviour" do
+    setup do
+      user = insert(:user)
+      ingestion = insert(:ingestion)
+      chat_session = insert(:chat_session, user: user, ingestion: ingestion)
+
+      %{user: user, chat_session: chat_session}
+    end
+
+    test "user is nilified on deletion of the user", %{
+      user: user,
+      chat_session: chat_session
+    } do
+      Repo.delete(user)
+
+      chat_session = Repo.reload(chat_session)
+      assert chat_session
+      refute chat_session.user_id
+    end
+  end
 end

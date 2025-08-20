@@ -208,17 +208,15 @@ defmodule Exmeralda.Chats do
   @doc """
   Upserts a reaction for a message in a session.
   """
-  @spec upsert_reaction(Message.id(), Session.id(), atom()) ::
+  @spec upsert_reaction(Message.id(), atom()) ::
           {:ok, Message.t()}
           | {:error, :message_not_from_assistant}
           | {:error, {:not_found, Message}}
-          | {:error, {:not_found, Session}}
-  def upsert_reaction(message_id, session_id, type) do
+  def upsert_reaction(message_id, type) do
     Repo.transact(fn ->
-      with {:ok, session} <- Repo.fetch(Session, session_id),
-           {:ok, message} <- Repo.fetch(Message, message_id),
+      with {:ok, message} <- Repo.fetch(Message, message_id, lock: :no_key_update),
            :ok <- message_from_assitant?(message),
-           {:ok, _} <- do_upsert_reaction(message_id, session, type) do
+           {:ok, _} <- do_upsert_reaction(message_id, type) do
         {:ok, Repo.preload(message, @message_preload)}
       end
     end)
@@ -227,15 +225,14 @@ defmodule Exmeralda.Chats do
   defp message_from_assitant?(%{role: :assistant}), do: :ok
   defp message_from_assitant?(_), do: {:error, :message_not_from_assistant}
 
-  defp do_upsert_reaction(message_id, session, type) do
+  defp do_upsert_reaction(message_id, type) do
     Repo.insert(
       %Reaction{
         message_id: message_id,
-        user_id: session.user_id,
         type: type
       },
       on_conflict: {:replace, [:type]},
-      conflict_target: [:message_id, :user_id]
+      conflict_target: [:message_id]
     )
   end
 

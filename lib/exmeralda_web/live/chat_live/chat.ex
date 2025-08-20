@@ -100,7 +100,7 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
   defp handle_add_vote(socket, message_id, type) do
     %{session: session} = socket.assigns
 
-    case Chats.upsert_reaction(message_id, session.id, type) do
+    case Chats.upsert_reaction(message_id, type) do
       {:ok, message} ->
         {:noreply, stream_insert(socket, :messages, message, update_only: true)}
 
@@ -110,7 +110,7 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
       {:error, {:not_found, _}} ->
         {:noreply,
          socket
-         |> put_flash(:error, gettext("The session was deleted and the vote cannot be recorded."))
+         |> put_flash(:error, gettext("Something went wrong"))
          |> push_navigate(to: ~p"/chat/start")}
     end
   end
