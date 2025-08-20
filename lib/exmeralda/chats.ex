@@ -8,7 +8,7 @@ defmodule Exmeralda.Chats do
   alias Ecto.Multi
   alias Phoenix.PubSub
 
-  alias Exmeralda.Topics.{Rag, Chunk, Ingestion}
+  alias Exmeralda.Topics.{Rag, Chunk, Ingestion, Library}
   alias Exmeralda.Chats.{LLM, Message, Reaction, Session, Source}
   alias Exmeralda.Accounts.User
 
@@ -41,6 +41,12 @@ defmodule Exmeralda.Chats do
   @spec list_sessions_for_ingestion(Ingestion.id()) :: [Session.t()]
   def list_sessions_for_ingestion(ingestion_id) do
     from(s in Session, where: s.ingestion_id == ^ingestion_id)
+    |> Repo.all()
+  end
+
+  @spec list_sessions_for_library(Library.id()) :: [Session.t()]
+  def list_sessions_for_library(library_id) do
+    from(s in Session, join: i in assoc(s, :ingestion), where: i.library_id == ^library_id)
     |> Repo.all()
   end
 

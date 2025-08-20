@@ -2,11 +2,12 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
   use ExmeraldaWeb, :live_view
   import ExmeraldaWeb.Admin.Helper
   import ExmeraldaWeb.Shared.Helper
-  alias Exmeralda.Topics
+  alias Exmeralda.{Topics, Chats}
 
   @impl true
   def handle_params(params, _url, socket) do
     library = Topics.get_library!(params["id"])
+    chat_sessions = Chats.list_sessions_for_library(library.id)
     {:ok, {ingestions, meta}} = Topics.list_ingestions(library, params)
 
     socket =
@@ -14,6 +15,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
       |> assign(:page_title, library_title(library))
       |> assign(:library, library)
       |> assign(:ingestions, ingestions)
+      |> assign(:chat_sessions, chat_sessions)
       |> assign(:meta, meta)
 
     {:noreply, socket}
@@ -45,15 +47,28 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
 
   @impl true
   def handle_event("delete", _params, socket) do
-    Topics.delete_library(socket.assigns.library)
+    %{library: library} = socket.assigns
 
-    {:noreply,
-     put_flash(socket, :info, gettext("Library successfully deleted!"))
-     |> push_navigate(to: ~p"/admin")}
+    socket =
+      case Topics.delete_library(library.id) do
+        {:ok, _} ->
+          socket
+          |> put_flash(:info, gettext("Library successfully deleted!"))
+          |> push_navigate(to: ~p"/admin")
+
+        {:error, :library_has_chats} ->
+          socket
+          |> put_flash(:error, gettext("Library has chats and cannot be deleted."))
+          |> push_patch(to: ~p"/admin/library/#{library.id}")
+      end
+
+    {:noreply, socket}
   end
 
   @impl true
   def render(assigns) do
+    assigns = assign_new(assigns, :library_deletable?, fn -> library_deletable?(assigns) end)
+
     ~H"""
     <.navbar_layout user={@current_user}>
       <.breadcrumbs>
@@ -61,70 +76,93 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
         <:items title={library_title(@library)} href={~p"/admin/library/#{@library.id}"} />
       </.breadcrumbs>
 
-      <.header title={"Ingestions for #{library_title(@library)}"}>
+      <.header title={"Library #{library_title(@library)}"}>
+        <:actions>
+          <div
+            class={[!@library_deletable? && "tooltip tooltip-left"]}
+            data-tip={gettext("This library is used in chats.")}
+          >
+            <.button
+              class="btn btn-error"
+              disabled={!@library_deletable?}
+              phx-click="delete"
+              data-confirm="This will delete all ingestions associated to this library as well! Are you sure?"
+            >
+              <.icon name="hero-trash" /> Delete
+            </.button>
+          </div>
+        </:actions>
+      </.header>
+
+      <.list>
+        <:item title={gettext("ID")}>{@library.id}</:item>
+        <:item title={gettext("Name")}>{@library.name}</:item>
+        <:item title={gettext("Version")}>{@library.version}</:item>
+        <:item title={gettext("Chat Sessions Count")}>{length(@chat_sessions)}</:item>
+        <:item title={gettext("Inserted At")}>{datetime(@library.inserted_at)}</:item>
+        <:item title={gettext("Updated At")}>{datetime(@library.updated_at)}</:item>
+      </.list>
+
+      <.section title={gettext("Ingestions")}>
         <:actions>
           <.button class="btn btn-warning" phx-click="reingest">
             <.icon name="hero-arrow-path" /> Re-Ingest
           </.button>
         </:actions>
-        <:actions>
-          <.button
-            class="btn btn-error"
-            phx-click="delete"
-            data-confirm="This will delete all chats associated to this library as well! Are you sure?"
-          >
-            <.icon name="hero-trash" /> Delete
-          </.button>
-        </:actions>
-      </.header>
 
-      <.filter_form
-        class="grid grid-cols-4 gap-4 pb-4"
-        fields={[
-          state: [
-            label: gettext("State"),
-            type: "select",
-            options: [
-              {"All states", ""},
-              {"Queued", "queued"},
-              {"Embedding", "embedding"},
-              {"Failed", "failed"},
-              {"Ready", "ready"}
+        <.filter_form
+          class="grid grid-cols-4 gap-4 pb-4 mt-4"
+          fields={[
+            state: [
+              label: gettext("State"),
+              type: "select",
+              options: [
+                {"All states", ""},
+                {"Queued", "queued"},
+                {"Embedding", "embedding"},
+                {"Failed", "failed"},
+                {"Ready", "ready"}
+              ]
             ]
-          ]
-        ]}
-        meta={@meta}
-        id="ingestion-filter-form"
-      />
+          ]}
+          meta={@meta}
+          id="ingestion-filter-form"
+        />
 
-      <Flop.Phoenix.table
-        items={@ingestions}
-        meta={@meta}
-        path={~p"/admin/library/#{@library.id}"}
-        opts={[table_attrs: [class: "table"]]}
-      >
-        <:col :let={ingestion} label="ID" field={:id}>{ingestion.id}</:col>
-        <:col :let={ingestion} label="State" field={:state}>
-          <.ingestion_state_badge state={ingestion.state} />
-        </:col>
-        <:col :let={ingestion} label="Created At" field={:inserted_at}>
-          {datetime(ingestion.inserted_at)}
-        </:col>
-        <:col :let={ingestion} label="Updated At" field={:updated_at}>
-          {datetime(ingestion.updated_at)}
-        </:col>
-        <:col :let={ingestion} label="Actions">
-          <.link
-            class="btn btn-primary btn-sm"
-            navigate={~p"/admin/library/#{@library.id}/ingestions/#{ingestion.id}"}
-          >
-            Show
-          </.link>
-        </:col>
-      </Flop.Phoenix.table>
+        <Flop.Phoenix.table
+          items={@ingestions}
+          meta={@meta}
+          path={~p"/admin/library/#{@library.id}"}
+          opts={[table_attrs: [class: "table"]]}
+        >
+          <:col :let={ingestion} label="ID" field={:id}>{ingestion.id}</:col>
+          <:col :let={ingestion} label="State" field={:state}>
+            <.ingestion_state_badge state={ingestion.state} />
+          </:col>
+          <:col :let={ingestion} label="Created At" field={:inserted_at}>
+            {datetime(ingestion.inserted_at)}
+          </:col>
+          <:col :let={ingestion} label="Updated At" field={:updated_at}>
+            {datetime(ingestion.updated_at)}
+          </:col>
+          <:col :let={ingestion} label="Actions">
+            <.link
+              class="btn btn-primary btn-sm"
+              navigate={~p"/admin/library/#{@library.id}/ingestions/#{ingestion.id}"}
+            >
+              Show
+            </.link>
+          </:col>
+        </Flop.Phoenix.table>
 
-      <.pagination meta={@meta} path={~p"/admin/library/#{@library.id}"} />
+        <.pagination meta={@meta} path={~p"/admin/library/#{@library.id}"} />
+      </.section>
     </.navbar_layout>
     """
+  end
+
+  defp library_deletable?(assigns) do
+    %{chat_sessions: chat_sessions} = assigns
+    Enum.empty?(chat_sessions)
   end
 end

@@ -307,4 +307,32 @@ defmodule Exmeralda.TopicsTest do
       refute Repo.reload(ingestion)
     end
   end
+
+  describe "delete_library/1 when the library does not exist" do
+    test "returns ok" do
+      assert Topics.delete_library(uuid()) == {:ok, :ok}
+    end
+  end
+
+  describe "delete_library/1" do
+    setup do
+      %{library: insert(:library)}
+    end
+
+    test "returns an error when the library has existing chat sessions", %{library: library} do
+      ingestion = insert(:ingestion, library: library)
+      insert(:chat_session, ingestion: ingestion)
+      assert Topics.delete_library(library.id) == {:error, :library_has_chats}
+    end
+
+    test "deletes the library, and its ingestions and chunks", %{library: library} do
+      ingestion = insert(:ingestion, library: library)
+      chunk = insert(:chunk, ingestion: ingestion)
+
+      assert {:ok, _} = Topics.delete_library(library.id)
+      refute Repo.reload(library)
+      refute Repo.reload(ingestion)
+      refute Repo.reload(chunk)
+    end
+  end
 end

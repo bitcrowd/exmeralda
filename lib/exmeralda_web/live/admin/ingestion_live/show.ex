@@ -79,7 +79,12 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
             class={[!@ingestion_deletable? && "tooltip tooltip-left"]}
             data-tip={gettext("This ingestion is used in chats.")}
           >
-            <.button class="btn btn-error" phx-click="delete" disabled={!@ingestion_deletable?}>
+            <.button
+              class="btn btn-error"
+              phx-click="delete"
+              disabled={!@ingestion_deletable?}
+              data-confirm="This will delete all chunks associated to this ingestion. Are you sure?"
+            >
               <.icon name="hero-trash" /> Delete
             </.button>
           </div>

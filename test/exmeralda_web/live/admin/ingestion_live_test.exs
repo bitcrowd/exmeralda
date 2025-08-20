@@ -39,7 +39,8 @@ defmodule ExmeraldaWeb.Admin.IngestionLiveTest do
       {:ok, show_library_live, html} =
         live(conn, ~p"/admin/library/#{library.id}")
 
-      assert html =~ "Ingestions for rag 0.1.0"
+      assert html =~ "Library rag 0.1.0"
+      assert html =~ "Ingestions"
 
       assert {:error, {:live_redirect, %{to: path}}} =
                show_library_live
