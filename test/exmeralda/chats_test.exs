@@ -105,6 +105,16 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
+  describe "list_sessions_for_ingestion/1" do
+    test "returns the chat sessions of an ingestion" do
+      ingestion = insert(:ingestion)
+      %{id: session_id} = insert(:chat_session, ingestion: ingestion)
+      insert(:chat_session)
+
+      assert [%Session{id: ^session_id}] = Chats.list_sessions_for_ingestion(ingestion.id)
+    end
+  end
+
   describe "get_message!/1" do
     test "raises if the message does not exist" do
       assert_raise Ecto.NoResultsError, fn -> Chats.get_message!(uuid()) end
@@ -114,7 +124,7 @@ defmodule Exmeralda.ChatsTest do
       library = insert(:library)
       ingestion = insert(:ingestion, library: library)
       session = insert(:chat_session, ingestion: ingestion)
-      chunk = insert(:chunk, library: library, ingestion: ingestion)
+      chunk = insert(:chunk, ingestion: ingestion)
       message = insert(:message, session: session)
       insert(:chat_source, chunk: chunk, message: message)
 

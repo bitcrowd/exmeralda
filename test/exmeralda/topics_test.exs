@@ -285,4 +285,26 @@ defmodule Exmeralda.TopicsTest do
       assert Enum.all?(result, &(&1.state == :ready))
     end
   end
+
+  describe "delete_ingestion/1 when the ingestion does not exist" do
+    test "returns ok" do
+      assert Topics.delete_ingestion(uuid()) == {:ok, :ok}
+    end
+  end
+
+  describe "delete_ingestion/1" do
+    setup do
+      %{ingestion: insert(:ingestion)}
+    end
+
+    test "returns an error when the ingestion has existing chat sessions", %{ingestion: ingestion} do
+      insert(:chat_session, ingestion: ingestion)
+      assert Topics.delete_ingestion(ingestion.id) == {:error, :ingestion_has_chats}
+    end
+
+    test "deletes the ingestion", %{ingestion: ingestion} do
+      assert {:ok, _} = Topics.delete_ingestion(ingestion.id)
+      refute Repo.reload(ingestion)
+    end
+  end
 end

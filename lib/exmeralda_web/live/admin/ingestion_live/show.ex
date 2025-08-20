@@ -2,7 +2,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
   use ExmeraldaWeb, :live_view
   import ExmeraldaWeb.Admin.Helper
   import ExmeraldaWeb.Shared.Helper
-  alias Exmeralda.Topics
+  alias Exmeralda.{Topics, Chats}
 
   @impl true
   def handle_params(params, _url, socket) do
@@ -11,6 +11,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
     stats = Topics.get_ingestion_stats(ingestion)
     embedding_job_stats = Topics.get_embedding_chunks_jobs(ingestion)
     {:ok, {chunks, meta}} = Topics.list_chunks_for_ingestion(ingestion, params)
+    chat_sessions = Chats.list_sessions_for_ingestion(ingestion.id)
 
     socket =
       socket
@@ -21,6 +22,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
       |> assign(:embedding_job_stats, embedding_job_stats)
       |> assign(:chunks, chunks)
       |> assign(:meta, meta)
+      |> assign(:chat_sessions, chat_sessions)
 
     {:noreply, socket}
   end
@@ -36,8 +38,29 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
      )}
   end
 
+  def handle_event("delete", _params, socket) do
+    %{ingestion: ingestion} = socket.assigns
+
+    socket =
+      case Topics.delete_ingestion(ingestion.id) do
+        {:ok, _} ->
+          socket
+          |> put_flash(:info, gettext("Ingestion successfully deleted!"))
+          |> push_navigate(to: ~p"/admin/library/#{ingestion.library_id}")
+
+        {:error, :ingestion_has_chats} ->
+          socket
+          |> put_flash(:error, gettext("Ingestion has chats and cannot be deleted."))
+          |> push_patch(to: ~p"/admin/library/#{ingestion.library_id}/ingestions/#{ingestion.id}")
+      end
+
+    {:noreply, socket}
+  end
+
   @impl true
   def render(assigns) do
+    assigns = assign_new(assigns, :ingestion_deletable?, fn -> ingestion_deletable?(assigns) end)
+
     ~H"""
     <.navbar_layout user={@current_user}>
       <.breadcrumbs>
@@ -51,6 +74,16 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
 
       <.header title={"Ingestion ##{@ingestion.id} for #{library_title(@library)}"}>
         <.ingestion_state_badge state={@ingestion.state} />
+        <:actions>
+          <div
+            class={[!@ingestion_deletable? && "tooltip tooltip-left"]}
+            data-tip={gettext("This ingestion is used in chats.")}
+          >
+            <.button class="btn btn-error" phx-click="delete" disabled={!@ingestion_deletable?}>
+              <.icon name="hero-trash" /> Delete
+            </.button>
+          </div>
+        </:actions>
       </.header>
 
       <.list>
@@ -68,6 +101,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
             <.empty />
           <% end %>
         </:item>
+        <:item title={gettext("Chat Sessions Count")}>{length(@chat_sessions)}</:item>
         <:item title={gettext("Inserted At")}>{datetime(@ingestion.inserted_at)}</:item>
         <:item title={gettext("Updated At")}>{datetime(@ingestion.updated_at)}</:item>
       </.list>
@@ -134,5 +168,10 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
       <.pagination meta={@meta} path={~p"/admin/library/#{@library.id}/ingestions/#{@ingestion.id}"} />
     </.navbar_layout>
     """
+  end
+
+  defp ingestion_deletable?(assigns) do
+    %{ingestion: ingestion, chat_sessions: chat_sessions} = assigns
+    ingestion.state in [:failed, :ready] && Enum.empty?(chat_sessions)
   end
 end

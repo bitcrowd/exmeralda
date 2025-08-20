@@ -38,6 +38,12 @@ defmodule Exmeralda.Chats do
     from s in Session, where: s.user_id == ^user_id, preload: :library
   end
 
+  @spec list_sessions_for_ingestion(Ingestion.id()) :: [Session.t()]
+  def list_sessions_for_ingestion(ingestion_id) do
+    from(s in Session, where: s.ingestion_id == ^ingestion_id)
+    |> Repo.all()
+  end
+
   @doc """
   Gets a single message.
   """

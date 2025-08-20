@@ -10,6 +10,8 @@ defmodule Exmeralda.Topics do
     Ingestion
   }
 
+  alias Exmeralda.Chats
+
   alias Exmeralda.Accounts.User
 
   def list_libraries(params) do
@@ -273,5 +275,23 @@ defmodule Exmeralda.Topics do
   def list_chunks_for_ingestion(%Ingestion{id: id}, params) do
     from(c in Chunk, where: c.ingestion_id == ^id)
     |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
+  end
+
+  @spec delete_ingestion(Ingestion.id()) :: {:ok, any()} | {:error, :ingestion_has_chats}
+  def delete_ingestion(ingestion_id) do
+    Repo.transact(fn ->
+      case Repo.fetch(Ingestion, ingestion_id, lock: :no_key_update) do
+        {:ok, ingestion} -> do_delete_ingestion(ingestion)
+        {:error, {:not_found, Ingestion}} -> {:ok, :ok}
+      end
+    end)
+  end
+
+  defp do_delete_ingestion(ingestion) do
+    if Enum.empty?(Chats.list_sessions_for_ingestion(ingestion.id)) do
+      Repo.delete(ingestion)
+    else
+      {:error, :ingestion_has_chats}
+    end
   end
 end
