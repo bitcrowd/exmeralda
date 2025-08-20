@@ -167,8 +167,10 @@ defmodule Exmeralda.Topics do
   @spec delete_library(Library.id()) :: {:ok, any()} | {:error, :library_has_chats}
   def delete_library(library_id) do
     Repo.transact(fn ->
-      case Repo.fetch(Library) do
-        {:ok, library} -> do_delete_library(library)
+      with {:ok, library} <- Repo.fetch(Library, library_id),
+           :ok <- Repo.advisory_xact_lock("library:#{library_id}") do
+        do_delete_library(library)
+      else
         {:error, {:not_found, Library}} -> {:ok, :ok}
       end
     end)
@@ -294,8 +296,10 @@ defmodule Exmeralda.Topics do
   @spec delete_ingestion(Ingestion.id()) :: {:ok, any()} | {:error, :ingestion_has_chats}
   def delete_ingestion(ingestion_id) do
     Repo.transact(fn ->
-      case Repo.fetch(Ingestion, ingestion_id, lock: :no_key_update) do
-        {:ok, ingestion} -> do_delete_ingestion(ingestion)
+      with {:ok, ingestion} <- Repo.fetch(Ingestion, ingestion_id),
+           :ok <- Repo.advisory_xact_lock("library:#{ingestion.library_id}") do
+        do_delete_ingestion(ingestion)
+      else
         {:error, {:not_found, Ingestion}} -> {:ok, :ok}
       end
     end)
