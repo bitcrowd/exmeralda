@@ -2,12 +2,11 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   use ExmeraldaWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
-  import Ecto.Query
   alias Exmeralda.Repo
   alias Exmeralda.Chats.{Reaction, Session}
 
   defp insert_library(_) do
-    library = insert(:library, name: "ecto")
+    library = insert(:library)
     ingestion = insert(:ingestion, library: library, state: :ready)
 
     %{library: library, ingestion: ingestion}
@@ -95,16 +94,14 @@ defmodule ExmeraldaWeb.ChatLiveTest do
               {:redirect, %{to: "/", flash: %{"error" => "You must log in to access this page."}}}} =
                live(conn, ~p"/chat/start")
     end
-  end
-
-  describe "chat session" do
-    setup [:insert_library, :insert_user, :insert_session]
 
     test "users can up and downvote messages and undo their votes", %{
       conn: conn,
       user: user,
       session: session
     } do
+      [_, message] = session.messages
+
       {:ok, chat_live, html} =
         conn
         |> log_in_user(user)
@@ -112,31 +109,20 @@ defmodule ExmeraldaWeb.ChatLiveTest do
 
       assert html =~ "I am a message"
 
-      assert chat_live |> element("#upvote") |> render_click()
-      assert chat_live |> element("#downvote") |> render_click()
+      assert chat_live |> element(".e2e-upvote-message-#{message.id}") |> render_click()
 
-      assert Repo.aggregate(
-               from(r in Reaction, where: r.user_id == ^user.id and r.type == :upvote),
-               :count
-             ) == 1
+      [reaction] = Repo.all(Reaction)
+      assert reaction.user_id == user.id
+      assert reaction.message_id == message.id
+      assert reaction.type == :upvote
 
-      assert Repo.aggregate(
-               from(r in Reaction, where: r.user_id == ^user.id and r.type == :downvote),
-               :count
-             ) == 1
+      assert chat_live |> element(".e2e-downvote-message-#{message.id}") |> render_click()
 
-      assert chat_live |> element("#upvote") |> render_click()
-      assert chat_live |> element("#downvote") |> render_click()
+      reaction = Repo.reload(reaction)
+      assert reaction.type == :downvote
 
-      assert Repo.aggregate(
-               from(r in Reaction, where: r.user_id == ^user.id and r.type == :upvote),
-               :count
-             ) == 0
-
-      assert Repo.aggregate(
-               from(r in Reaction, where: r.user_id == ^user.id and r.type == :downvote),
-               :count
-             ) == 0
+      assert chat_live |> element(".e2e-downvote-message-#{message.id}") |> render_click()
+      assert Repo.all(Reaction) == []
     end
   end
 end

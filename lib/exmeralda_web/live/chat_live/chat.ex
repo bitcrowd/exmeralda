@@ -56,14 +56,6 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
   end
 
   @impl true
-  def handle_event("upvote", %{"value" => message_id}, socket) do
-    handle_vote(socket, message_id, :upvote)
-  end
-
-  def handle_event("downvote", %{"value" => message_id}, socket) do
-    handle_vote(socket, message_id, :downvote)
-  end
-
   def handle_event("send", %{"message" => message_params}, socket) do
     socket.assigns.session
     |> Chats.continue_session(message_params)
@@ -87,8 +79,26 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
     end
   end
 
-  defp handle_vote(socket, message_id, type) do
-    %{session: session} = socket.assigns.session
+  def handle_event("add-upvote", %{"message-id" => message_id}, socket) do
+    handle_add_vote(socket, message_id, :upvote)
+  end
+
+  def handle_event("add-downvote", %{"message-id" => message_id}, socket) do
+    handle_add_vote(socket, message_id, :downvote)
+  end
+
+  def handle_event(
+        "remove-vote",
+        %{"message-id" => message_id, "reaction-id" => reaction_id},
+        socket
+      ) do
+    Chats.delete_reaction(reaction_id)
+    message = Chats.get_message!(message_id)
+    {:noreply, stream_insert(socket, :messages, message, update_only: true)}
+  end
+
+  defp handle_add_vote(socket, message_id, type) do
+    %{session: session} = socket.assigns
 
     Chats.upsert_reaction!(message_id, session, type)
     message = Chats.get_message!(message_id)
@@ -154,31 +164,8 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
           </div>
           <div class="chat-footer p-2 gap-4">
             <div :if={message.role == :assistant}>
-              <%!-- TODO: show different buttons and action if user removes the vote --%>
-              <.button
-                id="upvote"
-                class={[
-                  "btn btn-xs btn-soft btn-circle btn-success btn-outline",
-                  message.reaction && message.reaction.type == :upvote && "btn-active"
-                ]}
-                phx-click="upvote"
-                value={message.id}
-                phx-target={@myself}
-              >
-                <.icon name="hero-hand-thumb-up" />
-              </.button>
-              <.button
-                id="downvote"
-                class={[
-                  "btn btn-xs btn-soft btn-circle btn-error",
-                  message.reaction && message.reaction.type == :downvote && "btn-active"
-                ]}
-                phx-click="downvote"
-                value={message.id}
-                phx-target={@myself}
-              >
-                <.icon name="hero-hand-thumb-down" />
-              </.button>
+              <.vote_button message={message} type={:upvote} target={@myself} />
+              <.vote_button message={message} type={:downvote} target={@myself} />
             </div>
             <span :if={message.incomplete} class="opacity-50 loading loading-dots loading-xs"></span>
           </div>
@@ -203,12 +190,43 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
     """
   end
 
-  def message_class(:user), do: "chat chat-end"
-  def message_class(:assistant), do: "chat chat-start"
+  defp message_class(:user), do: "chat chat-end"
+  defp message_class(:assistant), do: "chat chat-start"
 
-  def message_content_class(:user), do: "chat-bubble bg-violet-100 dark:bg-violet-900"
-  def message_content_class(:assistant), do: "chat-bubble bg-base-200 dark:bg-base-300"
+  defp message_content_class(:user), do: "chat-bubble bg-violet-100 dark:bg-violet-900"
+  defp message_content_class(:assistant), do: "chat-bubble bg-base-200 dark:bg-base-300"
 
-  def message_role(:user), do: gettext("You")
-  def message_role(:assistant), do: gettext("Exmeralda")
+  defp message_role(:user), do: gettext("You")
+  defp message_role(:assistant), do: gettext("Exmeralda")
+
+  defp vote_button(assigns) do
+    ~H"""
+    <.button
+      class={[
+        "btn btn-xs btn-circle mr-0.5 e2e-#{@type}-message-#{@message.id}",
+        @type == :upvote && "btn-accent",
+        @type == :downvote && "btn-error",
+        @message.reaction && @message.reaction.type == @type && "btn-outline",
+        (!@message.reaction || @message.reaction.type != @type) && "btn-ghost"
+      ]}
+      phx-click={vote_button_action(@type, @message.reaction)}
+      phx-value-message-id={@message.id}
+      phx-value-reaction-id={@message.reaction && @message.reaction.id}
+      phx-target={@target}
+    >
+      <.icon
+        class="scale-75"
+        name={if @type == :upvote, do: "hero-hand-thumb-up", else: "hero-hand-thumb-down"}
+      />
+    </.button>
+    """
+  end
+
+  defp vote_button_action(type, reaction) do
+    if reaction && reaction.type == type do
+      "remove-vote"
+    else
+      "add-#{type}"
+    end
+  end
 end

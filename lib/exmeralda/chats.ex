@@ -213,7 +213,9 @@ defmodule Exmeralda.Chats do
   @doc """
   Upserts a reaction for a message in a session.
   """
+  @spec upsert_reaction!(Message.id(), Session.t(), atom()) :: Reaction.t()
   def upsert_reaction!(message_id, session, type) do
+    # TODO: Error if message not assistant
     Repo.insert!(
       %Reaction{
         message_id: message_id,
@@ -221,8 +223,20 @@ defmodule Exmeralda.Chats do
         ingestion_id: session.ingestion_id,
         type: type
       },
-      on_conflict: [set: [type: type]],
+      on_conflict: {:replace, [:type]},
       conflict_target: [:message_id, :user_id]
     )
+  end
+
+  @doc """
+  Deletes a reaction.
+  """
+  @spec delete_reaction(Reaction.id()) :: {:ok, Reaction.t()} | {:error, {:not_found, Reaction}}
+  def delete_reaction(reaction_id) do
+    Repo.transact(fn ->
+      with {:ok, reaction} <- Repo.fetch(Reaction, reaction_id) do
+        {:ok, Repo.delete!(reaction)}
+      end
+    end)
   end
 end

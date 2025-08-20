@@ -226,24 +226,36 @@ defmodule Exmeralda.ChatsTest do
       other_session = insert(:chat_session, user: user, ingestion: ingestion)
       _other_message = insert(:message, session: other_session)
 
-      assert_count_differences(Repo, [{Reaction, 1}], fn ->
-        assert %Reaction{} = reaction = Chats.upsert_reaction!(message.id, session, :upvote)
-        assert reaction.message_id == message.id
-        assert reaction.ingestion_id == ingestion.id
-        assert reaction.user_id == user.id
-        assert reaction.type == :upvote
-      end)
+      reaction =
+        assert_count_differences(Repo, [{Reaction, 1}], fn ->
+          assert %Reaction{} = reaction = Chats.upsert_reaction!(message.id, session, :upvote)
+          assert reaction.message_id == message.id
+          assert reaction.ingestion_id == ingestion.id
+          assert reaction.user_id == user.id
+          assert reaction.type == :upvote
+          reaction
+        end)
 
       # Now upsert the vote -> no new reaction is created
       assert_count_differences(Repo, [{Reaction, 0}], fn ->
-        assert %Reaction{} =
-                 upserted_reaction = Chats.upsert_reaction!(message.id, session, :downvote)
-
-        assert upserted_reaction.message_id == message.id
-        assert upserted_reaction.ingestion_id == ingestion.id
-        assert upserted_reaction.user_id == user.id
-        assert upserted_reaction.type == :downvote
+        assert %Reaction{} = Chats.upsert_reaction!(message.id, session, :downvote)
       end)
+
+      assert Repo.reload(reaction).type == :downvote
+    end
+  end
+
+  describe "delete_reaction/1 when the reaction does not exist" do
+    test "returns an error" do
+      assert Chats.delete_reaction(uuid()) == {:error, {:not_found, Reaction}}
+    end
+  end
+
+  describe "delete_reaction/1" do
+    test "deletes the reaction" do
+      reaction = insert(:reaction)
+      assert {:ok, _} = Chats.delete_reaction(reaction.id)
+      refute Repo.reload(reaction)
     end
   end
 end

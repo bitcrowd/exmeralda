@@ -1,7 +1,7 @@
 defmodule Exmeralda.Schema do
   defmacro __using__(_) do
     quote do
-      use Ecto.Schema
+      use BitcrowdEcto.Schema
       import Ecto.Changeset
       import BitcrowdEcto.Changeset
 
