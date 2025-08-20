@@ -22,7 +22,7 @@ defmodule ExmeraldaWeb.ChatLive.Index do
   end
 
   defp apply_action(socket, :show, %{"id" => id}) do
-    session = Chats.get_session!(socket.assigns.current_user, id)
+    session = Chats.get_session!(socket.assigns.current_user.id, id)
 
     socket
     |> assign(:page_title, session.title)
@@ -79,8 +79,13 @@ defmodule ExmeraldaWeb.ChatLive.Index do
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    session = Chats.get_session!(socket.assigns.current_user, id)
-    {:ok, _} = Chats.delete_session(session)
+    session =
+      socket.assigns.current_user.id
+      |> Chats.get_session!(id)
+      # We want to preserve sessions and messages to be able to produce meaningful
+      # statistics on the quality of the answers. Instead of deleting the session,
+      # we just nilify the user_id.
+      |> Chats.unlink_user_from_session!()
 
     socket = stream_delete(socket, :sessions, session)
 

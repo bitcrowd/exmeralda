@@ -27,8 +27,8 @@ defmodule Exmeralda.Chats do
   @doc """
   Gets a single session of a user.
   """
-  def get_session!(user, id) do
-    user.id
+  def get_session!(user_id, id) do
+    user_id
     |> session_scope()
     |> Repo.get!(id)
     |> Repo.preload(messages: [@message_preload])
@@ -184,9 +184,11 @@ defmodule Exmeralda.Chats do
   @doc """
   Deletes a session.
   """
-  @spec delete_session(Session.t()) :: {:ok, Session.t()}
-  def delete_session(%Session{} = session) do
-    Repo.delete(session)
+  @spec unlink_user_from_session!(Session.t()) :: Session.t()
+  def unlink_user_from_session!(%Session{} = session) do
+    session
+    |> Session.unset_user_changeset()
+    |> Repo.update!()
   end
 
   @doc """
@@ -201,13 +203,6 @@ defmodule Exmeralda.Chats do
   """
   def new_message_changeset(attrs \\ %{}) do
     Message.changeset(%Message{role: :user}, attrs)
-  end
-
-  @doc """
-  Gets the reaction for message and user.
-  """
-  def get_reaction(message_id, user_id) do
-    Repo.get_by(Reaction, message_id: message_id, user_id: user_id)
   end
 
   @doc """
@@ -237,7 +232,6 @@ defmodule Exmeralda.Chats do
       %Reaction{
         message_id: message_id,
         user_id: session.user_id,
-        ingestion_id: session.ingestion_id,
         type: type
       },
       on_conflict: {:replace, [:type]},

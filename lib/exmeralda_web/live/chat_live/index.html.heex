@@ -45,7 +45,7 @@
         <.button
           phx-click={JS.push("delete", value: %{id: session.id}) |> hide("##{id}")}
           data-confirm="Are you sure?"
-          class="btn-square absolute right-2 top-2 hover:text-error"
+          class={"btn-square absolute right-2 top-2 hover:text-error e2e-delete-session-#{session.id}"}
         >
           <span class="sr-only">{gettext("Delete")}</span>
           <.icon name="hero-x-mark" class="shrink-0" />

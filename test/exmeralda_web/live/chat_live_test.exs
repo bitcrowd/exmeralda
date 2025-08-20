@@ -45,9 +45,29 @@ defmodule ExmeraldaWeb.ChatLiveTest do
     end
 
     test "does not show other users sessions", %{conn: conn, session: session} do
+      user = insert(:user)
+
       {:ok, _index_live, html} =
         conn
-        |> log_in_user(insert(:user))
+        |> log_in_user(user)
+        |> live(~p"/chat/start")
+
+      refute html =~ session.id
+      assert html =~ "Ask Exmeralda"
+
+      assert_raise Ecto.NoResultsError, fn ->
+        conn
+        |> log_in_user(user)
+        |> live(~p"/chat/#{session}")
+      end
+    end
+
+    test "does not show sessions with nilified users", %{conn: conn, user: user} do
+      session = insert(:chat_session, user_id: nil)
+
+      {:ok, _index_live, html} =
+        conn
+        |> log_in_user(user)
         |> live(~p"/chat/start")
 
       refute html =~ session.id
@@ -87,6 +107,22 @@ defmodule ExmeraldaWeb.ChatLiveTest do
         |> live(~p"/chat/#{session}")
 
       assert html =~ "I am a message"
+    end
+
+    test "delete a session", %{conn: conn, session: session, user: user} do
+      {:ok, index_live, html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/chat/start")
+
+      assert html =~ session.id
+
+      assert index_live |> element(".e2e-delete-session-#{session.id}") |> render_click()
+
+      refute Repo.reload(session).user_id
+
+      html = render(index_live)
+      refute html =~ session.id
     end
 
     test "requires authentication", %{conn: conn} do

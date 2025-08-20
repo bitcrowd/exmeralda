@@ -48,50 +48,60 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
+  describe "get_session/2 when the session does not exist" do
+    test "raises an error" do
+      assert_raise Ecto.NoResultsError, fn -> Chats.get_session!(uuid(), uuid()) end
+    end
+  end
+
+  describe "get_session/2 when the session does not belong to the user" do
+    test "raises an error" do
+      session = insert(:chat_session)
+      assert_raise Ecto.NoResultsError, fn -> Chats.get_session!(uuid(), session.id) end
+    end
+  end
+
+  describe "get_session/2 when the session's user was nilified" do
+    setup [:insert_user]
+
+    test "returns an error", %{user: user} do
+      session = insert(:chat_session, user_id: nil)
+      assert_raise Ecto.NoResultsError, fn -> Chats.get_session!(user.id, session.id) end
+    end
+  end
+
   describe "get_session!/2" do
     setup [:insert_user]
 
     setup %{user: user} do
       library = insert(:library)
       ingestion = insert(:ingestion, library: library)
-
-      %{
-        session: insert(:chat_session, user: user, ingestion: ingestion),
-        library: library,
-        ingestion: ingestion
-      }
-    end
-
-    test "raises if the session does not belong to the user", %{session: session} do
-      assert_raise Ecto.NoResultsError, fn -> Chats.get_session!(insert(:user), session.id) end
-    end
-
-    test "raises if the session does not exist" do
-      assert_raise Ecto.NoResultsError, fn -> Chats.get_session!(insert(:user), uuid()) end
-    end
-
-    test "returns the session by user and session ID and preloads library, messages", %{
-      session: session,
-      user: user
-    } do
-      assert result = Chats.get_session!(user, session.id)
-      assert result.id == session.id
-      assert_preloaded(result, :library)
-      assert_preloaded(result, :messages)
-    end
-
-    test "preloads the messages source chunks", %{
-      session: session,
-      user: user,
-      library: library,
-      ingestion: ingestion
-    } do
+      session = insert(:chat_session, user: user, ingestion: ingestion)
+      message = insert(:message, session: session)
       chunk = insert(:chunk, library: library, ingestion: ingestion)
-      insert(:chat_source, chunk: chunk, message: insert(:message, session: session))
+      insert(:chat_source, chunk: chunk, message: message)
+      insert(:reaction, message: message, user: user)
 
-      assert result = Chats.get_session!(user, session.id)
-      [message] = result.messages
+      %{session: session, message: message, library: library}
+    end
+
+    test "returns the session by user and session ID and preloads library, messages, message chunks and reaction",
+         %{
+           session: %{id: session_id},
+           user: user,
+           library: library,
+           message: %{id: message_id}
+         } do
+      assert %Session{} = session = Chats.get_session!(user.id, session_id)
+      assert session.id == session_id
+      assert session.user_id == user.id
+      assert_preloaded(session, :library)
+      assert_preloaded(session, :messages)
+
+      assert session.library.id == library.id
+      assert [%{id: ^message_id} = message] = session.messages
       assert_preloaded(message, :source_chunks)
+      assert_preloaded(message, :reaction)
     end
   end
 
@@ -206,10 +216,12 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
-  describe "delete_session/1" do
-    test "deletes the session" do
-      session = insert(:chat_session)
-      assert {:ok, _} = Chats.delete_session(session)
+  describe "unlink_user_from_session!/1" do
+    test "unsets used_id on the session" do
+      user = insert(:user)
+      session = insert(:chat_session, user: user)
+      assert updated_session = Chats.unlink_user_from_session!(session)
+      refute updated_session.user_id
     end
   end
 
@@ -258,7 +270,6 @@ defmodule Exmeralda.ChatsTest do
 
           reaction = updated_message.reaction
           assert reaction.message_id == message.id
-          assert reaction.ingestion_id == ingestion.id
           assert reaction.user_id == user.id
           assert reaction.type == :upvote
           reaction
