@@ -213,10 +213,27 @@ defmodule Exmeralda.Chats do
   @doc """
   Upserts a reaction for a message in a session.
   """
-  @spec upsert_reaction!(Message.id(), Session.t(), atom()) :: Reaction.t()
-  def upsert_reaction!(message_id, session, type) do
-    # TODO: Error if message not assistant
-    Repo.insert!(
+  @spec upsert_reaction(Message.id(), Session.id(), atom()) ::
+          {:ok, Message.t()}
+          | {:error, :message_not_from_assistant}
+          | {:error, {:not_found, Message}}
+          | {:error, {:not_found, Session}}
+  def upsert_reaction(message_id, session_id, type) do
+    Repo.transact(fn ->
+      with {:ok, session} <- Repo.fetch(Session, session_id),
+           {:ok, message} <- Repo.fetch(Message, message_id),
+           :ok <- message_from_assitant?(message),
+           {:ok, _} <- do_upsert_reaction(message_id, session, type) do
+        {:ok, Repo.preload(message, @message_preload)}
+      end
+    end)
+  end
+
+  defp message_from_assitant?(%{role: :assistant}), do: :ok
+  defp message_from_assitant?(_), do: {:error, :message_not_from_assistant}
+
+  defp do_upsert_reaction(message_id, session, type) do
+    Repo.insert(
       %Reaction{
         message_id: message_id,
         user_id: session.user_id,

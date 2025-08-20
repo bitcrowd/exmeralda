@@ -213,13 +213,36 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
-  describe "upsert_reaction!/3" do
+  describe "upsert_reaction/3 when the session does not exist" do
+    test "returns an error" do
+      assert Chats.upsert_reaction(uuid(), uuid(), :upvote) == {:error, {:not_found, Session}}
+    end
+  end
+
+  describe "upsert_reaction/3 when the message is not found" do
+    test "returns an error" do
+      session = insert(:chat_session)
+      assert Chats.upsert_reaction(uuid(), session.id, :upvote) == {:error, {:not_found, Message}}
+    end
+  end
+
+  describe "upsert_reaction/3 when the message is not from the assistant" do
+    test "returns an error" do
+      session = insert(:chat_session)
+      message = insert(:message, session: session, role: :user)
+
+      assert Chats.upsert_reaction(message.id, session.id, :upvote) ==
+               {:error, :message_not_from_assistant}
+    end
+  end
+
+  describe "upsert_reaction/3" do
     setup [:insert_user]
 
     test "creates new reaction for message and user", %{user: user} do
       ingestion = insert(:ingestion)
       session = insert(:chat_session, user: user, ingestion: ingestion)
-      message = insert(:message, session: session)
+      message = insert(:message, session: session, role: :assistant)
       _other_message = insert(:message, session: session)
 
       # Some other records
@@ -228,7 +251,12 @@ defmodule Exmeralda.ChatsTest do
 
       reaction =
         assert_count_differences(Repo, [{Reaction, 1}], fn ->
-          assert %Reaction{} = reaction = Chats.upsert_reaction!(message.id, session, :upvote)
+          assert {:ok, %Message{} = updated_message} =
+                   Chats.upsert_reaction(message.id, session.id, :upvote)
+
+          assert_preloaded(updated_message, [:reaction])
+
+          reaction = updated_message.reaction
           assert reaction.message_id == message.id
           assert reaction.ingestion_id == ingestion.id
           assert reaction.user_id == user.id
@@ -238,7 +266,10 @@ defmodule Exmeralda.ChatsTest do
 
       # Now upsert the vote -> no new reaction is created
       assert_count_differences(Repo, [{Reaction, 0}], fn ->
-        assert %Reaction{} = Chats.upsert_reaction!(message.id, session, :downvote)
+        assert {:ok, %Message{} = updated_message} =
+                 Chats.upsert_reaction(message.id, session.id, :downvote)
+
+        assert updated_message.reaction.type == :downvote
       end)
 
       assert Repo.reload(reaction).type == :downvote
