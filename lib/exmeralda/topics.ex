@@ -351,7 +351,7 @@ defmodule Exmeralda.Topics do
     {:ok, mark_ingestion_as_active!(ingestion)}
   end
 
-  def mark_ingestion_as_active!(ingestion) do
+  defp mark_ingestion_as_active!(ingestion) do
     ingestion
     |> Ingestion.set_ingestion_active_changeset()
     |> Repo.update!()

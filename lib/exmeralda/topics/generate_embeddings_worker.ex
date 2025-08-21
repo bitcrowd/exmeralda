@@ -49,9 +49,8 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorker do
         |> Enum.each(&Repo.update!/1)
 
         if all_chunks_embedded?(ingestion.id) do
-          ingestion
-          |> Topics.update_ingestion_state!(:ready)
-          |> Topics.mark_ingestion_as_active!()
+          ingestion = Topics.update_ingestion_state!(ingestion, :ready)
+          {:ok, _} = Topics.mark_ingestion_as_active(ingestion.id)
         end
 
         {:ok, ingestion}

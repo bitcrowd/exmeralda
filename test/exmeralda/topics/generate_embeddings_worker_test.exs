@@ -88,7 +88,7 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
       library: library,
       ingestion: ingestion
     } do
-      insert(:ingestion, library: library, active: true, state: :ready)
+      active_ingestion = insert(:ingestion, library: library, active: true, state: :ready)
 
       assert :ok =
                perform_job(GenerateEmbeddingsWorker, %{
@@ -102,6 +102,9 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
 
       assert ingestion.state == :ready
       assert ingestion.active
+
+      active_ingestion = Repo.reload(active_ingestion)
+      refute active_ingestion.active
     end
   end
 
