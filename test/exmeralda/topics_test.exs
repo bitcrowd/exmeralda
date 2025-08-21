@@ -94,7 +94,10 @@ defmodule Exmeralda.TopicsTest do
 
     test "returns the active ingestion if present", %{library: library} do
       active_ingestion = insert(:ingestion, state: :ready, active: true, library: library)
-      _other_library_ingestion = insert(:ingestion, library: insert(:library), active: true)
+
+      _other_library_ingestion =
+        insert(:ingestion, library: insert(:library), active: true, state: :ready)
+
       _other_ingestion = insert(:ingestion, library: library, active: false)
 
       assert {:ok, ingestion} = Topics.active_ingestion(library.id)

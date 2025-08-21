@@ -88,6 +88,8 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
       library: library,
       ingestion: ingestion
     } do
+      insert(:ingestion, library: library, active: true, state: :ready)
+
       assert :ok =
                perform_job(GenerateEmbeddingsWorker, %{
                  library_id: library.id,

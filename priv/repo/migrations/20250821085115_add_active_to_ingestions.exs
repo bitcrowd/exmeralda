@@ -19,6 +19,14 @@ defmodule Exmeralda.Repo.Migrations.AddActiveToIngestions do
     """)
 
     create unique_index(:ingestions, [:library_id, :active], where: "active IS TRUE")
+
+    create(
+      constraint(
+        :ingestions,
+        :active_when_ready,
+        check: "NOT (active IS TRUE AND state != 'ready')"
+      )
+    )
   end
 
   def down do

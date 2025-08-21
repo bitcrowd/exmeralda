@@ -2,6 +2,18 @@ defmodule Exmeralda.Topics.IngestionTest do
   use Exmeralda.DataCase
   alias Exmeralda.Topics.Ingestion
 
+  describe "table" do
+    test "active_when_ready constraint" do
+      insert(:ingestion, active: true, state: :ready)
+      insert(:ingestion, active: false, state: :ready)
+      insert(:ingestion, active: false, state: :queued)
+
+      assert_raise Ecto.ConstraintError, ~r/active_when_ready/, fn ->
+        insert(:ingestion, active: true, state: :queued)
+      end
+    end
+  end
+
   describe "changeset/2" do
     test "works" do
       %{state: :queued, library_id: uuid()}
