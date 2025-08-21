@@ -164,7 +164,8 @@ defmodule Exmeralda.Topics do
   @doc """
   Deletes a library.
   """
-  @spec delete_library(Library.id()) :: {:ok, any()} | {:error, :library_has_chats}
+  @spec delete_library(Library.id()) ::
+          {:ok, :ok} | {:ok, Library.t()} | {:error, :library_has_chats}
   def delete_library(library_id) do
     Repo.transact(fn ->
       with {:ok, library} <- Repo.fetch(Library, library_id),
@@ -293,7 +294,8 @@ defmodule Exmeralda.Topics do
     |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
   end
 
-  @spec delete_ingestion(Ingestion.id()) :: {:ok, any()} | {:error, :ingestion_has_chats}
+  @spec delete_ingestion(Ingestion.id()) ::
+          {:ok, :ok} | {:ok, Ingestion.t()} | {:error, :ingestion_has_chats}
   def delete_ingestion(ingestion_id) do
     Repo.transact(fn ->
       with {:ok, ingestion} <- Repo.fetch(Ingestion, ingestion_id),

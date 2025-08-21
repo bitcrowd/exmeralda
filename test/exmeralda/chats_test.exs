@@ -142,6 +142,17 @@ defmodule Exmeralda.ChatsTest do
       assert_required_error_on(changeset, :prompt)
     end
 
+    test "errors with a changeset when the ingestion does not exist", %{user: user} do
+      assert {:error, changeset} =
+               Chats.start_session(user, %{
+                 "library_id" => uuid(),
+                 "ingestion_id" => uuid(),
+                 "prompt" => "hello"
+               })
+
+      assert_foreign_key_constraint_on(changeset, :ingestion_id)
+    end
+
     test "creates a session, a message", %{user: user} do
       library = insert(:library)
       ingestion = insert(:ingestion, library: library)

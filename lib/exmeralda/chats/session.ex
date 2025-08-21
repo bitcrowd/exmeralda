@@ -23,6 +23,7 @@ defmodule Exmeralda.Chats.Session do
       session
       |> cast(attrs, [:ingestion_id, :prompt])
       |> validate_required([:ingestion_id, :prompt])
+      |> foreign_key_constraint(:ingestion_id)
 
     title =
       changeset
