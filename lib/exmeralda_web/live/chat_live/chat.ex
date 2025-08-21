@@ -79,6 +79,42 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
     end
   end
 
+  def handle_event("add-upvote", %{"message-id" => message_id}, socket) do
+    handle_add_vote(socket, message_id, :upvote)
+  end
+
+  def handle_event("add-downvote", %{"message-id" => message_id}, socket) do
+    handle_add_vote(socket, message_id, :downvote)
+  end
+
+  def handle_event(
+        "remove-vote",
+        %{"message-id" => message_id, "reaction-id" => reaction_id},
+        socket
+      ) do
+    Chats.delete_reaction(reaction_id)
+    message = Chats.get_message!(message_id)
+    {:noreply, stream_insert(socket, :messages, message, update_only: true)}
+  end
+
+  defp handle_add_vote(socket, message_id, type) do
+    %{session: session} = socket.assigns
+
+    case Chats.upsert_reaction(message_id, type) do
+      {:ok, message} ->
+        {:noreply, stream_insert(socket, :messages, message, update_only: true)}
+
+      {:error, :message_not_from_assistant} ->
+        {:noreply, push_patch(socket, to: ~p"/chat/#{session.id}")}
+
+      {:error, {:not_found, _}} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, gettext("Something went wrong"))
+         |> push_navigate(to: ~p"/chat/start")}
+    end
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -136,8 +172,12 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
               </ul>
             </details>
           </div>
-          <div class="chat-footer opacity-50">
-            <span :if={message.incomplete} class="loading loading-dots loading-xs"></span>
+          <div :if={message.incomplete} class="chat-footer opacity-50">
+            <span class="loading loading-dots loading-xs"></span>
+          </div>
+          <div :if={!message.incomplete && message.role == :assistant} class="chat-footer p-2">
+            <.vote_button message={message} type={:upvote} target={@myself} />
+            <.vote_button message={message} type={:downvote} target={@myself} />
           </div>
         </div>
       </div>
@@ -160,12 +200,43 @@ defmodule ExmeraldaWeb.ChatLive.Chat do
     """
   end
 
-  def message_class(:user), do: "chat chat-end"
-  def message_class(:assistant), do: "chat chat-start"
+  defp message_class(:user), do: "chat chat-end"
+  defp message_class(:assistant), do: "chat chat-start"
 
-  def message_content_class(:user), do: "chat-bubble bg-violet-100 dark:bg-violet-900"
-  def message_content_class(:assistant), do: "chat-bubble bg-base-200 dark:bg-base-300"
+  defp message_content_class(:user), do: "chat-bubble bg-violet-100 dark:bg-violet-900"
+  defp message_content_class(:assistant), do: "chat-bubble bg-base-200 dark:bg-base-300"
 
-  def message_role(:user), do: gettext("You")
-  def message_role(:assistant), do: gettext("Exmeralda")
+  defp message_role(:user), do: gettext("You")
+  defp message_role(:assistant), do: gettext("Exmeralda")
+
+  defp vote_button(assigns) do
+    ~H"""
+    <.button
+      class={[
+        "btn btn-xs btn-circle mr-0.5 e2e-#{@type}-message-#{@message.id}",
+        @type == :upvote && "btn-accent",
+        @type == :downvote && "btn-error",
+        @message.reaction && @message.reaction.type == @type && "btn-outline",
+        (!@message.reaction || @message.reaction.type != @type) && "btn-ghost"
+      ]}
+      phx-click={vote_button_action(@type, @message.reaction)}
+      phx-value-message-id={@message.id}
+      phx-value-reaction-id={@message.reaction && @message.reaction.id}
+      phx-target={@target}
+    >
+      <.icon
+        class="scale-75"
+        name={if @type == :upvote, do: "hero-hand-thumb-up", else: "hero-hand-thumb-down"}
+      />
+    </.button>
+    """
+  end
+
+  defp vote_button_action(type, reaction) do
+    if reaction && reaction.type == type do
+      "remove-vote"
+    else
+      "add-#{type}"
+    end
+  end
 end

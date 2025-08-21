@@ -2,7 +2,7 @@ defmodule Exmeralda.ChatsTest do
   use Exmeralda.DataCase, async: false
 
   alias Exmeralda.Chats
-  alias Exmeralda.Chats.{Message, Session}
+  alias Exmeralda.Chats.{Message, Session, Reaction}
   alias Exmeralda.Repo
 
   def insert_user(_) do
@@ -48,50 +48,60 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
+  describe "get_session/2 when the session does not exist" do
+    test "raises an error" do
+      assert_raise Ecto.NoResultsError, fn -> Chats.get_session!(uuid(), uuid()) end
+    end
+  end
+
+  describe "get_session/2 when the session does not belong to the user" do
+    test "raises an error" do
+      session = insert(:chat_session)
+      assert_raise Ecto.NoResultsError, fn -> Chats.get_session!(uuid(), session.id) end
+    end
+  end
+
+  describe "get_session/2 when the session's user was nilified" do
+    setup [:insert_user]
+
+    test "returns an error", %{user: user} do
+      session = insert(:chat_session, user_id: nil)
+      assert_raise Ecto.NoResultsError, fn -> Chats.get_session!(user.id, session.id) end
+    end
+  end
+
   describe "get_session!/2" do
     setup [:insert_user]
 
     setup %{user: user} do
       library = insert(:library)
       ingestion = insert(:ingestion, library: library)
-
-      %{
-        session: insert(:chat_session, user: user, ingestion: ingestion),
-        library: library,
-        ingestion: ingestion
-      }
-    end
-
-    test "raises if the session does not belong to the user", %{session: session} do
-      assert_raise Ecto.NoResultsError, fn -> Chats.get_session!(insert(:user), session.id) end
-    end
-
-    test "raises if the session does not exist" do
-      assert_raise Ecto.NoResultsError, fn -> Chats.get_session!(insert(:user), uuid()) end
-    end
-
-    test "returns the session by user and session ID and preloads library, messages", %{
-      session: session,
-      user: user
-    } do
-      assert result = Chats.get_session!(user, session.id)
-      assert result.id == session.id
-      assert_preloaded(result, :library)
-      assert_preloaded(result, :messages)
-    end
-
-    test "preloads the messages source chunks", %{
-      session: session,
-      user: user,
-      library: library,
-      ingestion: ingestion
-    } do
+      session = insert(:chat_session, user: user, ingestion: ingestion)
+      message = insert(:message, session: session)
       chunk = insert(:chunk, library: library, ingestion: ingestion)
-      insert(:chat_source, chunk: chunk, message: insert(:message, session: session))
+      insert(:chat_source, chunk: chunk, message: message)
+      insert(:reaction, message: message)
 
-      assert result = Chats.get_session!(user, session.id)
-      [message] = result.messages
+      %{session: session, message: message, library: library}
+    end
+
+    test "returns the session by user and session ID and preloads library, messages, message chunks and reaction",
+         %{
+           session: %{id: session_id},
+           user: user,
+           library: library,
+           message: %{id: message_id}
+         } do
+      assert %Session{} = session = Chats.get_session!(user.id, session_id)
+      assert session.id == session_id
+      assert session.user_id == user.id
+      assert_preloaded(session, :library)
+      assert_preloaded(session, :messages)
+
+      assert session.library.id == library.id
+      assert [%{id: ^message_id} = message] = session.messages
       assert_preloaded(message, :source_chunks)
+      assert_preloaded(message, :reaction)
     end
   end
 
@@ -206,10 +216,92 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
-  describe "delete_session/1" do
-    test "deletes the session" do
+  describe "unlink_user_from_session/2 when the session does not exist" do
+    test "returns an error" do
+      assert Chats.unlink_user_from_session(uuid(), uuid()) == {:error, {:not_found, Session}}
+    end
+  end
+
+  describe "unlink_user_from_session/2 when the session does belong to the user" do
+    test "returns an error" do
+      user = insert(:user)
+      session = insert(:chat_session, user: user)
+      assert Chats.unlink_user_from_session(uuid(), session.id) == {:error, {:not_found, Session}}
+      assert Repo.reload(session).user_id
+    end
+  end
+
+  describe "unlink_user_from_session/2" do
+    test "unsets used_id on the session" do
+      user = insert(:user)
+      session = insert(:chat_session, user: user)
+      assert {:ok, updated_session} = Chats.unlink_user_from_session(user.id, session.id)
+      refute updated_session.user_id
+    end
+  end
+
+  describe "upsert_reaction/2 when the message is not found" do
+    test "returns an error" do
+      assert Chats.upsert_reaction(uuid(), :upvote) == {:error, {:not_found, Message}}
+    end
+  end
+
+  describe "upsert_reaction/2 when the message is not from the assistant" do
+    test "returns an error" do
       session = insert(:chat_session)
-      assert {:ok, _} = Chats.delete_session(session)
+      message = insert(:message, session: session, role: :user)
+
+      assert Chats.upsert_reaction(message.id, :upvote) == {:error, :message_not_from_assistant}
+    end
+  end
+
+  describe "upsert_reaction/2" do
+    setup [:insert_user]
+
+    test "creates new reaction for message", %{user: user} do
+      ingestion = insert(:ingestion)
+      session = insert(:chat_session, user: user, ingestion: ingestion)
+      message = insert(:message, session: session, role: :assistant)
+      _other_message = insert(:message, session: session)
+
+      # Some other records
+      other_session = insert(:chat_session, user: user, ingestion: ingestion)
+      _other_message = insert(:message, session: other_session)
+
+      reaction =
+        assert_count_differences(Repo, [{Reaction, 1}], fn ->
+          assert {:ok, %Message{} = updated_message} = Chats.upsert_reaction(message.id, :upvote)
+
+          assert_preloaded(updated_message, [:reaction])
+
+          reaction = updated_message.reaction
+          assert reaction.message_id == message.id
+          assert reaction.type == :upvote
+          reaction
+        end)
+
+      # Now upsert the vote -> no new reaction is created
+      assert_count_differences(Repo, [{Reaction, 0}], fn ->
+        assert {:ok, %Message{} = updated_message} = Chats.upsert_reaction(message.id, :downvote)
+
+        assert updated_message.reaction.type == :downvote
+      end)
+
+      assert Repo.reload(reaction).type == :downvote
+    end
+  end
+
+  describe "delete_reaction/1 when the reaction does not exist" do
+    test "returns ok" do
+      assert Chats.delete_reaction(uuid()) == :ok
+    end
+  end
+
+  describe "delete_reaction/1" do
+    test "deletes the reaction" do
+      reaction = insert(:reaction)
+      assert Chats.delete_reaction(reaction.id) == :ok
+      refute Repo.reload(reaction)
     end
   end
 end

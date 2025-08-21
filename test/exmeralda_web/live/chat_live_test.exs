@@ -2,7 +2,8 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   use ExmeraldaWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
-  alias Exmeralda.{Repo, Chats.Session}
+  alias Exmeralda.Repo
+  alias Exmeralda.Chats.{Reaction, Session}
 
   defp insert_library(_) do
     library = insert(:library, name: "ecto")
@@ -44,9 +45,29 @@ defmodule ExmeraldaWeb.ChatLiveTest do
     end
 
     test "does not show other users sessions", %{conn: conn, session: session} do
+      user = insert(:user)
+
       {:ok, _index_live, html} =
         conn
-        |> log_in_user(insert(:user))
+        |> log_in_user(user)
+        |> live(~p"/chat/start")
+
+      refute html =~ session.id
+      assert html =~ "Ask Exmeralda"
+
+      assert_raise Ecto.NoResultsError, fn ->
+        conn
+        |> log_in_user(user)
+        |> live(~p"/chat/#{session}")
+      end
+    end
+
+    test "does not show sessions with nilified users", %{conn: conn, user: user} do
+      session = insert(:chat_session, user_id: nil)
+
+      {:ok, _index_live, html} =
+        conn
+        |> log_in_user(user)
         |> live(~p"/chat/start")
 
       refute html =~ session.id
@@ -88,10 +109,55 @@ defmodule ExmeraldaWeb.ChatLiveTest do
       assert html =~ "I am a message"
     end
 
+    test "delete a session", %{conn: conn, session: session, user: user} do
+      {:ok, index_live, html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/chat/start")
+
+      assert html =~ session.id
+
+      assert index_live |> element(".e2e-delete-session-#{session.id}") |> render_click()
+
+      refute Repo.reload(session).user_id
+
+      html = render(index_live)
+      refute html =~ session.id
+    end
+
     test "requires authentication", %{conn: conn} do
       assert {:error,
               {:redirect, %{to: "/", flash: %{"error" => "You must log in to access this page."}}}} =
                live(conn, ~p"/chat/start")
+    end
+
+    test "users can up and downvote messages and undo their votes", %{
+      conn: conn,
+      user: user,
+      session: session
+    } do
+      [_, message] = session.messages
+
+      {:ok, chat_live, html} =
+        conn
+        |> log_in_user(user)
+        |> live(~p"/chat/#{session}")
+
+      assert html =~ "I am a message"
+
+      assert chat_live |> element(".e2e-upvote-message-#{message.id}") |> render_click()
+
+      [reaction] = Repo.all(Reaction)
+      assert reaction.message_id == message.id
+      assert reaction.type == :upvote
+
+      assert chat_live |> element(".e2e-downvote-message-#{message.id}") |> render_click()
+
+      reaction = Repo.reload(reaction)
+      assert reaction.type == :downvote
+
+      assert chat_live |> element(".e2e-downvote-message-#{message.id}") |> render_click()
+      assert Repo.all(Reaction) == []
     end
   end
 end

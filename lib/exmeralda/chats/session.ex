@@ -36,4 +36,9 @@ defmodule Exmeralda.Chats.Session do
   def set_title_changeset(session, title) do
     change(session, title: title)
   end
+
+  @doc false
+  def unset_user_changeset(session) do
+    change(session, user_id: nil)
+  end
 end

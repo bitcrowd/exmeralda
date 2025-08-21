@@ -18,6 +18,13 @@ defmodule Exmeralda.Factory do
     }
   end
 
+  def reaction_factory do
+    %Exmeralda.Chats.Reaction{
+      message: build(:message),
+      type: :upvote
+    }
+  end
+
   def user_factory do
     %Exmeralda.Accounts.User{
       name: "Evil Rick",

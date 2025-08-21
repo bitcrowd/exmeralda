@@ -9,10 +9,10 @@ defmodule Exmeralda.Chats do
   alias Phoenix.PubSub
 
   alias Exmeralda.Topics.{Rag, Chunk, Ingestion}
-  alias Exmeralda.Chats.{LLM, Message, Session, Source}
+  alias Exmeralda.Chats.{LLM, Message, Reaction, Session, Source}
   alias Exmeralda.Accounts.User
 
-  @message_preload [:source_chunks]
+  @message_preload [:source_chunks, :reaction]
 
   @doc """
   Returns the list of chat_sessions of a user.
@@ -27,8 +27,8 @@ defmodule Exmeralda.Chats do
   @doc """
   Gets a single session of a user.
   """
-  def get_session!(user, id) do
-    user.id
+  def get_session!(user_id, id) do
+    user_id
     |> session_scope()
     |> Repo.get!(id)
     |> Repo.preload(messages: [@message_preload])
@@ -184,9 +184,14 @@ defmodule Exmeralda.Chats do
   @doc """
   Deletes a session.
   """
-  @spec delete_session(Session.t()) :: {:ok, Session.t()}
-  def delete_session(%Session{} = session) do
-    Repo.delete(session)
+  @spec unlink_user_from_session(User.id(), Session.id()) ::
+          {:ok, Session.t()} | {:error, {:not_found, Session}}
+  def unlink_user_from_session(user_id, session_id) do
+    with {:ok, session} <- Repo.fetch_by(Session, id: session_id, user_id: user_id) do
+      session
+      |> Session.unset_user_changeset()
+      |> Repo.update()
+    end
   end
 
   @doc """
@@ -201,5 +206,51 @@ defmodule Exmeralda.Chats do
   """
   def new_message_changeset(attrs \\ %{}) do
     Message.changeset(%Message{role: :user}, attrs)
+  end
+
+  @doc """
+  Upserts a reaction for a message.
+  """
+  @spec upsert_reaction(Message.id(), atom()) ::
+          {:ok, Message.t()}
+          | {:error, :message_not_from_assistant}
+          | {:error, {:not_found, Message}}
+  def upsert_reaction(message_id, type) do
+    Repo.transact(fn ->
+      with {:ok, message} <- Repo.fetch(Message, message_id, lock: :no_key_update),
+           :ok <- message_from_assitant?(message),
+           {:ok, _} <- do_upsert_reaction(message_id, type) do
+        {:ok, Repo.preload(message, @message_preload)}
+      end
+    end)
+  end
+
+  defp message_from_assitant?(%{role: :assistant}), do: :ok
+  defp message_from_assitant?(_), do: {:error, :message_not_from_assistant}
+
+  defp do_upsert_reaction(message_id, type) do
+    Repo.insert(
+      %Reaction{
+        message_id: message_id,
+        type: type
+      },
+      on_conflict: {:replace, [:type]},
+      conflict_target: [:message_id]
+    )
+  end
+
+  @doc """
+  Deletes a reaction.
+  """
+  @spec delete_reaction(Reaction.id()) :: :ok
+  def delete_reaction(reaction_id) do
+    case Repo.fetch(Reaction, reaction_id) do
+      {:ok, reaction} ->
+        Repo.delete(reaction, allow_stale: true)
+        :ok
+
+      _ ->
+        :ok
+    end
   end
 end

@@ -160,7 +160,7 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Deletes a libray.
+  Deletes a library.
   """
   def delete_library(library) do
     Repo.delete(library, allow_stale: true)
