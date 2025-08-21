@@ -70,7 +70,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
 
     socket =
       case Topics.mark_ingestion_as_active(ingestion_id) do
-        {:ok, ingestion} ->
+        {:ok, _ingestion} ->
           socket
           |> put_flash(:info, gettext("Ingestion was successfully marked active."))
           |> push_patch(to: ~p"/admin/library/#{library.id}")
@@ -92,7 +92,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
 
     socket =
       case Topics.mark_ingestion_as_inactive(ingestion_id) do
-        {:ok, ingestion} ->
+        {:ok, _ingestion} ->
           socket
           |> put_flash(:info, gettext("Ingestion was successfully marked inactive."))
           |> push_patch(to: ~p"/admin/library/#{library.id}")

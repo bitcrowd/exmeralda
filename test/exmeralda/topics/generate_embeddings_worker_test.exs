@@ -84,7 +84,7 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
       refute from(c in Chunk, where: is_nil(c.embedding)) |> Repo.one()
     end
 
-    test "sets ingestion state to :ready when all chunks embedded", %{
+    test "activates and sets ingestion state to :ready when all chunks embedded", %{
       library: library,
       ingestion: ingestion
     } do
@@ -99,6 +99,7 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
       ingestion = Repo.reload(ingestion)
 
       assert ingestion.state == :ready
+      assert ingestion.active
     end
   end
 
@@ -174,6 +175,7 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
       # and the ingestion has failed
       ingestion = Repo.reload(ingestion)
       assert ingestion.state == :failed
+      refute ingestion.active
     end
   end
 

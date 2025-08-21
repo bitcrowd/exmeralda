@@ -348,7 +348,13 @@ defmodule Exmeralda.Topics do
         :ok
     end
 
-    ingestion |> Ingestion.set_ingestion_active_changeset() |> Repo.update()
+    {:ok, mark_ingestion_as_active!(ingestion)}
+  end
+
+  def mark_ingestion_as_active!(ingestion) do
+    ingestion
+    |> Ingestion.set_ingestion_active_changeset()
+    |> Repo.update!()
   end
 
   @spec mark_ingestion_as_inactive(Ingestion.id()) ::

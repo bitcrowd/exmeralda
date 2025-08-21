@@ -31,4 +31,22 @@ defmodule Exmeralda.Topics.IngestionTest do
       |> refute_changeset_valid()
     end
   end
+
+  describe "set_ingestion_inactive_changeset/1" do
+    test "sets active to false" do
+      build(:ingestion, active: true)
+      |> Ingestion.set_ingestion_inactive_changeset()
+      |> assert_changeset_valid()
+      |> assert_changes(:active, false)
+    end
+  end
+
+  describe "set_ingestion_active_changeset/1" do
+    test "sets active to true" do
+      build(:ingestion, active: false)
+      |> Ingestion.set_ingestion_active_changeset()
+      |> assert_changeset_valid()
+      |> assert_changes(:active, true)
+    end
+  end
 end
