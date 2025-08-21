@@ -9,6 +9,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
     library = Topics.get_library!(params["id"])
     chat_sessions = Chats.list_sessions_for_library(library.id)
     {:ok, {ingestions, meta}} = Topics.list_ingestions(library, params)
+    reaction_stats = Chats.count_reactions_for_ingestions(Enum.map(ingestions, & &1.id))
 
     socket =
       socket
@@ -16,6 +17,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
       |> assign(:library, library)
       |> assign(:ingestions, ingestions)
       |> assign(:chat_sessions, chat_sessions)
+      |> assign(:reaction_stats, reaction_stats)
       |> assign(:meta, meta)
 
     {:noreply, socket}
@@ -185,6 +187,18 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
           </:col>
           <:col :let={ingestion} label="State" field={:state}>
             <.ingestion_state_badge state={ingestion.state} />
+          </:col>
+          <:col :let={ingestion} label="Stats">
+            <div class="flex gap-2">
+              <div>
+                {Keyword.get(Map.get(@reaction_stats, ingestion.id, []), :upvote, 0)}
+                <.icon name="hero-hand-thumb-up" class="scale-75 text-accent" />
+              </div>
+              <div>
+                {Keyword.get(Map.get(@reaction_stats, ingestion.id, []), :downvote, 0)}
+                <.icon name="hero-hand-thumb-down" class="scale-75 text-error" />
+              </div>
+            </div>
           </:col>
           <:col :let={ingestion} label="Created At" field={:inserted_at}>
             {datetime(ingestion.inserted_at)}

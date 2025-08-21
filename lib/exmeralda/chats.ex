@@ -269,4 +269,17 @@ defmodule Exmeralda.Chats do
         :ok
     end
   end
+
+  @spec count_reactions_for_ingestions([Ingestion.id()]) :: map()
+  def count_reactions_for_ingestions(ingestion_ids) do
+    from(r in Reaction,
+      left_join: m in assoc(r, :message),
+      left_join: s in assoc(m, :session),
+      where: s.ingestion_id in ^ingestion_ids,
+      group_by: [s.ingestion_id, r.type],
+      select: %{ingestion_id: s.ingestion_id, count: {r.type, count(r.id)}}
+    )
+    |> Repo.all()
+    |> Enum.group_by(& &1.ingestion_id, & &1.count)
+  end
 end

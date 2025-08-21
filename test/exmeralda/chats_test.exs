@@ -328,4 +328,35 @@ defmodule Exmeralda.ChatsTest do
       refute Repo.reload(reaction)
     end
   end
+
+  describe "count_reactions_for_ingestions/1" do
+    test "count number of reaction per type for given ingestions" do
+      ingestion = insert(:ingestion)
+
+      for _n <- 1..3 do
+        session = insert(:chat_session, ingestion: ingestion)
+        insert(:reaction, type: :upvote, message: insert(:message, session: session))
+      end
+
+      session = insert(:chat_session, ingestion: ingestion)
+
+      for _n <- 1..2 do
+        insert(:reaction, type: :downvote, message: insert(:message, session: session))
+      end
+
+      # Other ingestion data
+      other_ingestion = insert(:ingestion)
+      other_session = insert(:chat_session, ingestion: other_ingestion)
+      insert(:reaction, type: :downvote, message: insert(:message, session: other_session))
+
+      ingestion_id = ingestion.id
+      other_ingestion_id = other_ingestion.id
+
+      assert %{
+               ^ingestion_id => [{:downvote, 2}, {:upvote, 3}],
+               ^other_ingestion_id => [downvote: 1]
+             } =
+               Chats.count_reactions_for_ingestions([ingestion.id, other_ingestion.id])
+    end
+  end
 end
