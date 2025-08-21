@@ -40,19 +40,26 @@ defmodule Exmeralda.Chats.SessionTest do
       user = insert(:user)
       ingestion = insert(:ingestion)
       chat_session = insert(:chat_session, user: user, ingestion: ingestion)
+      message = insert(:message, session: chat_session)
+      reaction = insert(:reaction, message: message)
 
-      %{user: user, chat_session: chat_session}
+      %{user: user, chat_session: chat_session, message: message, reaction: reaction}
     end
 
     test "user is nilified on deletion of the user", %{
       user: user,
-      chat_session: chat_session
+      chat_session: chat_session,
+      message: message,
+      reaction: reaction
     } do
       Repo.delete(user)
 
       chat_session = Repo.reload(chat_session)
       assert chat_session
       refute chat_session.user_id
+
+      assert Repo.reload(message)
+      assert Repo.reload(reaction)
     end
   end
 end
