@@ -5,7 +5,7 @@ defmodule ExmeraldaWeb.Shared.Helper do
 
   def ingestion_state_badge(assigns) do
     ~H"""
-    <span class={["badge", ingestion_state_class(@state)]}>
+    <span class={["badge badge-soft", ingestion_state_class(@state)]}>
       {@state}
     </span>
     """
