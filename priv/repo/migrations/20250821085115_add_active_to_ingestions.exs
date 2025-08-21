@@ -12,6 +12,7 @@ defmodule Exmeralda.Repo.Migrations.AddActiveToIngestions do
       FROM (
         SELECT DISTINCT ON (library_id) *
         FROM ingestions
+        WHERE state = 'ready'
         ORDER BY library_id, inserted_at DESC
       ) AS subquery
       WHERE ingestions.id = subquery.id;
