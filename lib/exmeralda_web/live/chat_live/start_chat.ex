@@ -103,18 +103,18 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
   def handle_event("start", %{"session" => session_params}, socket) do
     %{selected_library: library} = socket.assigns
 
-    case Topics.current_ingestion(library) do
-      nil ->
+    case Topics.active_ingestion(library.id) do
+      {:ok, active_ingestion} ->
+        do_start_session(socket, session_params, active_ingestion)
+
+      {:error, {:not_found, _}} ->
         {:noreply,
          socket
          |> put_flash(
            :error,
-           gettext("This library cannot be used anymore! Try adding it again.")
+           gettext("This library cannot be used anymore.")
          )
          |> push_navigate(to: ~p"/chat/start")}
-
-      current_ingestion ->
-        do_start_session(socket, session_params, current_ingestion)
     end
   end
 
@@ -151,13 +151,13 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
 
   defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
 
-  defp do_start_session(socket, session_params, current_ingestion) do
+  defp do_start_session(socket, session_params, active_ingestion) do
     %{user: user, selected_library: library} = socket.assigns
 
     params =
       Map.merge(session_params, %{
-        "ingestion_id" => current_ingestion.id,
-        "library_id" => current_ingestion.library_id
+        "ingestion_id" => active_ingestion.id,
+        "library_id" => active_ingestion.library_id
       })
 
     case Chats.start_session(user, params) do

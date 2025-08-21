@@ -65,6 +65,50 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
     {:noreply, socket}
   end
 
+  def handle_event("mark-as-active", %{"ingestion-id" => ingestion_id}, socket) do
+    %{library: library} = socket.assigns
+
+    socket =
+      case Topics.mark_ingestion_as_active(ingestion_id) do
+        {:ok, _ingestion} ->
+          socket
+          |> put_flash(:info, gettext("Ingestion was successfully marked active."))
+          |> push_patch(to: ~p"/admin/library/#{library.id}")
+
+        {:error, error} when error in [:ingestion_already_active, :ingestion_invalid_state] ->
+          push_patch(socket, to: ~p"/admin/library/#{library.id}")
+
+        {:error, {:not_found, _}} ->
+          socket
+          |> put_flash(:error, gettext("Ingestion was deleted and cannot be marked active."))
+          |> push_patch(to: ~p"/admin/library/#{library.id}")
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("mark-as-inactive", %{"ingestion-id" => ingestion_id}, socket) do
+    %{library: library} = socket.assigns
+
+    socket =
+      case Topics.mark_ingestion_as_inactive(ingestion_id) do
+        {:ok, _ingestion} ->
+          socket
+          |> put_flash(:info, gettext("Ingestion was successfully marked inactive."))
+          |> push_patch(to: ~p"/admin/library/#{library.id}")
+
+        {:error, error} when error in [:ingestion_already_inactive, :ingestion_invalid_state] ->
+          push_patch(socket, to: ~p"/admin/library/#{library.id}")
+
+        {:error, {:not_found, _}} ->
+          socket
+          |> put_flash(:error, gettext("Ingestion was deleted and cannot be marked inactive."))
+          |> push_patch(to: ~p"/admin/library/#{library.id}")
+      end
+
+    {:noreply, socket}
+  end
+
   @impl true
   def render(assigns) do
     assigns = assign_new(assigns, :library_deletable?, fn -> library_deletable?(assigns) end)
@@ -135,7 +179,10 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
           path={~p"/admin/library/#{@library.id}"}
           opts={[table_attrs: [class: "table"]]}
         >
-          <:col :let={ingestion} label="ID" field={:id}>{ingestion.id}</:col>
+          <:col :let={ingestion} label="ID" field={:id}>
+            {ingestion.id}
+            <.ingestion_active_badge :if={ingestion.active} active={ingestion.active} />
+          </:col>
           <:col :let={ingestion} label="State" field={:state}>
             <.ingestion_state_badge state={ingestion.state} />
           </:col>
@@ -152,6 +199,24 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
             >
               Show
             </.link>
+            <.button
+              :if={ingestion.state == :ready && !ingestion.active}
+              class={"btn btn-primary btn-soft btn-sm mt-1 lg:mt-0 lg:ml-2 e2e-activate-#{ingestion.id}"}
+              phx-click="mark-as-active"
+              phx-value-ingestion-id={ingestion.id}
+            >
+              <.icon name="hero-check-circle-micro" class="scale-75" />
+              {gettext("Activate")}
+            </.button>
+            <.button
+              :if={ingestion.state == :ready && ingestion.active}
+              class={"btn btn-outline btn-dash btn-sm mt-1 lg:mt-0 lg:ml-2 e2e-deactivate-#{ingestion.id}"}
+              phx-click="mark-as-inactive"
+              phx-value-ingestion-id={ingestion.id}
+            >
+              <.icon name="hero-no-symbol-micro" class="scale-75" />
+              {gettext("Deactivate")}
+            </.button>
           </:col>
         </Flop.Phoenix.table>
 

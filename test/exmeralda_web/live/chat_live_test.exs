@@ -7,7 +7,7 @@ defmodule ExmeraldaWeb.ChatLiveTest do
 
   defp insert_library(_) do
     library = insert(:library, name: "ecto")
-    ingestion = insert(:ingestion, library: library, state: :ready)
+    ingestion = insert(:ingestion, library: library, state: :ready, active: true)
 
     %{library: library, ingestion: ingestion}
   end

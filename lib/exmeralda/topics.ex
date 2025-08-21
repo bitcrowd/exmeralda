@@ -18,13 +18,13 @@ defmodule Exmeralda.Topics do
     Flop.validate_and_run(Library, params, replace_invalid_params: true, for: Library)
   end
 
-  def last_libraries() do
+  def last_libraries do
     from(l in Library,
       as: :library,
       order_by: [desc: :inserted_at],
       limit: 10
     )
-    |> with_ingestion_ready()
+    |> with_ingestion_active()
     |> Repo.all()
   end
 
@@ -49,16 +49,17 @@ defmodule Exmeralda.Topics do
         desc: :version
       ]
     )
-    |> with_ingestion_ready()
+    |> with_ingestion_active()
     |> Repo.all()
   end
 
-  defp with_ingestion_ready(query) do
+  defp with_ingestion_active(query) do
     where(
       query,
       [l],
       exists(
-        from i in Ingestion, where: i.library_id == parent_as(:library).id and i.state == :ready
+        from i in Ingestion,
+          where: i.library_id == parent_as(:library).id and i.state == :ready and i.active
       )
     )
   end
@@ -193,16 +194,11 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Returns the latest ingestion in state :ready for a library.
+  Returns the active ingestion for a library.
   """
-  @spec current_ingestion(Library.t()) :: Library.t() | nil
-  def current_ingestion(%Library{id: library_id}) do
-    Repo.one(
-      from i in Ingestion,
-        where: i.library_id == ^library_id and i.state == :ready,
-        order_by: [desc: :inserted_at],
-        limit: 1
-    )
+  @spec active_ingestion(Library.id()) :: {:ok, Ingestion.t()} | {:error, {:not_found, Ingestion}}
+  def active_ingestion(library_id) do
+    Repo.fetch_by(Ingestion, library_id: library_id, active: true)
   end
 
   @doc """
@@ -232,11 +228,23 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Gets the latest ingestions in given states.
+  Gets the latest ongoing ingestions.
   """
-  def last_ingestions(states) do
-    from(i in Ingestion,
-      where: i.state in ^states,
+  def last_ongoing_ingestions do
+    from(i in Ingestion, where: i.state in [:queued, :embedding])
+    |> last_ingestions()
+  end
+
+  @doc """
+  Gets the latest finished ingestions.
+  """
+  def last_ready_ingestions do
+    from(i in Ingestion, where: i.state == :failed or (i.state == :ready and i.active))
+    |> last_ingestions()
+  end
+
+  defp last_ingestions(scope) do
+    from(i in scope,
       order_by: [desc: :inserted_at],
       preload: [:library, :job],
       limit: 10
@@ -316,5 +324,73 @@ defmodule Exmeralda.Topics do
       Enum.empty?(Chats.list_sessions_for_ingestion(ingestion.id)) -> Repo.delete(ingestion)
       true -> {:error, :ingestion_has_chats}
     end
+  end
+
+  @spec mark_ingestion_as_active(Ingestion.id()) ::
+          {:ok, Ingestion.t()}
+          | {:error, {:not_found, Ingestion}}
+          | {:error, :ingestion_invalid_state}
+          | {:error, :ingestion_already_active}
+  def mark_ingestion_as_active(ingestion_id) do
+    Repo.transact(fn ->
+      with {:ok, ingestion} <- fetch_ingestion(ingestion_id),
+           :ok <- check_ingestion_inactive(ingestion),
+           :ok <- Repo.advisory_xact_lock("library:#{ingestion.library_id}") do
+        do_mark_ingestion_as_active(ingestion)
+      end
+    end)
+  end
+
+  defp fetch_ingestion(ingestion_id) do
+    case Repo.fetch(Ingestion, ingestion_id) do
+      {:error, {:not_found, Ingestion}} -> {:error, {:not_found, Ingestion}}
+      {:ok, %{state: state}} when state != :ready -> {:error, :ingestion_invalid_state}
+      {:ok, ingestion} -> {:ok, ingestion}
+    end
+  end
+
+  defp check_ingestion_inactive(%{active: true}), do: {:error, :ingestion_already_active}
+  defp check_ingestion_inactive(_), do: :ok
+
+  defp do_mark_ingestion_as_active(ingestion) do
+    case active_ingestion(ingestion.library_id) do
+      {:ok, active_ingestion} ->
+        mark_ingestion_as_inactive!(active_ingestion)
+
+      {:error, {:not_found, _}} ->
+        :ok
+    end
+
+    {:ok, mark_ingestion_as_active!(ingestion)}
+  end
+
+  defp mark_ingestion_as_active!(ingestion) do
+    ingestion
+    |> Ingestion.set_ingestion_active_changeset()
+    |> Repo.update!()
+  end
+
+  @spec mark_ingestion_as_inactive(Ingestion.id()) ::
+          {:ok, Ingestion.t()}
+          | {:error, {:not_found, Ingestion}}
+          | {:error, :ingestion_invalid_state}
+          | {:error, :ingestion_already_inactive}
+  def mark_ingestion_as_inactive(ingestion_id) do
+    Repo.transact(fn ->
+      with {:ok, ingestion} <- fetch_ingestion(ingestion_id),
+           :ok <- check_ingestion_active(ingestion),
+           :ok <- Repo.advisory_xact_lock("library:#{ingestion.library_id}") do
+        {:ok, mark_ingestion_as_inactive!(ingestion)}
+      end
+    end)
+  end
+
+  defp check_ingestion_active(%{active: false}), do: {:error, :ingestion_already_inactive}
+  defp check_ingestion_active(_), do: :ok
+
+  defp mark_ingestion_as_inactive!(ingestion) do
+    ingestion
+    |> Ingestion.set_ingestion_inactive_changeset()
+    |> Repo.update!()
   end
 end
