@@ -104,17 +104,17 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
     %{selected_library: library} = socket.assigns
 
     case Topics.active_ingestion(library.id) do
-      nil ->
+      {:ok, active_ingestion} ->
+        do_start_session(socket, session_params, active_ingestion)
+
+      {:error, {:not_found, _}} ->
         {:noreply,
          socket
          |> put_flash(
            :error,
-           gettext("This library cannot be used anymore! Try adding it again.")
+           gettext("This library cannot be used anymore.")
          )
          |> push_navigate(to: ~p"/chat/start")}
-
-      active_ingestion ->
-        do_start_session(socket, session_params, active_ingestion)
     end
   end
 

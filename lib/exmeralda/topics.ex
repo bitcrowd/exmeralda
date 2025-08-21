@@ -18,13 +18,13 @@ defmodule Exmeralda.Topics do
     Flop.validate_and_run(Library, params, replace_invalid_params: true, for: Library)
   end
 
-  def last_libraries() do
+  def last_libraries do
     from(l in Library,
       as: :library,
       order_by: [desc: :inserted_at],
       limit: 10
     )
-    |> with_ingestion_ready()
+    |> with_ingestion_active()
     |> Repo.all()
   end
 
@@ -49,16 +49,17 @@ defmodule Exmeralda.Topics do
         desc: :version
       ]
     )
-    |> with_ingestion_ready()
+    |> with_ingestion_active()
     |> Repo.all()
   end
 
-  defp with_ingestion_ready(query) do
+  defp with_ingestion_active(query) do
     where(
       query,
       [l],
       exists(
-        from i in Ingestion, where: i.library_id == parent_as(:library).id and i.state == :ready
+        from i in Ingestion,
+          where: i.library_id == parent_as(:library).id and i.state == :ready and i.active
       )
     )
   end
@@ -227,11 +228,23 @@ defmodule Exmeralda.Topics do
   end
 
   @doc """
-  Gets the latest ingestions in given states.
+  Gets the latest ongoing ingestions.
   """
-  def last_ingestions(states) do
-    from(i in Ingestion,
-      where: i.state in ^states,
+  def last_ongoing_ingestions do
+    from(i in Ingestion, where: i.state in [:queued, :embedding])
+    |> last_ingestions()
+  end
+
+  @doc """
+  Gets the latest finished ingestions.
+  """
+  def last_ready_ingestions do
+    from(i in Ingestion, where: i.state == :failed or (i.state == :ready and i.active))
+    |> last_ingestions()
+  end
+
+  defp last_ingestions(scope) do
+    from(i in scope,
       order_by: [desc: :inserted_at],
       preload: [:library, :job],
       limit: 10

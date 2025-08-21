@@ -14,9 +14,16 @@ defmodule Exmeralda.TopicsTest do
 
   def insert_ingested_library(_) do
     library = insert(:library, name: "ecto")
-    ingestion = insert(:ingestion, library: library, state: :ready)
+    ingestion = insert(:ingestion, library: library, state: :ready, active: true)
     insert_list(3, :chunk, ingestion: ingestion, library: library)
     %{ingested: library, ingested_library_ingestion: ingestion}
+  end
+
+  def insert_inactive_library(_) do
+    library = insert(:library)
+    ingestion = insert(:ingestion, library: library, state: :ready, active: false)
+    insert_list(3, :chunk, ingestion: ingestion, library: library)
+    %{inactive: library, inactive_library_ingestion: ingestion}
   end
 
   def insert_in_progress_library(_) do
@@ -33,33 +40,30 @@ defmodule Exmeralda.TopicsTest do
   end
 
   describe "last_libraries/0" do
-    setup [:insert_ingested_library, :insert_chunkless_library, :insert_in_progress_library]
+    setup [
+      :insert_ingested_library,
+      :insert_chunkless_library,
+      :insert_in_progress_library,
+      :insert_inactive_library
+    ]
 
-    test "returns only libraries with ingestion that is ready", %{
-      ingested: ingested,
-      chunkless: chunkless,
-      in_progress: in_progress
-    } do
-      ids = Topics.last_libraries() |> Enum.map(& &1.id)
-
-      assert ingested.id in ids
-      refute in_progress.id in ids
-      refute chunkless.id in ids
+    test "returns only libraries with ingestion that is active (and ready)", %{ingested: ingested} do
+      assert_sorted_equal(Topics.last_libraries(), [ingested], & &1.id)
     end
   end
 
   describe "search_libraries/1" do
-    setup [:insert_ingested_library, :insert_chunkless_library, :insert_in_progress_library]
+    setup [
+      :insert_ingested_library,
+      :insert_chunkless_library,
+      :insert_in_progress_library,
+      :insert_inactive_library
+    ]
 
     test "returns only libraries that are ingested fully and match the term", %{
-      ingested: ingested,
-      chunkless: chunkless,
-      in_progress: in_progress
+      ingested: ingested
     } do
-      ids = Topics.search_libraries("ecto") |> Enum.map(& &1.id)
-      assert ingested.id in ids
-      refute chunkless.id in ids
-      refute in_progress.id in ids
+      assert_sorted_equal(Topics.search_libraries("ecto"), [ingested], & &1.id)
     end
   end
 
@@ -276,15 +280,30 @@ defmodule Exmeralda.TopicsTest do
     end
   end
 
-  describe "last_ingestions/1" do
-    test "returns the last 10 ingestions in the given states" do
+  describe "last_ongoing_ingestions/1" do
+    test "returns the last 10 ingestions in states queued and embedding" do
       library = insert(:library)
-      insert_list(10, :ingestion, library: library, state: :ready)
+      insert_list(5, :ingestion, library: library, state: :queued)
+      insert_list(5, :ingestion, library: library, state: :embedding)
       insert(:ingestion, library: library, state: :failed)
 
-      result = Topics.last_ingestions([:ready])
+      result = Topics.last_ongoing_ingestions()
       assert length(result) == 10
-      assert Enum.all?(result, &(&1.state == :ready))
+      assert Enum.all?(result, &(&1.state in [:queued, :embedding]))
+    end
+  end
+
+  describe "last_ready_ingestions/1" do
+    test "returns the last 10 ingestions either failed, or ready and active" do
+      library = insert(:library)
+      insert_list(5, :ingestion, library: library, state: :failed)
+      insert_list(5, :ingestion, state: :ready, active: true)
+      excluded_ingestion = insert(:ingestion, library: library, state: :ready, active: false)
+
+      result = Topics.last_ready_ingestions()
+      assert length(result) == 10
+      assert Enum.all?(result, &(&1.state in [:ready, :failed]))
+      refute excluded_ingestion.id in Enum.map(result, & &1.id)
     end
   end
 
