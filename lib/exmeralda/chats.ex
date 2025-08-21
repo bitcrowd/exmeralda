@@ -184,11 +184,14 @@ defmodule Exmeralda.Chats do
   @doc """
   Deletes a session.
   """
-  @spec unlink_user_from_session!(Session.t()) :: Session.t()
-  def unlink_user_from_session!(%Session{} = session) do
-    session
-    |> Session.unset_user_changeset()
-    |> Repo.update!()
+  @spec unlink_user_from_session(User.id(), Session.id()) ::
+          {:ok, Session.t()} | {:error, {:not_found, Session}}
+  def unlink_user_from_session(user_id, session_id) do
+    with {:ok, session} <- Repo.fetch_by(Session, id: session_id, user_id: user_id) do
+      session
+      |> Session.unset_user_changeset()
+      |> Repo.update()
+    end
   end
 
   @doc """

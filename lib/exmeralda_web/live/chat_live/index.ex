@@ -79,20 +79,23 @@ defmodule ExmeraldaWeb.ChatLive.Index do
 
   @impl true
   def handle_event("delete", %{"id" => id}, socket) do
-    session =
-      socket.assigns.current_user.id
-      |> Chats.get_session!(id)
-      # We want to preserve sessions and messages to be able to produce meaningful
-      # statistics on the quality of the answers. Instead of deleting the session,
-      # we just nilify the user_id.
-      |> Chats.unlink_user_from_session!()
+    %{current_user: user} = socket.assigns
 
-    socket = stream_delete(socket, :sessions, session)
+    # We want to preserve sessions and messages to be able to produce meaningful
+    # statistics on the quality of the answers. Instead of deleting the session,
+    # we just nilify the user_id.
+    case Chats.unlink_user_from_session(user.id, id) do
+      {:ok, session} ->
+        socket = stream_delete(socket, :sessions, session)
 
-    if socket.assigns.current_session && session.id == socket.assigns.current_session.id do
-      {:noreply, push_navigate(socket, to: ~p"/chat/start")}
-    else
-      {:noreply, socket}
+        if socket.assigns.current_session && session.id == socket.assigns.current_session.id do
+          {:noreply, push_navigate(socket, to: ~p"/chat/start")}
+        else
+          {:noreply, socket}
+        end
+
+      {:error, {:not_found, _}} ->
+        {:noreply, push_navigate(socket, to: ~p"/chat/start")}
     end
   end
 

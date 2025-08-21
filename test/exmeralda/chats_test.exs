@@ -216,11 +216,26 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
-  describe "unlink_user_from_session!/1" do
+  describe "unlink_user_from_session/2 when the session does not exist" do
+    test "returns an error" do
+      assert Chats.unlink_user_from_session(uuid(), uuid()) == {:error, {:not_found, Session}}
+    end
+  end
+
+  describe "unlink_user_from_session/2 when the session does belong to the user" do
+    test "returns an error" do
+      user = insert(:user)
+      session = insert(:chat_session, user: user)
+      assert Chats.unlink_user_from_session(uuid(), session.id) == {:error, {:not_found, Session}}
+      assert Repo.reload(session).user_id
+    end
+  end
+
+  describe "unlink_user_from_session/2" do
     test "unsets used_id on the session" do
       user = insert(:user)
       session = insert(:chat_session, user: user)
-      assert updated_session = Chats.unlink_user_from_session!(session)
+      assert {:ok, updated_session} = Chats.unlink_user_from_session(user.id, session.id)
       refute updated_session.user_id
     end
   end
