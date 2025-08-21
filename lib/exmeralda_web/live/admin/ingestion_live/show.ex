@@ -78,7 +78,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
       </.breadcrumbs>
 
       <.header title={"Ingestion ##{@ingestion.id} for #{library_title(@library)}"}>
-        <.ingestion_state_badge state={@ingestion.state} />
+        <.ingestion_active_badge active={@ingestion.active} />
         <:actions>
           <div
             class={[!@ingestion_deletable? && "tooltip tooltip-left"]}
@@ -98,6 +98,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
 
       <.list>
         <:item title={gettext("ID")}>{@ingestion.id}</:item>
+        <:item title={gettext("State")}><.ingestion_state_badge state={@ingestion.state} /></:item>
         <:item title={gettext("Current Oban Job")}>
           <%= if @ingestion.job_id do %>
             <div>

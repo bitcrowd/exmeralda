@@ -17,11 +17,12 @@ defmodule Exmeralda.Topics.Ingestion do
   }
 
   schema "ingestions" do
-    field :state, Ecto.Enum, values: [:queued, :embedding, :failed, :ready]
-
     belongs_to :library, Library
     has_many :chunks, Chunk
     belongs_to :job, Oban.Job, foreign_key: :job_id, type: :integer
+
+    field :state, Ecto.Enum, values: [:queued, :embedding, :failed, :ready]
+    field :active, :boolean, default: false
 
     timestamps()
   end

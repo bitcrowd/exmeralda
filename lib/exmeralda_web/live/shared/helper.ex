@@ -16,6 +16,27 @@ defmodule ExmeraldaWeb.Shared.Helper do
   defp ingestion_state_class(:queued), do: "badge-info"
   defp ingestion_state_class(_), do: "badge-warning"
 
+  def ingestion_active_badge(assigns) do
+    ~H"""
+    <div :if={@active} class="tooltip" data-tip={gettext("New chat sessions use this ingestion.")}>
+      <span class="badge badge-success badge-soft ml-4">
+        <.icon name="hero-check-circle-micro" class="scale-75" />
+        {gettext("Active")}
+      </span>
+    </div>
+    <div
+      :if={!@active}
+      class="tooltip"
+      data-tip={gettext("New chat sessions do not use this ingestion.")}
+    >
+      <span class="badge badge-warning badge-soft ml-4">
+        <.icon name="hero-no-symbol-micro" class="scale-75" />
+        {gettext("Inactive")}
+      </span>
+    </div>
+    """
+  end
+
   # credo:disable-for-lines:20 Credo.Check.Refactor.CyclomaticComplexity
   def find_current_step(%{state: :queued, job: %{state: state}})
       when state in ["scheduled", "available"],

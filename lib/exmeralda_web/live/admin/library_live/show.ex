@@ -135,7 +135,10 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
           path={~p"/admin/library/#{@library.id}"}
           opts={[table_attrs: [class: "table"]]}
         >
-          <:col :let={ingestion} label="ID" field={:id}>{ingestion.id}</:col>
+          <:col :let={ingestion} label="ID" field={:id}>
+            {ingestion.id}
+            <.ingestion_active_badge :if={ingestion.active} active={ingestion.active} />
+          </:col>
           <:col :let={ingestion} label="State" field={:state}>
             <.ingestion_state_badge state={ingestion.state} />
           </:col>
