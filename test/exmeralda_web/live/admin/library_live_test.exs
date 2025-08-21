@@ -41,18 +41,16 @@ defmodule ExmeraldaWeb.Admin.LibraryLiveTest do
   describe "Show" do
     setup [:insert_user, :insert_library]
 
-    test "delete a library, its ingestion and chats", %{conn: conn, user: user, library: library} do
+    test "delete a library, its ingestion and chunks", %{conn: conn, user: user, library: library} do
       ingestion = insert(:ingestion, library: library)
       chunk = insert(:chunk, ingestion: ingestion, library: library)
-      # TODO: [EX-93] Delete an ingestion or a library only when no chat sessions exist
-      # session = insert(:chat_session, ingestion: ingestion)
-      # message = insert(:message, session: session)
 
       conn = log_in_user(conn, user)
 
       {:ok, view, html} = live(conn, ~p"/admin/library/#{library.id}")
 
-      assert html =~ "Ingestions for rag 0.1.0"
+      assert html =~ "Library rag 0.1.0"
+      assert html =~ "Ingestions"
 
       assert {:error, {:live_redirect, %{to: "/admin"}}} =
                view
@@ -61,9 +59,25 @@ defmodule ExmeraldaWeb.Admin.LibraryLiveTest do
 
       refute Repo.reload(library)
       refute Repo.reload(ingestion)
-      # refute Repo.reload(session)
-      # refute Repo.reload(message)
       refute Repo.reload(chunk)
+    end
+
+    test "forbids deleting a library if it has chat sessions", %{
+      conn: conn,
+      user: user,
+      library: library
+    } do
+      ingestion = insert(:ingestion, library: library)
+      insert(:chat_session, ingestion: ingestion)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, html} = live(conn, ~p"/admin/library/#{library.id}")
+
+      assert html =~ "Library rag 0.1.0"
+      assert html =~ "Ingestions"
+
+      assert has_element?(view, "button[disabled]", "Delete")
     end
 
     test "reingest library", %{conn: conn, user: user, library: library} do
@@ -79,7 +93,8 @@ defmodule ExmeraldaWeb.Admin.LibraryLiveTest do
 
       {:ok, view, html} = live(conn, ~p"/admin/library/#{library.id}")
 
-      assert html =~ "Ingestions for rag 0.1.0"
+      assert html =~ "Library rag 0.1.0"
+      assert html =~ "Ingestions"
 
       view
       |> element("button", "Re-Ingest")

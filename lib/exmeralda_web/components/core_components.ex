@@ -656,7 +656,7 @@ defmodule ExmeraldaWeb.CoreComponents do
     <div>
       <dl class="divide-y divide-zinc-100">
         <div :for={item <- @item} class="flex gap-4 py-4 text-sm leading-6 sm:gap-8">
-          <dt class="w-1/4 font-bold">{item.title}</dt>
+          <dt class="w-1/4 font-medium">{item.title}</dt>
           <dd>{render_slot(item)}</dd>
         </div>
       </dl>
@@ -701,6 +701,26 @@ defmodule ExmeraldaWeb.CoreComponents do
         </table>
       </div>
     <% end %>
+    """
+  end
+
+  attr :title, :string
+  slot :inner_block
+  slot :actions
+
+  def section(assigns) do
+    ~H"""
+    <section class="mt-10">
+      <div class="flex place-content-between">
+        <h3 class="font-bold text-xl">{@title}</h3>
+        <ul :if={@actions != []} class="flex gap-3">
+          <li :for={action <- @actions}>
+            {render_slot(action)}
+          </li>
+        </ul>
+      </div>
+      {render_slot(@inner_block)}
+    </section>
     """
   end
 end

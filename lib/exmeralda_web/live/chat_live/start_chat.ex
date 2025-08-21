@@ -101,23 +101,24 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
 
   @impl true
   def handle_event("start", %{"session" => session_params}, socket) do
-    current_ingestion = Topics.current_ingestion(socket.assigns.selected_library)
+    %{selected_library: library} = socket.assigns
 
-    params = Map.put(session_params, "ingestion_id", current_ingestion.id)
-
-    case Chats.start_session(socket.assigns.user, params) do
-      {:ok, session} ->
-        notify_parent({:start, Map.put(session, :library, socket.assigns.selected_library)})
-
+    case Topics.current_ingestion(library) do
+      nil ->
         {:noreply,
          socket
-         |> push_patch(to: ~p"/chat/#{session.id}")}
+         |> put_flash(
+           :error,
+           gettext("This library cannot be used anymore! Try adding it again.")
+         )
+         |> push_navigate(to: ~p"/chat/start")}
 
-      {:error, %Ecto.Changeset{} = changeset} ->
-        {:noreply, assign(socket, form: to_form(changeset))}
+      current_ingestion ->
+        do_start_session(socket, session_params, current_ingestion)
     end
   end
 
+  @impl true
   def handle_event("validate", %{"session" => session_params}, socket) do
     {:noreply,
      socket
@@ -149,4 +150,23 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
   end
 
   defp notify_parent(msg), do: send(self(), {__MODULE__, msg})
+
+  defp do_start_session(socket, session_params, current_ingestion) do
+    %{user: user, selected_library: library} = socket.assigns
+
+    params =
+      Map.merge(session_params, %{
+        "ingestion_id" => current_ingestion.id,
+        "library_id" => current_ingestion.library_id
+      })
+
+    case Chats.start_session(user, params) do
+      {:ok, session} ->
+        notify_parent({:start, Map.put(session, :library, library)})
+        {:noreply, push_patch(socket, to: ~p"/chat/#{session.id}")}
+
+      {:error, %Ecto.Changeset{} = changeset} ->
+        {:noreply, assign(socket, form: to_form(changeset))}
+    end
+  end
 end

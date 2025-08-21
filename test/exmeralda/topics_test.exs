@@ -285,4 +285,63 @@ defmodule Exmeralda.TopicsTest do
       assert Enum.all?(result, &(&1.state == :ready))
     end
   end
+
+  describe "delete_ingestion/1 when the ingestion does not exist" do
+    test "returns ok" do
+      assert Topics.delete_ingestion(uuid()) == {:ok, :ok}
+    end
+  end
+
+  for state <- [:queued, :embedding] do
+    describe "delete_ingestion/1 when the ingestion state is #{state}" do
+      test "returns an error" do
+        ingestion = insert(:ingestion, state: unquote(state))
+        assert Topics.delete_ingestion(ingestion.id) == {:error, :ingestion_invalid_state}
+      end
+    end
+  end
+
+  describe "delete_ingestion/1" do
+    setup do
+      %{ingestion: insert(:ingestion, state: :ready)}
+    end
+
+    test "returns an error when the ingestion has existing chat sessions", %{ingestion: ingestion} do
+      insert(:chat_session, ingestion: ingestion)
+      assert Topics.delete_ingestion(ingestion.id) == {:error, :ingestion_has_chats}
+    end
+
+    test "deletes the ingestion", %{ingestion: ingestion} do
+      assert {:ok, _} = Topics.delete_ingestion(ingestion.id)
+      refute Repo.reload(ingestion)
+    end
+  end
+
+  describe "delete_library/1 when the library does not exist" do
+    test "returns ok" do
+      assert Topics.delete_library(uuid()) == {:ok, :ok}
+    end
+  end
+
+  describe "delete_library/1" do
+    setup do
+      %{library: insert(:library)}
+    end
+
+    test "returns an error when the library has existing chat sessions", %{library: library} do
+      ingestion = insert(:ingestion, library: library)
+      insert(:chat_session, ingestion: ingestion)
+      assert Topics.delete_library(library.id) == {:error, :library_has_chats}
+    end
+
+    test "deletes the library, and its ingestions and chunks", %{library: library} do
+      ingestion = insert(:ingestion, library: library)
+      chunk = insert(:chunk, ingestion: ingestion)
+
+      assert {:ok, _} = Topics.delete_library(library.id)
+      refute Repo.reload(library)
+      refute Repo.reload(ingestion)
+      refute Repo.reload(chunk)
+    end
+  end
 end

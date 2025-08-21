@@ -8,7 +8,7 @@ defmodule Exmeralda.Chats do
   alias Ecto.Multi
   alias Phoenix.PubSub
 
-  alias Exmeralda.Topics.{Rag, Chunk, Ingestion}
+  alias Exmeralda.Topics.{Rag, Chunk, Ingestion, Library}
   alias Exmeralda.Chats.{LLM, Message, Reaction, Session, Source}
   alias Exmeralda.Accounts.User
 
@@ -38,6 +38,18 @@ defmodule Exmeralda.Chats do
     from s in Session, where: s.user_id == ^user_id, preload: :library
   end
 
+  @spec list_sessions_for_ingestion(Ingestion.id()) :: [Session.t()]
+  def list_sessions_for_ingestion(ingestion_id) do
+    from(s in Session, where: s.ingestion_id == ^ingestion_id)
+    |> Repo.all()
+  end
+
+  @spec list_sessions_for_library(Library.id()) :: [Session.t()]
+  def list_sessions_for_library(library_id) do
+    from(s in Session, join: i in assoc(s, :ingestion), where: i.library_id == ^library_id)
+    |> Repo.all()
+  end
+
   @doc """
   Gets a single message.
   """
@@ -50,6 +62,7 @@ defmodule Exmeralda.Chats do
   """
   @type start_session_attrs :: %{
           ingestion_id: Ingestion.id(),
+          library_id: Library.id(),
           prompt: String.t()
         }
 
@@ -57,6 +70,9 @@ defmodule Exmeralda.Chats do
           {:ok, Session.t()} | {:error, Ecto.Changeset.t()}
   def start_session(user, attrs) do
     Multi.new()
+    |> Multi.run(:library_lock, fn _, _ ->
+      {:ok, Repo.advisory_xact_lock("library:#{Map.fetch!(attrs, "library_id")}")}
+    end)
     |> Multi.insert(:session, Session.create_changeset(%Session{user_id: user.id}, attrs))
     |> Multi.insert(:message, fn %{session: session} ->
       %Message{role: :user, content: session.prompt, index: 0, session: session}

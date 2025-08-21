@@ -10,6 +10,8 @@ defmodule Exmeralda.Topics do
     Ingestion
   }
 
+  alias Exmeralda.Chats
+
   alias Exmeralda.Accounts.User
 
   def list_libraries(params) do
@@ -162,8 +164,25 @@ defmodule Exmeralda.Topics do
   @doc """
   Deletes a library.
   """
-  def delete_library(library) do
-    Repo.delete(library, allow_stale: true)
+  @spec delete_library(Library.id()) ::
+          {:ok, :ok} | {:ok, Library.t()} | {:error, :library_has_chats}
+  def delete_library(library_id) do
+    Repo.transact(fn ->
+      with {:ok, library} <- Repo.fetch(Library, library_id),
+           :ok <- Repo.advisory_xact_lock("library:#{library_id}") do
+        do_delete_library(library)
+      else
+        {:error, {:not_found, Library}} -> {:ok, :ok}
+      end
+    end)
+  end
+
+  defp do_delete_library(library) do
+    if Enum.empty?(Chats.list_sessions_for_library(library.id)) do
+      Repo.delete(library)
+    else
+      {:error, :library_has_chats}
+    end
   end
 
   @doc """
@@ -273,5 +292,29 @@ defmodule Exmeralda.Topics do
   def list_chunks_for_ingestion(%Ingestion{id: id}, params) do
     from(c in Chunk, where: c.ingestion_id == ^id)
     |> Flop.validate_and_run(params, replace_invalid_params: true, for: Chunk)
+  end
+
+  @spec delete_ingestion(Ingestion.id()) ::
+          {:ok, :ok}
+          | {:ok, Ingestion.t()}
+          | {:error, :ingestion_has_chats}
+          | {:error, :ingestion_invalid_state}
+  def delete_ingestion(ingestion_id) do
+    Repo.transact(fn ->
+      with {:ok, ingestion} <- Repo.fetch(Ingestion, ingestion_id),
+           :ok <- Repo.advisory_xact_lock("library:#{ingestion.library_id}") do
+        do_delete_ingestion(ingestion)
+      else
+        {:error, {:not_found, Ingestion}} -> {:ok, :ok}
+      end
+    end)
+  end
+
+  defp do_delete_ingestion(ingestion) do
+    cond do
+      ingestion.state not in [:ready, :failed] -> {:error, :ingestion_invalid_state}
+      Enum.empty?(Chats.list_sessions_for_ingestion(ingestion.id)) -> Repo.delete(ingestion)
+      true -> {:error, :ingestion_has_chats}
+    end
   end
 end

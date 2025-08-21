@@ -105,6 +105,16 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
+  describe "list_sessions_for_ingestion/1" do
+    test "returns the chat sessions of an ingestion" do
+      ingestion = insert(:ingestion)
+      %{id: session_id} = insert(:chat_session, ingestion: ingestion)
+      insert(:chat_session)
+
+      assert [%Session{id: ^session_id}] = Chats.list_sessions_for_ingestion(ingestion.id)
+    end
+  end
+
   describe "get_message!/1" do
     test "raises if the message does not exist" do
       assert_raise Ecto.NoResultsError, fn -> Chats.get_message!(uuid()) end
@@ -114,7 +124,7 @@ defmodule Exmeralda.ChatsTest do
       library = insert(:library)
       ingestion = insert(:ingestion, library: library)
       session = insert(:chat_session, ingestion: ingestion)
-      chunk = insert(:chunk, library: library, ingestion: ingestion)
+      chunk = insert(:chunk, ingestion: ingestion)
       message = insert(:message, session: session)
       insert(:chat_source, chunk: chunk, message: message)
 
@@ -124,13 +134,23 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
-  describe "start_session/1" do
+  describe "start_session/2" do
     setup [:insert_user]
 
     test "errors with a changeset for invalid attrs", %{user: user} do
-      assert {:error, changeset} = Chats.start_session(user, %{})
-      assert_required_error_on(changeset, :ingestion_id)
+      assert {:error, changeset} = Chats.start_session(user, %{"ingestion_id" => uuid()})
       assert_required_error_on(changeset, :prompt)
+    end
+
+    test "errors with a changeset when the ingestion does not exist", %{user: user} do
+      assert {:error, changeset} =
+               Chats.start_session(user, %{
+                 "library_id" => uuid(),
+                 "ingestion_id" => uuid(),
+                 "prompt" => "hello"
+               })
+
+      assert_foreign_key_constraint_on(changeset, :ingestion_id)
     end
 
     test "creates a session, a message", %{user: user} do
@@ -139,7 +159,11 @@ defmodule Exmeralda.ChatsTest do
 
       assert_count_differences(Repo, [{Session, 1}, {Message, 2}], fn ->
         assert {:ok, session} =
-                 Chats.start_session(user, %{ingestion_id: ingestion.id, prompt: "Hello"})
+                 Chats.start_session(user, %{
+                   "ingestion_id" => ingestion.id,
+                   "library_id" => library.id,
+                   "prompt" => "Hello"
+                 })
 
         assert session.ingestion_id == ingestion.id
         assert session.title == "Hello"

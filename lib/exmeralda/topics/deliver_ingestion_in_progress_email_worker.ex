@@ -8,7 +8,6 @@ defmodule Exmeralda.Topics.DeliverIngestionInProgressEmailWorker do
   def perform(%Oban.Job{args: %{"user_id" => user_id, "library_id" => library_id}}) do
     with {:ok, user} <- fetch_user(user_id),
          {:ok, library} <- fetch_library(library_id) do
-      # TODO: library.name is not null: false...
       Emails.ingestion_in_progress_email(%{name: user.name, email: user.email}, library.name)
       |> Mailer.deliver()
     end
