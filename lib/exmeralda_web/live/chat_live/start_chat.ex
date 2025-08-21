@@ -166,7 +166,6 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
         {:noreply, push_patch(socket, to: ~p"/chat/#{session.id}")}
 
       {:error, %Ecto.Changeset{} = changeset} ->
-        dbg(changeset)
         {:noreply, assign(socket, form: to_form(changeset))}
     end
   end
