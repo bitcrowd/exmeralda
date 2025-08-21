@@ -67,6 +67,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
 
   def handle_event("mark-as-active", %{"ingestion-id" => ingestion_id}, socket) do
     %{library: library} = socket.assigns
+
     socket =
       case Topics.mark_ingestion_as_active(ingestion_id) do
         {:ok, ingestion} ->
@@ -80,6 +81,28 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
         {:error, {:not_found, _}} ->
           socket
           |> put_flash(:error, gettext("Ingestion was deleted and cannot be marked active."))
+          |> push_patch(to: ~p"/admin/library/#{library.id}")
+      end
+
+    {:noreply, socket}
+  end
+
+  def handle_event("mark-as-inactive", %{"ingestion-id" => ingestion_id}, socket) do
+    %{library: library} = socket.assigns
+
+    socket =
+      case Topics.mark_ingestion_as_inactive(ingestion_id) do
+        {:ok, ingestion} ->
+          socket
+          |> put_flash(:info, gettext("Ingestion was successfully marked inactive."))
+          |> push_patch(to: ~p"/admin/library/#{library.id}")
+
+        {:error, error} when error in [:ingestion_already_inactive, :ingestion_invalid_state] ->
+          push_patch(socket, to: ~p"/admin/library/#{library.id}")
+
+        {:error, {:not_found, _}} ->
+          socket
+          |> put_flash(:error, gettext("Ingestion was deleted and cannot be marked inactive."))
           |> push_patch(to: ~p"/admin/library/#{library.id}")
       end
 
@@ -184,6 +207,15 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
             >
               <.icon name="hero-check-circle-micro" class="scale-75" />
               {gettext("Mark as active")}
+            </.button>
+            <.button
+              :if={ingestion.state == :ready && ingestion.active}
+              class="btn btn-secondary btn-soft btn-sm ml-2"
+              phx-click="mark-as-inactive"
+              phx-value-ingestion-id={ingestion.id}
+            >
+              <.icon name="hero-no-symbol-micro" class="scale-75" />
+              {gettext("Mark as inactive")}
             </.button>
           </:col>
         </Flop.Phoenix.table>

@@ -350,19 +350,19 @@ defmodule Exmeralda.TopicsTest do
     end
   end
 
-  describe "mark_ingestion_as_active/1 when the ingestion is already active" do
-    test "returns an error" do
-      ingestion = insert(:ingestion, active: true)
-      assert Topics.mark_ingestion_as_active(ingestion.id) == {:error, :ingestion_already_active}
-    end
-  end
-
   for state <- [:queued, :embedding, :failed] do
     describe "mark_ingestion_as_active/1 when the ingestion is in state #{state}" do
       test "returns an error" do
         ingestion = insert(:ingestion, active: false, state: unquote(state))
         assert Topics.mark_ingestion_as_active(ingestion.id) == {:error, :ingestion_invalid_state}
       end
+    end
+  end
+
+  describe "mark_ingestion_as_active/1 when the ingestion is already active" do
+    test "returns an error" do
+      ingestion = insert(:ingestion, active: true, state: :ready)
+      assert Topics.mark_ingestion_as_active(ingestion.id) == {:error, :ingestion_already_active}
     end
   end
 
@@ -381,6 +381,45 @@ defmodule Exmeralda.TopicsTest do
 
       assert {:ok, %Ingestion{}} = Topics.mark_ingestion_as_active(ingestion.id)
       assert Repo.reload(ingestion).active
+      refute Repo.reload(active_ingestion).active
+    end
+  end
+
+  describe "mark_ingestion_as_inactive/1 when the ingestion does not exist" do
+    test "returns an error" do
+      assert Topics.mark_ingestion_as_inactive(uuid()) == {:error, {:not_found, Ingestion}}
+    end
+  end
+
+  for state <- [:queued, :embedding, :failed] do
+    describe "mark_ingestion_as_inactive/1 when the ingestion is in state #{state}" do
+      test "returns an error" do
+        ingestion = insert(:ingestion, active: false, state: unquote(state))
+
+        assert Topics.mark_ingestion_as_inactive(ingestion.id) ==
+                 {:error, :ingestion_invalid_state}
+      end
+    end
+  end
+
+  describe "mark_ingestion_as_inactive/1 when the ingestion is already inactive" do
+    test "returns an error" do
+      ingestion = insert(:ingestion, active: false, state: :ready)
+
+      assert Topics.mark_ingestion_as_inactive(ingestion.id) ==
+               {:error, :ingestion_already_inactive}
+    end
+  end
+
+  describe "mark_ingestion_as_inactive/1" do
+    test "marks the ingestion as inactive" do
+      library = insert(:library)
+      ingestion = insert(:ingestion, active: false, state: :ready, library: library)
+      active_ingestion = insert(:ingestion, active: true, state: :ready, library: library)
+      _other_library = insert(:ingestion, active: false, state: :ready)
+
+      assert {:ok, %Ingestion{}} = Topics.mark_ingestion_as_inactive(active_ingestion.id)
+      refute Repo.reload(ingestion).active
       refute Repo.reload(active_ingestion).active
     end
   end
