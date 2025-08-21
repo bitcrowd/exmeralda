@@ -201,21 +201,21 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
             </.link>
             <.button
               :if={ingestion.state == :ready && !ingestion.active}
-              class="btn btn-primary btn-soft btn-sm ml-2"
+              class="btn btn-primary btn-soft btn-sm mt-1 lg:mt-0 lg:ml-2"
               phx-click="mark-as-active"
               phx-value-ingestion-id={ingestion.id}
             >
               <.icon name="hero-check-circle-micro" class="scale-75" />
-              {gettext("Mark as active")}
+              {gettext("Activate")}
             </.button>
             <.button
               :if={ingestion.state == :ready && ingestion.active}
-              class="btn btn-secondary btn-soft btn-sm ml-2"
+              class="btn btn-outline btn-dash btn-sm mt-1 lg:mt-0 lg:ml-2"
               phx-click="mark-as-inactive"
               phx-value-ingestion-id={ingestion.id}
             >
               <.icon name="hero-no-symbol-micro" class="scale-75" />
-              {gettext("Mark as inactive")}
+              {gettext("Deactivate")}
             </.button>
           </:col>
         </Flop.Phoenix.table>
