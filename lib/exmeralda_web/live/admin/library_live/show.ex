@@ -201,7 +201,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
             </.link>
             <.button
               :if={ingestion.state == :ready && !ingestion.active}
-              class="btn btn-primary btn-soft btn-sm mt-1 lg:mt-0 lg:ml-2"
+              class={"btn btn-primary btn-soft btn-sm mt-1 lg:mt-0 lg:ml-2 e2e-activate-#{ingestion.id}"}
               phx-click="mark-as-active"
               phx-value-ingestion-id={ingestion.id}
             >
@@ -210,7 +210,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
             </.button>
             <.button
               :if={ingestion.state == :ready && ingestion.active}
-              class="btn btn-outline btn-dash btn-sm mt-1 lg:mt-0 lg:ml-2"
+              class={"btn btn-outline btn-dash btn-sm mt-1 lg:mt-0 lg:ml-2 e2e-deactivate-#{ingestion.id}"}
               phx-click="mark-as-inactive"
               phx-value-ingestion-id={ingestion.id}
             >

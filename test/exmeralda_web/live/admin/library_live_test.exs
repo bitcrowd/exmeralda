@@ -130,5 +130,39 @@ defmodule ExmeraldaWeb.Admin.LibraryLiveTest do
       ingestion = Repo.reload(ingestion)
       assert ingestion.state == :ready
     end
+
+    test "activate and deactivate an ingestion", %{conn: conn, user: user, library: library} do
+      ingestion = insert(:ingestion, library: library, state: :ready, active: true)
+      other_ingestion = insert(:ingestion, library: library, state: :ready, active: false)
+
+      conn = log_in_user(conn, user)
+
+      {:ok, view, html} = live(conn, ~p"/admin/library/#{library.id}")
+
+      assert html =~ "Library rag 0.1.0"
+      assert html =~ "Ingestions"
+
+      view
+      |> element(".e2e-activate-#{other_ingestion.id}", "Activate")
+      |> render_click() =~ "Ingestion was successfully marked active."
+
+      refute Repo.reload(ingestion).active
+      assert Repo.reload(other_ingestion).active
+
+      view
+      |> element(".e2e-deactivate-#{other_ingestion.id}", "Deactivate")
+      |> render_click() =~ "Ingestion was successfully marked inactive."
+
+      # Both are inactive now
+      refute Repo.reload(ingestion).active
+      refute Repo.reload(other_ingestion).active
+
+      view
+      |> element(".e2e-activate-#{ingestion.id}", "Activate")
+      |> render_click() =~ "Ingestion was successfully marked active."
+
+      assert Repo.reload(ingestion).active
+      refute Repo.reload(other_ingestion).active
+    end
   end
 end
