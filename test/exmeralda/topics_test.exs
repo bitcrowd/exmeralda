@@ -292,9 +292,18 @@ defmodule Exmeralda.TopicsTest do
     end
   end
 
+  for state <- [:queued, :embedding] do
+    describe "delete_ingestion/1 when the ingestion state is #{state}" do
+      test "returns an error" do
+        ingestion = insert(:ingestion, state: unquote(state))
+        assert Topics.delete_ingestion(ingestion.id) == {:error, :ingestion_invalid_state}
+      end
+    end
+  end
+
   describe "delete_ingestion/1" do
     setup do
-      %{ingestion: insert(:ingestion)}
+      %{ingestion: insert(:ingestion, state: :ready)}
     end
 
     test "returns an error when the ingestion has existing chat sessions", %{ingestion: ingestion} do

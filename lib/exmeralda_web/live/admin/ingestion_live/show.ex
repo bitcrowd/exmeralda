@@ -52,6 +52,11 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
           socket
           |> put_flash(:error, gettext("Ingestion has chats and cannot be deleted."))
           |> push_patch(to: ~p"/admin/library/#{ingestion.library_id}/ingestions/#{ingestion.id}")
+
+        {:error, :ingestion_invalid_state} ->
+          socket
+          |> put_flash(:error, gettext("Ingestion cannot be deleted in this state."))
+          |> push_patch(to: ~p"/admin/library/#{ingestion.library_id}/ingestions/#{ingestion.id}")
       end
 
     {:noreply, socket}

@@ -295,7 +295,10 @@ defmodule Exmeralda.Topics do
   end
 
   @spec delete_ingestion(Ingestion.id()) ::
-          {:ok, :ok} | {:ok, Ingestion.t()} | {:error, :ingestion_has_chats}
+          {:ok, :ok}
+          | {:ok, Ingestion.t()}
+          | {:error, :ingestion_has_chats}
+          | {:error, :ingestion_invalid_state}
   def delete_ingestion(ingestion_id) do
     Repo.transact(fn ->
       with {:ok, ingestion} <- Repo.fetch(Ingestion, ingestion_id),
@@ -308,10 +311,10 @@ defmodule Exmeralda.Topics do
   end
 
   defp do_delete_ingestion(ingestion) do
-    if Enum.empty?(Chats.list_sessions_for_ingestion(ingestion.id)) do
-      Repo.delete(ingestion)
-    else
-      {:error, :ingestion_has_chats}
+    cond do
+      ingestion.state not in [:ready, :failed] -> {:error, :ingestion_invalid_state}
+      Enum.empty?(Chats.list_sessions_for_ingestion(ingestion.id)) -> Repo.delete(ingestion)
+      true -> {:error, :ingestion_has_chats}
     end
   end
 end
