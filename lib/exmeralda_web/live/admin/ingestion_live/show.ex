@@ -13,6 +13,9 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
     {:ok, {chunks, meta}} = Topics.list_chunks_for_ingestion(ingestion, params)
     chat_sessions = Chats.list_sessions_for_ingestion(ingestion.id)
 
+    reaction_stats =
+      Chats.count_reactions_for_ingestions([ingestion.id]) |> Map.get(ingestion.id, [])
+
     socket =
       socket
       |> assign(:page_title, "Ingestion #{ingestion.id}")
@@ -20,6 +23,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
       |> assign(:ingestion, ingestion)
       |> assign(:stats, stats)
       |> assign(:embedding_job_stats, embedding_job_stats)
+      |> assign(:reaction_stats, reaction_stats)
       |> assign(:chunks, chunks)
       |> assign(:meta, meta)
       |> assign(:chat_sessions, chat_sessions)
@@ -96,6 +100,23 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
         </:actions>
       </.header>
 
+      <div class="stats shadow mb-4">
+        <.stat
+          icon_name="hero-hand-thumb-up"
+          title="Upvotes"
+          text_variant="text-accent"
+          value_variant=""
+          value={Keyword.get(@reaction_stats, :upvote, 0)}
+        />
+        <.stat
+          icon_name="hero-hand-thumb-down"
+          title="Downvotes"
+          text_variant="text-error"
+          value_variant=""
+          value={Keyword.get(@reaction_stats, :downvote, 0)}
+        />
+      </div>
+
       <.list>
         <:item title={gettext("ID")}>{@ingestion.id}</:item>
         <:item title={gettext("State")}><.ingestion_state_badge state={@ingestion.state} /></:item>
@@ -117,66 +138,71 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
         <:item title={gettext("Updated At")}>{datetime(@ingestion.updated_at)}</:item>
       </.list>
 
-      <div class="stats shadow mt-4">
-        <.stat icon_name="hero-bolt" title="Total Chunks" value={@stats[:chunks_total]} />
+      <.section title={gettext("Chunks")}>
+        <div class="stats shadow mt-4">
+          <.stat icon_name="hero-bolt" title="Total Chunks" value={@stats[:chunks_total]} />
 
-        <.stat
-          icon_name="hero-book-open"
-          title="Embedded chunks"
-          value={@stats[:chunks_embedding]}
-          text_variant="text-secondary"
-          value_variant="text-secondary"
-          total={@stats[:chunks_total]}
+          <.stat
+            icon_name="hero-book-open"
+            title="Embedded chunks"
+            value={@stats[:chunks_embedding]}
+            text_variant="text-secondary"
+            value_variant="text-secondary"
+            total={@stats[:chunks_total]}
+          />
+
+          <.stat
+            icon_name="hero-book-open"
+            title="Chunks from docs"
+            value={Keyword.get(@stats[:chunks_type], :docs, 0)}
+            text_variant="text-secondary"
+            value_variant="text-secondary"
+            total={@stats[:chunks_total]}
+          />
+
+          <.stat
+            icon_name="hero-code-bracket"
+            title="Chunks from code"
+            value={Keyword.get(@stats[:chunks_type], :code, 0)}
+            text_variant="text-secondary"
+            value_variant=""
+            total={@stats[:chunks_total]}
+          />
+        </div>
+
+        <.filter_form
+          class="grid grid-cols-4 gap-4 p-4"
+          fields={[
+            type: [label: gettext("Type"), type: "select", options: ["", "code", "docs"]],
+            source: [
+              label: gettext("Source"),
+              op: :ilike_and
+            ]
+          ]}
+          meta={@meta}
+          id="chunk-filter-form"
         />
+        <Flop.Phoenix.table
+          items={@chunks}
+          meta={@meta}
+          path={~p"/admin/library/#{@library.id}/ingestions/#{@ingestion.id}"}
+          opts={[table_attrs: [class: "table"]]}
+        >
+          <:col :let={chunk} label="Type" field={:type}>{chunk.type}</:col>
+          <:col :let={chunk} label="Source" field={:source}>{chunk.source}</:col>
+          <:col :let={chunk} label="Content" field={:content}>
+            <details>
+              <summary>Show</summary>
+              {chunk.content}
+            </details>
+          </:col>
+        </Flop.Phoenix.table>
 
-        <.stat
-          icon_name="hero-book-open"
-          title="Chunks from docs"
-          value={Keyword.get(@stats[:chunks_type], :docs, 0)}
-          text_variant="text-secondary"
-          value_variant="text-secondary"
-          total={@stats[:chunks_total]}
+        <.pagination
+          meta={@meta}
+          path={~p"/admin/library/#{@library.id}/ingestions/#{@ingestion.id}"}
         />
-
-        <.stat
-          icon_name="hero-code-bracket"
-          title="Chunks from code"
-          value={Keyword.get(@stats[:chunks_type], :code, 0)}
-          text_variant="text-secondary"
-          value_variant=""
-          total={@stats[:chunks_total]}
-        />
-      </div>
-
-      <.filter_form
-        class="grid grid-cols-4 gap-4 p-4"
-        fields={[
-          type: [label: gettext("Type"), type: "select", options: ["", "code", "docs"]],
-          source: [
-            label: gettext("Source"),
-            op: :ilike_and
-          ]
-        ]}
-        meta={@meta}
-        id="chunk-filter-form"
-      />
-      <Flop.Phoenix.table
-        items={@chunks}
-        meta={@meta}
-        path={~p"/admin/library/#{@library.id}/ingestions/#{@ingestion.id}"}
-        opts={[table_attrs: [class: "table"]]}
-      >
-        <:col :let={chunk} label="Type" field={:type}>{chunk.type}</:col>
-        <:col :let={chunk} label="Source" field={:source}>{chunk.source}</:col>
-        <:col :let={chunk} label="Content" field={:content}>
-          <details>
-            <summary>Show</summary>
-            {chunk.content}
-          </details>
-        </:col>
-      </Flop.Phoenix.table>
-
-      <.pagination meta={@meta} path={~p"/admin/library/#{@library.id}/ingestions/#{@ingestion.id}"} />
+      </.section>
     </.navbar_layout>
     """
   end
