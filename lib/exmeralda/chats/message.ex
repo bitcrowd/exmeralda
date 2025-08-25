@@ -2,6 +2,7 @@ defmodule Exmeralda.Chats.Message do
   use Exmeralda.Schema
 
   alias Exmeralda.Chats.{Reaction, Session, Source}
+  alias Exmeralda.Environment.GenerationConfig
 
   schema "chat_messages" do
     field :index, :integer
@@ -9,6 +10,7 @@ defmodule Exmeralda.Chats.Message do
     field :content, :string
     field :incomplete, :boolean, default: false
     belongs_to :session, Session
+    belongs_to :generation_config, GenerationConfig
     has_many :sources, Source
 
     has_many :source_chunks,
@@ -23,7 +25,7 @@ defmodule Exmeralda.Chats.Message do
   @doc false
   def changeset(message \\ %__MODULE__{}, attrs) do
     message
-    |> cast(attrs, [:session_id, :role, :index, :content, :incomplete])
-    |> validate_required([:session_id, :role, :index, :content, :incomplete])
+    |> cast(attrs, [:session_id, :generation_config_id, :role, :index, :content, :incomplete])
+    |> validate_required([:session_id, :generation_config_id, :role, :index, :content, :incomplete])
   end
 end
