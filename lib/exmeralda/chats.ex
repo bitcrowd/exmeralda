@@ -167,10 +167,16 @@ defmodule Exmeralda.Chats do
       {chunks, generation} = build_generation(message, session.ingestion.id)
       insert_sources(session, chunks, assistant_message)
 
-      LLM.stream_responses(
-        previous_messages ++ [%{message | content: generation.prompt}],
-        handler
-      )
+      case LLM.stream_responses(
+             previous_messages ++ [%{message | content: generation.prompt}],
+             handler
+           ) do
+        {:ok, responses} ->
+          {:ok, responses}
+
+        {:error, _chain, error} ->
+          raise "Error when building generation #{inspect(error)} - check the server logs!"
+      end
     end)
   end
 
