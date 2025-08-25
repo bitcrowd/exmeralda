@@ -1,0 +1,109 @@
+@startuml model
+
+title "Exmeralda Model"
+
+set namespaceSeparator none
+hide circle
+hide methods
+
+' skinparam linetype ortho
+skinparam defaultFontName Roboto Mono
+skinparam shadowing false
+
+package Environment {
+  object Provider {
+    id: string
+    endpoint: string
+  }
+
+  object ModelConfig {
+    id: string
+    name: string
+    config: jsonb
+  }
+
+  object ModelConfigProvider {
+    id: string
+    name: string
+  }
+
+  object GenerationConfig {
+    id: string
+  }
+
+  object SystemPrompt {
+    id: string
+    prompt: string
+  }
+
+  object PromptTemplate {
+    id: string
+    template: string
+  }
+
+  ModelConfigProvider "n" -l- "1" Provider
+  ModelConfigProvider "n" -u- "1" ModelConfig
+  ModelConfigProvider "1" -- "n" GenerationConfig
+  SystemPrompt "1" -r- "n" GenerationConfig
+  PromptTemplate "1" -u- "n" GenerationConfig
+}
+
+package Chats {
+  object Session {
+    id: string
+    title: string
+  }
+
+  object Message {
+    id: string
+    role: enum (user, assitant)
+    index: integer
+    content: string
+    incomplete: boolean
+  }
+
+  object Reaction {
+    id: string
+    type: enum (upvote, downvote)
+  }
+
+  object Source {
+    id: string
+  }
+
+  Message "1" -d- "0,1" Reaction
+  Message "n" -r- "1" Session
+  Source "n" -u- "1" Message
+}
+
+package Topics {
+  object Library {
+    id: string
+    name: string
+    version: string
+  }
+
+  object Ingestion {
+    id: string
+    state: enum (queued, embedding, failed, ready)
+    active: boolean
+  }
+
+  object Chunk {
+    id: string
+    type: enum (code, docs)
+    source: string
+    content: string
+    embedding: pgvector
+  }
+
+  Library "1" -d- "n" Ingestion
+  Chunk "n" -u- "1" Ingestion
+}
+
+Message "n" -l- "1" GenerationConfig
+Session "n" -- "1" Ingestion
+Source "n" -- "1" Chunk
+
+
+@enduml
