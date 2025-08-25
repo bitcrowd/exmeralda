@@ -83,13 +83,13 @@ if config_env() == :prod do
 end
 
 cond do
-  config_env() == :prod || System.get_env("LAMBDA_API_KEY") ->
+  config_env() == :prod || System.get_env("TOGETHER_API_KEY") ->
     config :exmeralda,
            :llm,
            LangChain.ChatModels.ChatOpenAI.new!(%{
-             endpoint: "https://api.lambda.ai/v1/chat/completions",
-             api_key: System.fetch_env!("LAMBDA_API_KEY"),
-             model: "qwen25-coder-32b-instruct",
+             endpoint: "https://api.together.xyz/v1/chat/completions",
+             api_key: System.fetch_env!("TOGETHER_API_KEY"),
+             model: "Qwen/Qwen2.5-Coder-32B-Instruct",
              stream: true
            })
 
