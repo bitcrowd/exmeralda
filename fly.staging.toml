@@ -3,7 +3,7 @@
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'exmeralda'
+app = 'exmeralda-staging'
 primary_region = 'fra'
 kill_signal = 'SIGTERM'
 
@@ -17,11 +17,11 @@ kill_signal = 'SIGTERM'
   release_command = '/app/bin/migrate'
 
 [env]
-  PHX_HOST = 'exmeralda.chat'
+  PHX_HOST = 'exmeralda-staging.fly.dev'
   PORT = '8080'
   APPSIGNAL_OTP_APP="exmeralda"
   APPSIGNAL_APP_NAME="exmeralda"
-  APPSIGNAL_APP_ENV="prod"
+  APPSIGNAL_APP_ENV="staging"
 
 [http_service]
   internal_port = 8080
