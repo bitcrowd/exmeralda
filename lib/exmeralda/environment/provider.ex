@@ -7,5 +7,7 @@ defmodule Exmeralda.Environment.Provider do
   schema "providers" do
     field :type, Ecto.Enum, values: [:groq, :lambda, :together, :hyperbolic]
     field :endpoint, :string
+
+    timestamps()
   end
 end

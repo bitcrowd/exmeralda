@@ -10,5 +10,7 @@ defmodule Exmeralda.Environment.ModelConfig do
   schema "model_configs" do
     field :name, :string
     field :config, :map
+
+    timestamps()
   end
 end

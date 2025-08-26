@@ -15,5 +15,7 @@ defmodule Exmeralda.Environment.ModelConfigProvider do
     belongs_to(:provider, Provider)
 
     field :name, :string
+
+    timestamps()
   end
 end

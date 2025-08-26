@@ -10,5 +10,7 @@ defmodule Exmeralda.Environment.GenerationConfig do
   schema "generation_configs" do
     belongs_to(:model_config_provider, ModelConfigProvider)
     # System prompt and template prompt will be added later.
+
+    timestamps()
   end
 end
