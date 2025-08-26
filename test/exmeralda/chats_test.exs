@@ -3,6 +3,7 @@ defmodule Exmeralda.ChatsTest do
 
   alias Exmeralda.Chats
   alias Exmeralda.Chats.{Message, Session, Reaction}
+  alias Exmeralda.Environment.GenerationConfig
   alias Exmeralda.Repo
 
   def insert_user(_) do
@@ -153,6 +154,14 @@ defmodule Exmeralda.ChatsTest do
       assert_foreign_key_constraint_on(changeset, :ingestion_id)
     end
 
+    test "raises if the current generation id does not exist", %{user: user} do
+      Repo.get!(GenerationConfig, test_generation_config_id()) |> Repo.delete!()
+
+      assert_raise RuntimeError, ~r/Could not find the current generation config/, fn ->
+        Chats.start_session(user, %{})
+      end
+    end
+
     test "creates a session, a message", %{user: user} do
       library = insert(:library)
       ingestion = insert(:ingestion, library: library)
@@ -175,12 +184,14 @@ defmodule Exmeralda.ChatsTest do
         assert message.role == :user
         assert message.content == "Hello"
         refute message.incomplete
+        assert message.generation_config_id == test_generation_config_id()
 
         assert assistant_message.index == 1
         assert assistant_message.role == :assistant
         assert assistant_message.content == ""
         assert assistant_message.incomplete
         assert assistant_message.sources == []
+        assert assistant_message.generation_config_id == test_generation_config_id()
 
         wait_for_generation_task()
 
@@ -214,6 +225,14 @@ defmodule Exmeralda.ChatsTest do
       end
     end
 
+    test "raises if the current generation id does not exist", %{session: session} do
+      Repo.get!(GenerationConfig, test_generation_config_id()) |> Repo.delete!()
+
+      assert_raise RuntimeError, ~r/Could not find the current generation config/, fn ->
+        Chats.continue_session(session, %{})
+      end
+    end
+
     test "creates a message", %{session: session} do
       assert_count_differences(Repo, [{Message, 2}], fn ->
         assert {:ok, [message, assistant_message]} =
@@ -226,12 +245,14 @@ defmodule Exmeralda.ChatsTest do
         assert message.role == :user
         assert message.content == "What's the recipe for cookies?"
         refute message.incomplete
+        assert message.generation_config_id == test_generation_config_id()
 
         assert assistant_message.index == 3
         assert assistant_message.role == :assistant
         assert assistant_message.content == ""
         assert assistant_message.incomplete
         assert assistant_message.sources == []
+        assert assistant_message.generation_config_id == test_generation_config_id()
 
         wait_for_generation_task()
 

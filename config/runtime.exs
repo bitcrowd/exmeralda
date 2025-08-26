@@ -105,6 +105,14 @@ cond do
     config :exmeralda, :llm, Exmeralda.LLM.Fake
 end
 
+if config_env() == :prod do
+  config :exmeralda,
+    current_generation_config_id: System.fetch_env!("CURRENT_GENERATION_CONFIG_ID")
+else
+  # This generation config is created in the seeds both for dev and test envs.
+  config :exmeralda, current_generation_config_id: "2305268e-c07e-47dc-9e8e-3cb3508ce2d4"
+end
+
 cond do
   config_env() == :prod || System.get_env("JINA_API_KEY") ->
     config :exmeralda,
