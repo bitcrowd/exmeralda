@@ -13,7 +13,5 @@ defmodule Exmeralda.Repo.Migrations.CreateProviders do
 
       timestamps()
     end
-
-    create unique_index(:providers, [:type])
   end
 end

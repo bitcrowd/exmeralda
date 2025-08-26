@@ -9,6 +9,6 @@ defmodule Exmeralda.Repo.Migrations.CreateGenerationConfig do
       timestamps()
     end
 
-    create unique_index(:generation_configs, [:model_config_provider_id])
+    create index(:generation_configs, [:model_config_provider_id])
   end
 end
