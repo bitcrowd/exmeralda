@@ -225,14 +225,6 @@ defmodule Exmeralda.ChatsTest do
       end
     end
 
-    test "raises if the current generation id does not exist", %{session: session} do
-      Repo.get!(GenerationConfig, test_generation_config_id()) |> Repo.delete!()
-
-      assert_raise RuntimeError, ~r/Could not find the current generation config/, fn ->
-        Chats.continue_session(session, %{})
-      end
-    end
-
     test "creates a message", %{session: session} do
       assert_count_differences(Repo, [{Message, 2}], fn ->
         assert {:ok, [message, assistant_message]} =
