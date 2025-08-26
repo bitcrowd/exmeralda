@@ -11,8 +11,8 @@ defmodule Exmeralda.Environment.ModelConfigProvider do
   alias Exmeralda.Environment.{ModelConfig, Provider}
 
   schema "model_config_providers" do
-    belongs_to(:model_config, ModelConfig)
-    belongs_to(:provider, Provider)
+    belongs_to :model_config, ModelConfig
+    belongs_to :provider, Provider
 
     field :name, :string
 
