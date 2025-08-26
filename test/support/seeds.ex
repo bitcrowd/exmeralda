@@ -69,6 +69,47 @@ defmodule Exmeralda.Seeds do
         name: "Qwen/Qwen2.5-Coder-32B-Instruct"
       })
     end
+
+    if Mix.env() == :dev do
+      provider =
+        Repo.insert!(
+          %Exmeralda.Environment.Provider{
+            type: :together,
+            endpoint: "https://api.together.xyz/v1/chat/completions"
+          },
+          on_conflict: {:replace_all_except, [:id]},
+          conflict_target: :type
+        )
+
+      model_config =
+        Repo.insert!(
+          %Exmeralda.Environment.ModelConfig{
+            name: "qwen25-coder-32b",
+            config: %{stream: true}
+          },
+          on_conflict: {:replace_all_except, [:id]},
+          conflict_target: :name
+        )
+
+      model_config_provider =
+        Repo.insert!(
+          %Exmeralda.Environment.ModelConfigProvider{
+            model_config_id: model_config.id,
+            provider_id: provider.id,
+            name: "Qwen/Qwen2.5-Coder-32B-Instruct"
+          },
+          on_conflict: {:replace_all_except, [:id]},
+          conflict_target: [:provider_id, :model_config_id]
+        )
+
+      Repo.insert!(
+        %Exmeralda.Environment.GenerationConfig{
+          model_config_provider_id: model_config_provider.id
+        },
+        on_conflict: {:replace_all_except, [:id]},
+        conflict_target: :model_config_provider_id
+      )
+    end
   end
 
   defp insert_idempotently(schema, conflict_target \\ :id) do

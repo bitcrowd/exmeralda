@@ -10,13 +10,9 @@ Check it out yourself at [exmeralda.chat](https://exmeralda.chat).
 
 You can install all of it (except pgvector) with [asdf](https://github.com/asdf-vm/asdf).
 
-## Setup
+## Dev Setup
 
-To test the chatbot locally you either need to start with a Groq API key (see 1password):
-
-`GROQ_API_KEY=abcd JINA_API_KEY=abcd iex -S mix phx.server`
-
- or install [Ollama](https://github.com/ollama/ollama):
+The chatbot can be tested locally with [Ollama](https://github.com/ollama/ollama):
 
 ```sh
 brew install ollama
@@ -36,8 +32,6 @@ mix deps.get
 mix setup
 ```
 
-## Run
-
 Start as usual:
 
 ```sh
@@ -56,6 +50,13 @@ iex -S mix phx.server
 
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
 To start a chat, first create a new library in the UI on the home page.
+
+## Prod setup
+
+The production environment does not run with Ollama. Instead we use various LLM API providers. If you need to test the chatbot against those APIs:
+
+1. Create
+
 
 ## Dev tools
 

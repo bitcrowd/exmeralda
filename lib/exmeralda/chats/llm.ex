@@ -28,29 +28,30 @@ defmodule Exmeralda.Chats.LLM do
 
     params =
       %{
-        model: generation_config.model_config_provider.name
+        "model" => generation_config.model_config_provider.name
       }
       |> Map.merge(generation_config.model_config.config)
       |> maybe_add_endpoint(generation_config.provider)
       |> maybe_add_api_key(generation_config.provider)
-      |> dbg()
 
     llm_mod = Application.fetch_env!(:exmeralda, :llm)
-    llm_mod.new!(params) |> dbg()
+    llm_mod.new!(params)
   end
 
   defp maybe_add_api_key(params, %{type: type}) do
     api_keys = Application.fetch_env!(:exmeralda, :llm_api_keys)
 
     if api_key = Map.get(api_keys, type) do
-      Map.put(params, :api_key, api_key)
+      Map.put(params, "api_key", api_key)
     else
       params
     end
   end
 
   defp maybe_add_endpoint(params, %{type: :mock}), do: params
-  defp maybe_add_endpoint(params, %{endpoint: endpoint}), do: Map.put(params, :endpoint, endpoint)
+
+  defp maybe_add_endpoint(params, %{endpoint: endpoint}),
+    do: Map.put(params, "endpoint", endpoint)
 
   defp system_prompt do
     Application.fetch_env!(:exmeralda, :system_prompt)

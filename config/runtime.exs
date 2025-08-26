@@ -83,29 +83,6 @@ if config_env() == :prod do
 end
 
 cond do
-  config_env() == :prod || System.get_env("TOGETHER_API_KEY") ->
-    config :exmeralda,
-           :llm,
-           LangChain.ChatModels.ChatOpenAI.new!(%{
-             endpoint: "https://api.together.xyz/v1/chat/completions",
-             api_key: System.fetch_env!("TOGETHER_API_KEY"),
-             model: "Qwen/Qwen2.5-Coder-32B-Instruct",
-             stream: true
-           })
-
-  config_env() == :dev ->
-    config :exmeralda,
-           :llm,
-           LangChain.ChatModels.ChatOllamaAI.new!(%{
-             model: "llama3.2:latest",
-             stream: true
-           })
-
-  true ->
-    config :exmeralda, :llm, Exmeralda.LLM.Fake
-end
-
-cond do
   config_env() == :prod ->
     # The CURRENT_GENERATION_CONFIG_ID must match an existing GenerationConfig record in the database
     # This record saves which API and which LLM model is used for the message generation.
