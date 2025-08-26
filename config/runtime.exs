@@ -105,14 +105,32 @@ cond do
     config :exmeralda, :llm, Exmeralda.LLM.Fake
 end
 
-if config_env() == :prod do
-  # The CURRENT_GENERATION_CONFIG_ID must match an existing GenerationConfig record in the database
-  # This record saves which API and which LLM model is used for the message generation.
-  config :exmeralda,
-    current_generation_config_id: System.fetch_env!("CURRENT_GENERATION_CONFIG_ID")
-else
-  # This generation config is created in the seeds both for dev and test envs.
-  config :exmeralda, current_generation_config_id: "2305268e-c07e-47dc-9e8e-3cb3508ce2d4"
+cond do
+  config_env() == :prod ->
+    # The CURRENT_GENERATION_CONFIG_ID must match an existing GenerationConfig record in the database
+    # This record saves which API and which LLM model is used for the message generation.
+    config :exmeralda,
+      llm_api_keys: %{
+        lambda: System.fetch_env!("LAMBDA_API_KEY"),
+        groq: System.fetch_env!("GROQ_API_KEY"),
+        together: System.fetch_env!("TOGETHER_API_KEY"),
+        hyperbolic: System.fetch_env!("HYPERBOLIC_API_KEY")
+      },
+      llm: LangChain.ChatModels.ChatOpenAI,
+      current_generation_config_id: System.fetch_env!("CURRENT_GENERATION_CONFIG_ID")
+
+  config_env() == :dev ->
+    # This generation config is created in the seeds both for dev and test envs.
+    config :exmeralda,
+      llm_api_keys: %{},
+      llm: LangChain.ChatModels.ChatOllamaAI,
+      current_generation_config_id: "2305268e-c07e-47dc-9e8e-3cb3508ce2d4"
+
+  true ->
+    config :exmeralda,
+      llm_api_keys: %{},
+      llm: Exmeralda.LLM.Fake,
+      current_generation_config_id: "2305268e-c07e-47dc-9e8e-3cb3508ce2d4"
 end
 
 cond do

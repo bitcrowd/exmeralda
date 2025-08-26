@@ -5,7 +5,7 @@ defmodule Exmeralda.LLM.Fake do
 
   defstruct name: "MockChatModel", version: "1.0", callbacks: []
 
-  def new(attrs) do
+  def new!(attrs) do
     struct!(__MODULE__, attrs)
   end
 

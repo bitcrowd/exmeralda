@@ -1,8 +1,10 @@
 defmodule Exmeralda.Chats.LLM do
-  alias LangChain.Chains.{LLMChain, TextToTitleChain}
+  alias LangChain.Chains.LLMChain
+  alias Exmeralda.Environment.GenerationConfig
+  alias Exmeralda.Repo
 
-  def stream_responses(messages, handler) do
-    %{llm: llm()}
+  def stream_responses(messages, generation_config_id, handler) do
+    %{llm: llm(generation_config_id)}
     |> LLMChain.new!()
     |> LLMChain.add_message(system_prompt() |> LangChain.Message.new_system!())
     |> LLMChain.add_messages(Enum.map(messages, &to_langchain_message/1))
@@ -19,20 +21,36 @@ defmodule Exmeralda.Chats.LLM do
   defp to_langchain_message(%{role: :assistant, content: content}),
     do: LangChain.Message.new_assistant!(content)
 
-  def generate_title(input) do
-    %{
-      llm: llm(),
-      input_text: input
-    }
-    |> TextToTitleChain.new!()
+  defp llm(generation_config_id) do
+    generation_config =
+      Repo.get!(GenerationConfig, generation_config_id)
+      |> Repo.preload([:model_config, :provider])
+
+    params =
+      %{
+        model: generation_config.model_config_provider.name
+      }
+      |> Map.merge(generation_config.model_config.config)
+      |> maybe_add_endpoint(generation_config.provider)
+      |> maybe_add_api_key(generation_config.provider)
+      |> dbg()
+
+    llm_mod = Application.fetch_env!(:exmeralda, :llm)
+    llm_mod.new!(params) |> dbg()
   end
 
-  defp llm do
-    case Application.fetch_env!(:exmeralda, :llm) do
-      llm when is_struct(llm) -> llm
-      mod when is_atom(mod) -> mod.new(%{})
+  defp maybe_add_api_key(params, %{type: type}) do
+    api_keys = Application.fetch_env!(:exmeralda, :llm_api_keys)
+
+    if api_key = Map.get(api_keys, type) do
+      Map.put(params, :api_key, api_key)
+    else
+      params
     end
   end
+
+  defp maybe_add_endpoint(params, %{type: :mock}), do: params
+  defp maybe_add_endpoint(params, %{endpoint: endpoint}), do: Map.put(params, :endpoint, endpoint)
 
   defp system_prompt do
     Application.fetch_env!(:exmeralda, :system_prompt)

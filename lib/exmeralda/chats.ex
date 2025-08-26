@@ -186,6 +186,7 @@ defmodule Exmeralda.Chats do
 
       case LLM.stream_responses(
              previous_messages ++ [%{message | content: generation.prompt}],
+             message.generation_config_id,
              handler
            ) do
         {:ok, responses} ->
