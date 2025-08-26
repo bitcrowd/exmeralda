@@ -106,6 +106,8 @@ cond do
 end
 
 if config_env() == :prod do
+  # The CURRENT_GENERATION_CONFIG_ID must match an existing GenerationConfig record in the database
+  # This record saves which API and which LLM model is used for the message generation.
   config :exmeralda,
     current_generation_config_id: System.fetch_env!("CURRENT_GENERATION_CONFIG_ID")
 else
