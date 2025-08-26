@@ -5,7 +5,7 @@ defmodule Exmeralda.Environment.Provider do
   use Exmeralda.Schema
 
   schema "providers" do
-    field :type, Ecto.Enum, values: [:groq, :lambda, :together, :hyperbolic]
+    field :type, Ecto.Enum, values: [:groq, :lambda, :together, :hyperbolic, :mock]
     field :endpoint, :string
 
     timestamps()

@@ -6,8 +6,8 @@ defmodule Exmeralda.Seeds do
       provider =
         insert_idempotently(%Exmeralda.Environment.Provider{
           id: "62b47ee3-17ec-4c41-ac5e-3d8d6c0ac83d",
-          type: :lambda,
-          endpoint: "http://example.net/lambda/chat/completions"
+          type: :mock,
+          endpoint: "http://localhost:4000/v1/chat/completions"
         })
 
       model_config =

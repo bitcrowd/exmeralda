@@ -3,7 +3,7 @@ defmodule Exmeralda.Repo.Migrations.CreateProviders do
 
   def change do
     execute(
-      "CREATE TYPE provider_type AS ENUM ('lambda', 'groq', 'hyperbolic', 'together');",
+      "CREATE TYPE provider_type AS ENUM ('lambda', 'groq', 'hyperbolic', 'together', 'mock');",
       "DROP TYPE provider_type;"
     )
 
