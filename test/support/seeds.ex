@@ -14,7 +14,7 @@ defmodule Exmeralda.Seeds do
       mock_model_config =
         insert_idempotently(%Exmeralda.LLM.ModelConfig{
           id: "8270fc8e-d0df-4af1-9ddf-b208f5a8059e",
-          name: "llm-model",
+          name: "llm-fake-model",
           config: %{stream: true}
         })
 
@@ -72,42 +72,39 @@ defmodule Exmeralda.Seeds do
 
     if Mix.env() == :dev do
       provider =
-        Repo.insert!(
+        insert_idempotently(
           %Exmeralda.Environment.Provider{
+            id: "460d1461-6ff3-49bf-b423-5a9e8f440ba9",
             type: :together,
             endpoint: "https://api.together.xyz/v1/chat/completions"
           },
-          on_conflict: {:replace_all_except, [:id]},
-          conflict_target: :type
+          :type
         )
 
       model_config =
-        Repo.insert!(
-          %Exmeralda.Environment.ModelConfig{
-            name: "qwen25-coder-32b",
-            config: %{stream: true}
-          },
-          on_conflict: {:replace_all_except, [:id]},
-          conflict_target: :name
-        )
+        insert_idempotently(%Exmeralda.Environment.ModelConfig{
+          id: "b316dea6-eba5-4fd4-ae6d-5e67f151cb4c",
+          name: "qwen25-coder-32b",
+          config: %{stream: true}
+        })
 
       model_config_provider =
-        Repo.insert!(
+        insert_idempotently(
           %Exmeralda.Environment.ModelConfigProvider{
+            id: "460d1461-6ff3-49bf-b423-5a9e8f440ba8",
             model_config_id: model_config.id,
             provider_id: provider.id,
             name: "Qwen/Qwen2.5-Coder-32B-Instruct"
           },
-          on_conflict: {:replace_all_except, [:id]},
-          conflict_target: [:provider_id, :model_config_id]
+          [:provider_id, :model_config_id]
         )
 
-      Repo.insert!(
+      insert_idempotently(
         %Exmeralda.Environment.GenerationConfig{
+          id: "5242404c-ca9e-40f3-a84e-c044195379ed",
           model_config_provider_id: model_config_provider.id
         },
-        on_conflict: {:replace_all_except, [:id]},
-        conflict_target: :model_config_provider_id
+        :model_config_provider_id
       )
     end
   end

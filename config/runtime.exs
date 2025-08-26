@@ -97,16 +97,17 @@ cond do
       current_generation_config_id: System.fetch_env!("CURRENT_GENERATION_CONFIG_ID")
 
   config_env() == :dev ->
-    # This generation config is created in the seeds both for dev and test envs.
     config :exmeralda,
       llm_api_keys: %{},
       llm: LangChain.ChatModels.ChatOllamaAI,
+      # This generation config is created in the seeds
       current_generation_config_id: "2305268e-c07e-47dc-9e8e-3cb3508ce2d4"
 
   true ->
     config :exmeralda,
       llm_api_keys: %{},
       llm: Exmeralda.LLM.Fake,
+      # This generation config is created in the seeds
       current_generation_config_id: "2305268e-c07e-47dc-9e8e-3cb3508ce2d4"
 end
 
