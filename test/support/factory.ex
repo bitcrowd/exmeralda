@@ -97,6 +97,7 @@ defmodule Exmeralda.Factory do
   def provider_factory do
     %Exmeralda.LLMs.Provider{
       config: %{},
+      name: sequence(:provider_name, &"provider_#{&1}"),
       type: :mock
     }
   end
