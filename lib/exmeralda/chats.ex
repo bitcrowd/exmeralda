@@ -10,7 +10,7 @@ defmodule Exmeralda.Chats do
 
   alias Exmeralda.Topics.{Rag, Chunk, Ingestion, Library}
   alias Exmeralda.Chats.{LLM, Message, Reaction, Session, Source}
-  alias Exmeralda.Environment.GenerationConfig
+  alias Exmeralda.LLMs.{ModelConfig, Provider}
   alias Exmeralda.Accounts.User
 
   @message_preload [:source_chunks, :reaction]
@@ -70,21 +70,21 @@ defmodule Exmeralda.Chats do
   @spec start_session(User.t(), start_session_attrs()) ::
           {:ok, Session.t()} | {:error, Ecto.Changeset.t()}
   def start_session(user, attrs) do
-    current_generation_config = current_generation_config()
-
     Multi.new()
     |> Multi.run(:library_lock, fn _, _ ->
       {:ok, Repo.advisory_xact_lock("library:#{Map.fetch!(attrs, "library_id")}")}
     end)
     |> Multi.insert(:session, Session.create_changeset(%Session{user_id: user.id}, attrs))
     |> Multi.insert(:message, fn %{session: session} ->
-      %Message{
-        role: :user,
-        content: session.prompt,
-        index: 0,
-        session_id: session.id,
-        generation_config_id: current_generation_config.id
-      }
+      Map.merge(
+        %Message{
+          role: :user,
+          content: session.prompt,
+          index: 0,
+          session_id: session.id
+        },
+        current_llm_config()
+      )
     end)
     |> Multi.put(:previous_messages, [])
     |> assistant_message()
@@ -109,17 +109,15 @@ defmodule Exmeralda.Chats do
   @spec continue_session(Session.t(), continue_session_attrs()) ::
           {:ok, Session.t()} | {:error, Ecto.Changeset.t()}
   def continue_session(session, params) do
-    current_generation_config = current_generation_config()
-
     Multi.new()
     |> Multi.put(:session, session)
     |> Multi.put(:previous_messages, all_messages(session))
     |> Multi.insert(:message, fn %{session: session} ->
       %Message{
         role: :user,
-        session_id: session.id,
-        generation_config_id: current_generation_config.id
+        session_id: session.id
       }
+      |> Map.merge(current_llm_config())
       |> Message.changeset(params)
     end)
     |> assistant_message()
@@ -148,7 +146,8 @@ defmodule Exmeralda.Chats do
         role: :assistant,
         content: "",
         session_id: session.id,
-        generation_config_id: message.generation_config_id,
+        model_config_id: message.model_config_id,
+        provider_id: message.provider_id,
         index: message.index + 1,
         incomplete: true
       }
@@ -186,7 +185,8 @@ defmodule Exmeralda.Chats do
 
       case LLM.stream_responses(
              previous_messages ++ [%{message | content: generation.prompt}],
-             message.generation_config_id,
+             message.model_config_id,
+             message.provider_id,
              handler
            ) do
         {:ok, responses} ->
@@ -307,11 +307,16 @@ defmodule Exmeralda.Chats do
     |> Enum.group_by(& &1.ingestion_id, & &1.count)
   end
 
-  def current_generation_config do
-    current_generation_config_id =
-      Application.fetch_env!(:exmeralda, :current_generation_config_id)
+  def current_llm_config do
+    %{provider_id: provider_id, model_config_id: model_config_id} =
+      Application.fetch_env!(:exmeralda, :llm_config)
 
-    Repo.get(GenerationConfig, current_generation_config_id) ||
-      raise "Could not find the current generation config!"
+    Repo.get(ModelConfig, model_config_id) ||
+      raise "Could not find the current LLM model config!"
+
+    Repo.get(Provider, provider_id) ||
+      raise "Could not find the current LLM provider!"
+
+    %{provider_id: provider_id, model_config_id: model_config_id}
   end
 end

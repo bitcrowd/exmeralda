@@ -84,31 +84,37 @@ end
 
 cond do
   config_env() == :prod ->
-    # The CURRENT_GENERATION_CONFIG_ID must match an existing GenerationConfig record in the database
-    # This record saves which API and which LLM model is used for the message generation.
     config :exmeralda,
       llm_api_keys: %{
-        lambda: System.fetch_env!("LAMBDA_API_KEY"),
-        groq: System.fetch_env!("GROQ_API_KEY"),
-        together: System.fetch_env!("TOGETHER_API_KEY"),
-        hyperbolic: System.fetch_env!("HYPERBOLIC_API_KEY")
+        lambda_ai: System.fetch_env!("LAMBDA_API_KEY"),
+        groq_ai: System.fetch_env!("GROQ_API_KEY"),
+        together_ai: System.fetch_env!("TOGETHER_API_KEY"),
+        hyperbolic_ai: System.fetch_env!("HYPERBOLIC_API_KEY")
       },
-      llm: LangChain.ChatModels.ChatOpenAI,
-      current_generation_config_id: System.fetch_env!("CURRENT_GENERATION_CONFIG_ID")
+      llm_config: %{
+        # The CURRENT_LLM_PROVIDER_ID must match an existing Provider record in the database
+        provider_id: System.fetch_env!("CURRENT_LLM_PROVIDER_ID"),
+        # The CURRENT_LLM_MODEL_CONFIG_ID must match an existing ModelConfig record in the database
+        model_config_id: System.fetch_env!("CURRENT_LLM_MODEL_CONFIG_ID")
+      }
 
   config_env() == :dev ->
     config :exmeralda,
       llm_api_keys: %{},
-      llm: LangChain.ChatModels.ChatOllamaAI,
       # This generation config is created in the seeds
-      current_generation_config_id: "2305268e-c07e-47dc-9e8e-3cb3508ce2d4"
+      llm_config: %{
+        provider_id: "1d7c3ee6-d189-4c85-ad59-116f92fdafd0",
+        model_config_id: "7420d870-b10b-46ba-b30b-5c4630ee3a99"
+      }
 
   true ->
     config :exmeralda,
       llm_api_keys: %{},
-      llm: Exmeralda.LLM.Fake,
-      # This generation config is created in the seeds
-      current_generation_config_id: "2305268e-c07e-47dc-9e8e-3cb3508ce2d4"
+      llm_config: %{
+        # Random IDs that are used in the tests!
+        provider_id: "9a21bfd3-cb0a-433c-a9b3-826143782c81",
+        model_config_id: "3846dd40-1fcd-4ba2-83d5-bd2d7f0986e7"
+      }
 end
 
 cond do

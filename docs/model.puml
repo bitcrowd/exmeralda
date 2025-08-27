@@ -99,6 +99,7 @@ package Topics {
 }
 
 Message "n" -l- "1" ModelConfig
+Message "n" -l- "1" Provider
 Session "n" -- "1" Ingestion
 Source "n" -- "1" Chunk
 

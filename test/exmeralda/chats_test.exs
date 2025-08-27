@@ -3,7 +3,6 @@ defmodule Exmeralda.ChatsTest do
 
   alias Exmeralda.Chats
   alias Exmeralda.Chats.{Message, Session, Reaction}
-  alias Exmeralda.Environment.GenerationConfig
   alias Exmeralda.Repo
 
   def insert_user(_) do
@@ -135,10 +134,10 @@ defmodule Exmeralda.ChatsTest do
     end
   end
 
-  describe "start_session/2" do
+  describe "start_session/2 with invalid attrs" do
     setup [:insert_user]
 
-    test "errors with a changeset for invalid attrs", %{user: user} do
+    test "errors with a changeset", %{user: user} do
       assert {:error, changeset} = Chats.start_session(user, %{"ingestion_id" => uuid()})
       assert_required_error_on(changeset, :prompt)
     end
@@ -153,19 +152,62 @@ defmodule Exmeralda.ChatsTest do
 
       assert_foreign_key_constraint_on(changeset, :ingestion_id)
     end
+  end
 
-    test "raises if the current generation id does not exist", %{user: user} do
-      Repo.get!(GenerationConfig, test_generation_config_id()) |> Repo.delete!()
+  describe "start_session/2" do
+    setup [:insert_user]
 
-      assert_raise RuntimeError, ~r/Could not find the current generation config/, fn ->
-        Chats.start_session(user, %{})
+    setup do
+      library = insert(:library)
+      ingestion = insert(:ingestion, library: library)
+      provider = insert(:provider, type: :mock, id: test_provider_id())
+      model_config = insert(:model_config, id: test_model_config_id())
+      insert(:model_config_provider, model_config: model_config, provider: provider)
+
+      %{library: library, ingestion: ingestion, provider: provider, model_config: model_config}
+    end
+
+    test "raises if the current model config does not exist", %{
+      user: user,
+      library: library,
+      ingestion: ingestion,
+      model_config: model_config
+    } do
+      Repo.delete(model_config)
+
+      assert_raise RuntimeError, ~r/Could not find the current LLM model config!/, fn ->
+        Chats.start_session(user, %{
+          "ingestion_id" => ingestion.id,
+          "library_id" => library.id,
+          "prompt" => "Hello"
+        })
       end
     end
 
-    test "creates a session, a message", %{user: user} do
-      library = insert(:library)
-      ingestion = insert(:ingestion, library: library)
+    test "raises if the current provider id does not exist", %{
+      user: user,
+      library: library,
+      ingestion: ingestion,
+      provider: provider
+    } do
+      Repo.delete(provider)
 
+      assert_raise RuntimeError, ~r/Could not find the current LLM provider!/, fn ->
+        Chats.start_session(user, %{
+          "ingestion_id" => ingestion.id,
+          "library_id" => library.id,
+          "prompt" => "Hello"
+        })
+      end
+    end
+
+    test "creates a session, a message", %{
+      user: user,
+      library: library,
+      ingestion: ingestion,
+      model_config: model_config,
+      provider: provider
+    } do
       assert_count_differences(Repo, [{Session, 1}, {Message, 2}], fn ->
         assert {:ok, session} =
                  Chats.start_session(user, %{
@@ -184,14 +226,16 @@ defmodule Exmeralda.ChatsTest do
         assert message.role == :user
         assert message.content == "Hello"
         refute message.incomplete
-        assert message.generation_config_id == test_generation_config_id()
+        assert message.model_config_id == model_config.id
+        assert message.provider_id == provider.id
 
         assert assistant_message.index == 1
         assert assistant_message.role == :assistant
         assert assistant_message.content == ""
         assert assistant_message.incomplete
         assert assistant_message.sources == []
-        assert assistant_message.generation_config_id == test_generation_config_id()
+        assert assistant_message.model_config_id == model_config.id
+        assert assistant_message.provider_id == provider.id
 
         wait_for_generation_task()
 
@@ -210,7 +254,11 @@ defmodule Exmeralda.ChatsTest do
       insert(:message, session: session, index: 0, role: :user, content: "Hello")
       insert(:message, session: session, index: 1, role: :assistant, content: "Howdie!")
 
-      %{session: session}
+      provider = insert(:provider, type: :mock, id: test_provider_id())
+      model_config = insert(:model_config, id: test_model_config_id())
+      insert(:model_config_provider, model_config: model_config, provider: provider)
+
+      %{session: session, provider: provider, model_config: model_config}
     end
 
     test "errors with a changeset for invalid attrs", %{session: session} do
@@ -225,7 +273,35 @@ defmodule Exmeralda.ChatsTest do
       end
     end
 
-    test "creates a message", %{session: session} do
+    test "raises if the current model config does not exist", %{
+      session: session,
+      model_config: model_config
+    } do
+      Repo.delete(model_config)
+
+      assert_raise RuntimeError, ~r/Could not find the current LLM model config!/, fn ->
+        Chats.continue_session(session, %{
+          index: 2,
+          content: "What's the recipe for cookies?"
+        })
+      end
+    end
+
+    test "raises if the current provider id does not exist", %{
+      session: session,
+      provider: provider
+    } do
+      Repo.delete(provider)
+
+      assert_raise RuntimeError, ~r/Could not find the current LLM provider!/, fn ->
+        Chats.continue_session(session, %{
+          index: 2,
+          content: "What's the recipe for cookies?"
+        })
+      end
+    end
+
+    test "creates a message", %{session: session, model_config: model_config, provider: provider} do
       assert_count_differences(Repo, [{Message, 2}], fn ->
         assert {:ok, [message, assistant_message]} =
                  Chats.continue_session(session, %{
@@ -237,14 +313,16 @@ defmodule Exmeralda.ChatsTest do
         assert message.role == :user
         assert message.content == "What's the recipe for cookies?"
         refute message.incomplete
-        assert message.generation_config_id == test_generation_config_id()
+        assert message.model_config_id == model_config.id
+        assert message.provider_id == provider.id
 
         assert assistant_message.index == 3
         assert assistant_message.role == :assistant
         assert assistant_message.content == ""
         assert assistant_message.incomplete
         assert assistant_message.sources == []
-        assert assistant_message.generation_config_id == test_generation_config_id()
+        assert assistant_message.model_config_id == model_config.id
+        assert assistant_message.provider_id == provider.id
 
         wait_for_generation_task()
 

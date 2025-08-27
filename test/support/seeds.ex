@@ -69,44 +69,6 @@ defmodule Exmeralda.Seeds do
         name: "Qwen/Qwen2.5-Coder-32B-Instruct"
       })
     end
-
-    if Mix.env() == :dev do
-      provider =
-        insert_idempotently(
-          %Exmeralda.Environment.Provider{
-            id: "460d1461-6ff3-49bf-b423-5a9e8f440ba9",
-            type: :together,
-            endpoint: "https://api.together.xyz/v1/chat/completions"
-          },
-          :type
-        )
-
-      model_config =
-        insert_idempotently(%Exmeralda.Environment.ModelConfig{
-          id: "b316dea6-eba5-4fd4-ae6d-5e67f151cb4c",
-          name: "qwen25-coder-32b",
-          config: %{stream: true}
-        })
-
-      model_config_provider =
-        insert_idempotently(
-          %Exmeralda.Environment.ModelConfigProvider{
-            id: "460d1461-6ff3-49bf-b423-5a9e8f440ba8",
-            model_config_id: model_config.id,
-            provider_id: provider.id,
-            name: "Qwen/Qwen2.5-Coder-32B-Instruct"
-          },
-          [:provider_id, :model_config_id]
-        )
-
-      insert_idempotently(
-        %Exmeralda.Environment.GenerationConfig{
-          id: "5242404c-ca9e-40f3-a84e-c044195379ed",
-          model_config_provider_id: model_config_provider.id
-        },
-        :model_config_provider_id
-      )
-    end
   end
 
   defp insert_idempotently(schema, conflict_target \\ :id) do

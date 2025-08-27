@@ -31,8 +31,16 @@ defmodule ExmeraldaWeb.ChatLiveTest do
     %{user: insert(:user)}
   end
 
+  defp insert_llm_config(_) do
+    provider = insert(:provider, type: :mock, id: test_provider_id())
+    model_config = insert(:model_config, id: test_model_config_id())
+    insert(:model_config_provider, model_config: model_config, provider: provider)
+
+    :ok
+  end
+
   describe "Index" do
-    setup [:insert_library, :insert_user, :insert_session]
+    setup [:insert_llm_config, :insert_library, :insert_user, :insert_session]
 
     test "list the sessions and greet", %{conn: conn, session: session, user: user} do
       {:ok, _index_live, html} =

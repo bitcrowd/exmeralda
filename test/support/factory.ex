@@ -12,7 +12,8 @@ defmodule Exmeralda.Factory do
   def message_factory do
     %Exmeralda.Chats.Message{
       session: build(:chat_session),
-      generation_config_id: Exmeralda.DataCase.test_generation_config_id(),
+      model_config: build(:model_config),
+      provider: build(:provider),
       index: sequence(:index, & &1),
       content: "I am a message",
       role: :user
