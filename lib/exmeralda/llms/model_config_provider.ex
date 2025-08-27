@@ -1,4 +1,4 @@
-defmodule Exmeralda.Environment.ModelConfigProvider do
+defmodule Exmeralda.LLMs.ModelConfigProvider do
   @moduledoc """
   ModelConfigProvider is joint model between ModelConfig and Provider.
   This joint model is required because the name of a model can be differently
@@ -8,7 +8,7 @@ defmodule Exmeralda.Environment.ModelConfigProvider do
   `qwen25-coder-32b-instruct` in Lambda.
   """
   use Exmeralda.Schema
-  alias Exmeralda.Environment.{ModelConfig, Provider}
+  alias Exmeralda.LLMs.{ModelConfig, Provider}
 
   schema "model_config_providers" do
     belongs_to :model_config, ModelConfig

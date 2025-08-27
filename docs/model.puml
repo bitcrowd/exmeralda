@@ -10,10 +10,12 @@ hide methods
 skinparam defaultFontName Roboto Mono
 skinparam shadowing false
 
-package Environment {
+package LLM {
   object Provider {
     id: string
-    endpoint: string
+    type: enum(ollama, openai, mock)
+    config: jsonb
+    name: string
   }
 
   object ModelConfig {
@@ -27,10 +29,6 @@ package Environment {
     name: string
   }
 
-  object GenerationConfig {
-    id: string
-  }
-
   object SystemPrompt {
     id: string
     prompt: string
@@ -42,10 +40,9 @@ package Environment {
   }
 
   ModelConfigProvider "n" -l- "1" Provider
-  ModelConfigProvider "n" -u- "1" ModelConfig
-  ModelConfigProvider "1" -- "n" GenerationConfig
-  SystemPrompt "1" -r- "n" GenerationConfig
-  PromptTemplate "1" -u- "n" GenerationConfig
+  ModelConfigProvider "n" -d- "1" ModelConfig
+  SystemPrompt "1" -r- "n" ModelConfig
+  PromptTemplate "1" -u- "n" ModelConfig
 }
 
 package Chats {
@@ -101,7 +98,7 @@ package Topics {
   Chunk "n" -u- "1" Ingestion
 }
 
-Message "n" -l- "1" GenerationConfig
+Message "n" -l- "1" ModelConfig
 Session "n" -- "1" Ingestion
 Source "n" -- "1" Chunk
 

@@ -1,9 +1,7 @@
-defmodule Exmeralda.Environment.ModelConfig do
+defmodule Exmeralda.LLMs.ModelConfig do
   @moduledoc """
   A ModelConfig represents an LLM model name and its parameterized config,
   that is passed to LangChain.
-
-  See `LangChain.ChatModels.ChatOpenAI.new!`.
   """
   use Exmeralda.Schema
 

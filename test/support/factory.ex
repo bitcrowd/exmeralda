@@ -95,30 +95,24 @@ defmodule Exmeralda.Factory do
   end
 
   def provider_factory do
-    %Exmeralda.Environment.Provider{
-      endpoint: "http://example.net/lambda/chat/completions",
-      type: :lambda
+    %Exmeralda.LLMs.Provider{
+      config: %{},
+      type: :mock
     }
   end
 
   def model_config_factory do
-    %Exmeralda.Environment.ModelConfig{
+    %Exmeralda.LLMs.ModelConfig{
       name: "fake-model",
       config: %{}
     }
   end
 
   def model_config_provider_factory do
-    %Exmeralda.Environment.ModelConfigProvider{
+    %Exmeralda.LLMs.ModelConfigProvider{
       name: "Fake/Fake-model",
       provider: build(:provider),
       model_config: build(:model_config)
-    }
-  end
-
-  def generation_config_factory do
-    %Exmeralda.Environment.GenerationConfig{
-      model_config_provider: build(:model_config_provider)
     }
   end
 end
