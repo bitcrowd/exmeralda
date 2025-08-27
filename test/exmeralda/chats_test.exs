@@ -353,10 +353,13 @@ defmodule Exmeralda.ChatsTest do
       other_ingestion_id = other_ingestion.id
 
       assert %{
-               ^ingestion_id => [{:downvote, 2}, {:upvote, 3}],
+               ^ingestion_id => votes,
                ^other_ingestion_id => [downvote: 1]
              } =
                Chats.count_reactions_for_ingestions([ingestion.id, other_ingestion.id])
+
+      assert Keyword.fetch!(votes, :downvote) == 2
+      assert Keyword.fetch!(votes, :upvote) == 3
     end
   end
 end
