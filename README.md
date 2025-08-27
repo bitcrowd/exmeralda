@@ -73,3 +73,21 @@ Follow [this guide](https://fly.io/docs/elixir/the-basics/iex-into-running-app/)
 ```sh
 fly ssh console --pty -C "/app/bin/exmeralda remote"
 ```
+
+
+### Staging
+
+The deployment to staging is automatic when merging to the `main` branch.
+
+### Production
+
+To deploy to production:
+
+```
+git fetch
+git checkout production
+git pull
+git reset --hard origin/main
+git push
+```
+
