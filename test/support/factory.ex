@@ -93,4 +93,27 @@ defmodule Exmeralda.Factory do
       message: build(:message)
     }
   end
+
+  def provider_factory do
+    %Exmeralda.LLM.Provider{
+      config: %{},
+      name: sequence(:provider_name, &"provider_#{&1}"),
+      type: :mock
+    }
+  end
+
+  def model_config_factory do
+    %Exmeralda.LLM.ModelConfig{
+      name: "fake-model",
+      config: %{}
+    }
+  end
+
+  def model_config_provider_factory do
+    %Exmeralda.LLM.ModelConfigProvider{
+      name: "Fake/Fake-model",
+      provider: build(:provider),
+      model_config: build(:model_config)
+    }
+  end
 end

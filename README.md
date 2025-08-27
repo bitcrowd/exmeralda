@@ -54,9 +54,8 @@ or
 iex -S mix phx.server
 ```
 
-Be aware that the seeded libraries are not that useful to chat with, since it is just dummy data.
-
 Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+To start a chat, first create a new library in the UI on the home page.
 
 ## Dev tools
 
