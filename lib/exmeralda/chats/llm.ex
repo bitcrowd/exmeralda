@@ -1,6 +1,6 @@
 defmodule Exmeralda.Chats.LLM do
   alias LangChain.Chains.LLMChain
-  alias Exmeralda.LLMs.ModelConfigProvider
+  alias Exmeralda.LLM.ModelConfigProvider
   alias Exmeralda.Repo
 
   def stream_responses(messages, model_config_id, provider_id, handler) do

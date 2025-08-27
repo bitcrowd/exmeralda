@@ -2,7 +2,7 @@ defmodule Exmeralda.Chats.Message do
   use Exmeralda.Schema
 
   alias Exmeralda.Chats.{Reaction, Session, Source}
-  alias Exmeralda.LLMs.{ModelConfig, Provider}
+  alias Exmeralda.LLM.{ModelConfig, Provider}
 
   schema "chat_messages" do
     field :index, :integer

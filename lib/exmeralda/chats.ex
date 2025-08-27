@@ -10,7 +10,7 @@ defmodule Exmeralda.Chats do
 
   alias Exmeralda.Topics.{Rag, Chunk, Ingestion, Library}
   alias Exmeralda.Chats.{LLM, Message, Reaction, Session, Source}
-  alias Exmeralda.LLMs.{ModelConfig, Provider}
+  alias Exmeralda.LLM.{ModelConfig, Provider}
   alias Exmeralda.Accounts.User
 
   @message_preload [:source_chunks, :reaction]
