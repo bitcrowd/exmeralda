@@ -1,7 +1,7 @@
 defmodule Exmeralda.Seeds do
   alias Exmeralda.Repo
 
-  @default_prompt """
+  @default_system_prompt """
     You are an expert in Elixir programming with in-depth knowledge of Elixir.
     Provide accurate information based on the provided context to assist Elixir
     developers. Include code snippets and examples to illustrate your points.
@@ -17,12 +17,28 @@ defmodule Exmeralda.Seeds do
     information the user needs, please ask follow-up questions.
   """
 
+  @default_generation_prompt """
+  Context information is below.
+  ---------------------
+  %{context}
+  ---------------------
+  Given the context information and no prior knowledge, answer the query.
+  Query: %{query}
+  Answer:
+  """
+
   def run do
     if Mix.env() == :dev do
       _system_prompt =
         insert_idempotently(%Exmeralda.LLM.SystemPrompt{
           id: "c49195b4-daca-42af-835d-bdb928986d5c",
-          prompt: @default_prompt
+          prompt: @default_system_prompt
+        })
+
+      _generation_prompt =
+        insert_idempotently(%Exmeralda.Topics.GenerationPrompt{
+          id: "3ef5b20b-bb71-467d-8364-898df9926a95",
+          prompt: @default_generation_prompt
         })
 
       mock_provider =

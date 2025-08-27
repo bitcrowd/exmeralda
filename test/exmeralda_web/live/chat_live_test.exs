@@ -42,6 +42,7 @@ defmodule ExmeraldaWeb.ChatLiveTest do
     )
 
     insert(:system_prompt, id: test_system_prompt_id())
+    insert(:generation_prompt, id: test_generation_prompt_id())
 
     :ok
   end
