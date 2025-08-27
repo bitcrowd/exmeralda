@@ -61,5 +61,6 @@ defmodule ExmeraldaWeb.ConnCase do
     end
   end
 
+  def test_system_prompt_id, do: "96123e4b-7d0a-4e14-82d4-63d68562e8f1"
   def test_model_config_provider_id, do: "9a21bfd3-cb0a-433c-a9b3-826143782c81"
 end

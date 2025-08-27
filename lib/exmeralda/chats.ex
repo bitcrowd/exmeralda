@@ -10,7 +10,7 @@ defmodule Exmeralda.Chats do
 
   alias Exmeralda.Topics.{Rag, Chunk, Ingestion, Library}
   alias Exmeralda.Chats.{LLM, Message, Reaction, Session, Source, GenerationEnvironment}
-  alias Exmeralda.LLM.ModelConfigProvider
+  alias Exmeralda.LLM.{ModelConfigProvider, SystemPrompt}
   alias Exmeralda.Accounts.User
 
   @message_preload [:source_chunks, :reaction]
@@ -146,21 +146,19 @@ defmodule Exmeralda.Chats do
   end
 
   defp upsert_generation_environment(multi) do
-    %{model_config_provider_id: model_config_provider_id} = current_llm_config()
+    generation_environment_params = current_llm_config()
 
     multi
     |> Multi.insert(
       :generation_environment,
-      fn _ ->
-        %GenerationEnvironment{
-          model_config_provider_id: model_config_provider_id
-        }
-      end,
+      fn _ -> Map.merge(%GenerationEnvironment{}, generation_environment_params) end,
       returning: [:id],
-      conflict_target: [:model_config_provider_id],
+      conflict_target: [:model_config_provider_id, :system_prompt_id],
       # See https://hexdocs.pm/ecto/constraints-and-upserts.html#upserts
       # We are setting to force an update and return the same ID as the existing record.
-      on_conflict: [set: [model_config_provider_id: model_config_provider_id]]
+      on_conflict: [
+        set: [model_config_provider_id: generation_environment_params.model_config_provider_id]
+      ]
     )
   end
 
@@ -331,12 +329,15 @@ defmodule Exmeralda.Chats do
   end
 
   defp current_llm_config do
-    %{model_config_provider_id: model_config_provider_id} =
+    %{model_config_provider_id: model_config_provider_id, system_prompt_id: system_prompt_id} =
       Application.fetch_env!(:exmeralda, :llm_config)
 
     Repo.get(ModelConfigProvider, model_config_provider_id) ||
       raise "Could not find the current LLM model config provider!"
 
-    %{model_config_provider_id: model_config_provider_id}
+    Repo.get(SystemPrompt, system_prompt_id) ||
+      raise "Could not find the current LLM system prompt!"
+
+    %{model_config_provider_id: model_config_provider_id, system_prompt_id: system_prompt_id}
   end
 end
