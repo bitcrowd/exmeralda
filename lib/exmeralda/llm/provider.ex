@@ -1,4 +1,4 @@
-defmodule Exmeralda.LLMs.Provider do
+defmodule Exmeralda.LLM.Provider do
   @moduledoc """
   A provider is a third-party providing access to AI models.
   """

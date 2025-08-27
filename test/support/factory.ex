@@ -95,7 +95,7 @@ defmodule Exmeralda.Factory do
   end
 
   def provider_factory do
-    %Exmeralda.LLMs.Provider{
+    %Exmeralda.LLM.Provider{
       config: %{},
       name: sequence(:provider_name, &"provider_#{&1}"),
       type: :mock
@@ -103,14 +103,14 @@ defmodule Exmeralda.Factory do
   end
 
   def model_config_factory do
-    %Exmeralda.LLMs.ModelConfig{
+    %Exmeralda.LLM.ModelConfig{
       name: "fake-model",
       config: %{}
     }
   end
 
   def model_config_provider_factory do
-    %Exmeralda.LLMs.ModelConfigProvider{
+    %Exmeralda.LLM.ModelConfigProvider{
       name: "Fake/Fake-model",
       provider: build(:provider),
       model_config: build(:model_config)

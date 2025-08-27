@@ -1,4 +1,4 @@
-defmodule Exmeralda.LLMs.ModelConfig do
+defmodule Exmeralda.LLM.ModelConfig do
   @moduledoc """
   A ModelConfig represents an LLM model name and its parameterized config,
   that is passed to LangChain.
