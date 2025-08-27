@@ -101,7 +101,7 @@ cond do
   config_env() == :dev ->
     config :exmeralda,
       llm_api_keys: %{},
-      # This generation config is created in the seeds
+      # Points to the Ollama dev config set in the seeds
       llm_config: %{
         provider_id: "1d7c3ee6-d189-4c85-ad59-116f92fdafd0",
         model_config_id: "7420d870-b10b-46ba-b30b-5c4630ee3a99"
