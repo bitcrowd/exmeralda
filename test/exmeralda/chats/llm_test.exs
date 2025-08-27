@@ -75,7 +75,7 @@ defmodule Exmeralda.Chats.LLMTest do
       provider =
         insert(:provider,
           type: :openai,
-          name: "foo",
+          name: "foo_ai",
           config: %{endpoint: "https://example.com/v1/chat/completions"}
         )
 
@@ -90,7 +90,8 @@ defmodule Exmeralda.Chats.LLMTest do
       assert %LangChain.ChatModels.ChatOpenAI{
                model: "Qwen/Qwen25",
                stream: true,
-               endpoint: "https://example.com/v1/chat/completions"
+               endpoint: "https://example.com/v1/chat/completions",
+               api_key: "abcde"
              } = LLM.llm(model_config.id, provider.id)
     end
   end

@@ -86,10 +86,11 @@ cond do
   config_env() == :prod ->
     config :exmeralda,
       llm_api_keys: %{
-        lambda_ai: System.fetch_env!("LAMBDA_API_KEY"),
-        groq_ai: System.fetch_env!("GROQ_API_KEY"),
-        together_ai: System.fetch_env!("TOGETHER_API_KEY"),
-        hyperbolic_ai: System.fetch_env!("HYPERBOLIC_API_KEY")
+        # Keys are the provider's `name` column
+        "lambda_ai" => System.fetch_env!("LAMBDA_API_KEY"),
+        "groq_ai" => System.fetch_env!("GROQ_API_KEY"),
+        "together_ai" => System.fetch_env!("TOGETHER_API_KEY"),
+        "hyperbolic_ai" => System.fetch_env!("HYPERBOLIC_API_KEY")
       },
       llm_config: %{
         # The CURRENT_LLM_PROVIDER_ID must match an existing Provider record in the database
@@ -109,7 +110,7 @@ cond do
 
   true ->
     config :exmeralda,
-      llm_api_keys: %{},
+      llm_api_keys: %{"foo_ai" => "abcde"},
       llm_config: %{
         # Random IDs that are used in the tests!
         provider_id: "9a21bfd3-cb0a-433c-a9b3-826143782c81",
