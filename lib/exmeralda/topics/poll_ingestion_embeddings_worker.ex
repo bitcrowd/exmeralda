@@ -3,7 +3,7 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorker do
     queue: :poll_ingestion,
     unique: [
       period: {2, :minutes},
-      fields: [:args],
+      fields: [:worker, :args],
       states: [:available, :scheduled, :executing, :retryable]
     ]
 
@@ -58,10 +58,10 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorker do
   defp all_chunks_embedded?(ingestion_id) do
     query = from(c in Chunk, where: c.ingestion_id == ^ingestion_id and is_nil(c.embedding))
 
-    if not Repo.exists?(query) do
-      :ok
-    else
+    if Repo.exists?(query) do
       {:error, :embedding_not_finished}
+    else
+      :ok
     end
   end
 
