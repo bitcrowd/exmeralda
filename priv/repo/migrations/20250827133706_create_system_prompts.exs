@@ -27,7 +27,7 @@ defmodule Exmeralda.Repo.Migrations.CreateSystemPrompts do
     execute(
       """
         INSERT INTO system_prompts (id, prompt, inserted_at, updated_at)
-        VALUES (gen_random_uuid(), '#{@default_prompt}', NOW(), NOW())
+        VALUES ('c8511eaf-d7e6-4fb6-b3f0-0ed8d8008d1b', '#{@default_prompt}', NOW(), NOW())
       """,
       ""
     )
