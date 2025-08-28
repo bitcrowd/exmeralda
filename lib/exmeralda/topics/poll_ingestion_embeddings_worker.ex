@@ -1,7 +1,11 @@
 defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorker do
   use Oban.Worker,
     queue: :poll_ingestion,
-    unique: [fields: [:worker, :args], states: [:available, :scheduled, :executing, :retryable]]
+    unique: [
+      period: {2, :minutes},
+      fields: [:args],
+      states: [:available, :scheduled, :executing, :retryable]
+    ]
 
   alias Exmeralda.Repo
   alias Exmeralda.Topics
@@ -9,11 +13,8 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorker do
 
   import Ecto.Query
 
-  # TODO: add button to enqueue in UI
   @impl Oban.Worker
-  def perform(%Oban.Job{
-        args: %{"ingestion_id" => ingestion_id, "parent_job_id" => parent_job_id}
-      }) do
+  def perform(%Oban.Job{args: %{"ingestion_id" => ingestion_id}}) do
     Repo.transact(fn ->
       with {:ok, ingestion} <- fetch_ingestion(ingestion_id) do
         case all_chunks_embedded?(ingestion_id) do
@@ -22,7 +23,7 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorker do
             {:ok, _} = Topics.mark_ingestion_as_active(ingestion.id)
 
           {:error, :embedding_not_finished} ->
-            check_all_job_retries_exceeded(ingestion, parent_job_id)
+            check_all_job_retries_exceeded(ingestion)
         end
       end
     end)
@@ -64,15 +65,14 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorker do
     end
   end
 
-  defp check_all_job_retries_exceeded(ingestion, parent_job_id) do
+  defp check_all_job_retries_exceeded(ingestion) do
     query =
       from(oj in Oban.Job,
         where:
           oj.worker == "Exmeralda.Topics.GenerateEmbeddingsWorker" and
             oj.state == "discarded" and
             oj.attempt >= oj.max_attempts and
-            fragment("args->>'ingestion_id' = ?::text", ^ingestion.id) and
-            fragment("args->>'parent_job_id' = ?::text", ^to_string(parent_job_id))
+            fragment("args->>'ingestion_id' = ?::text", ^ingestion.id)
       )
 
     if Repo.exists?(query) do

@@ -6,8 +6,7 @@ defmodule Exmeralda.Topics.EnqueueGenerateEmbeddingsWorker do
   alias Exmeralda.Topics.{
     Chunk,
     Ingestion,
-    GenerateEmbeddingsWorker,
-    PollIngestionEmbeddingsWorker
+    GenerateEmbeddingsWorker
   }
 
   import Ecto.Query
@@ -15,25 +14,20 @@ defmodule Exmeralda.Topics.EnqueueGenerateEmbeddingsWorker do
   @embeddings_batch_size 20
 
   @impl Oban.Worker
-  def perform(%Oban.Job{id: id, args: %{"ingestion_id" => ingestion_id}}) do
+  def perform(%Oban.Job{args: %{"ingestion_id" => ingestion_id}}) do
     with {:ok, ingestion} <- fetch_ingestion(ingestion_id) do
       from(c in Chunk, where: c.ingestion_id == ^ingestion_id, select: c.id)
       |> Repo.all()
       |> Enum.chunk_every(@embeddings_batch_size)
       |> Enum.map(
-        # Passing the parent job_id so it's easier to find which children chunk jobs
-        # were enqueued by this worker.
         &GenerateEmbeddingsWorker.new(%{
           chunk_ids: &1,
-          ingestion_id: ingestion.id,
-          parent_job_id: id
+          ingestion_id: ingestion.id
         })
       )
       |> Oban.insert_all()
 
-      Oban.insert(
-        PollIngestionEmbeddingsWorker.new(%{ingestion_id: ingestion.id, parent_job_id: id})
-      )
+      {:ok, _} = Exmeralda.Topics.poll_ingestion_state(ingestion)
 
       :ok
     end
