@@ -1,6 +1,6 @@
 defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorker do
   use Oban.Worker,
-    queue: :ingest,
+    queue: :poll_ingestion,
     unique: [fields: [:worker, :args], states: [:available, :scheduled, :executing, :retryable]]
 
   alias Exmeralda.Repo
@@ -9,6 +9,7 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorker do
 
   import Ecto.Query
 
+  # TODO: add button to enqueue in UI
   @impl Oban.Worker
   def perform(%Oban.Job{
         args: %{"ingestion_id" => ingestion_id, "parent_job_id" => parent_job_id}
@@ -68,7 +69,7 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorker do
       from(oj in Oban.Job,
         where:
           oj.worker == "Exmeralda.Topics.GenerateEmbeddingsWorker" and
-            oj.state != "completed" and
+            oj.state == "discarded" and
             oj.attempt >= oj.max_attempts and
             fragment("args->>'ingestion_id' = ?::text", ^ingestion.id) and
             fragment("args->>'parent_job_id' = ?::text", ^to_string(parent_job_id))
