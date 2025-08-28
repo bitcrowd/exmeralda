@@ -66,6 +66,23 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
     {:noreply, socket}
   end
 
+  def handle_event("poll_state", _params, socket) do
+    %{ingestion: ingestion} = socket.assigns
+
+    socket =
+      case Topics.poll_ingestion_state(ingestion) do
+        {:ok, job} ->
+          push_navigate(socket, to: ~p"/oban/jobs/#{job.id}")
+
+        {:error, {:ingestion_in_invalid_state, _}} ->
+          socket
+          |> put_flash(:error, gettext("Ingestion is not embedding."))
+          |> push_patch(to: ~p"/admin/library/#{ingestion.library_id}/ingestions/#{ingestion.id}")
+      end
+
+    {:noreply, socket}
+  end
+
   @impl true
   def render(assigns) do
     assigns = assign_new(assigns, :ingestion_deletable?, fn -> ingestion_deletable?(assigns) end)
@@ -83,6 +100,11 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
 
       <.header title={"Ingestion ##{@ingestion.id} for #{library_title(@library)}"}>
         <.ingestion_active_badge active={@ingestion.active} />
+        <:actions>
+          <.button :if={@ingestion.state == :embedding} class="btn btn-ghost" phx-click="poll_state">
+            <.icon name="hero-wrench" /> Poll State
+          </.button>
+        </:actions>
         <:actions>
           <div
             class={[!@ingestion_deletable? && "tooltip tooltip-left"]}

@@ -12,7 +12,7 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorkerTest do
 
   describe "perform/1 when the ingestion does not exist" do
     test "cancels the job" do
-      assert perform_job(PollIngestionEmbeddingsWorker, %{ingestion_id: uuid(), parent_job_id: 1}) ==
+      assert perform_job(PollIngestionEmbeddingsWorker, %{ingestion_id: uuid()}) ==
                {:cancel, :ingestion_not_found}
     end
   end
@@ -22,10 +22,7 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorkerTest do
       test "cancels the worker" do
         ingestion = insert(:ingestion, state: unquote(state))
 
-        assert perform_job(PollIngestionEmbeddingsWorker, %{
-                 ingestion_id: ingestion.id,
-                 parent_job_id: 1
-               }) ==
+        assert perform_job(PollIngestionEmbeddingsWorker, %{ingestion_id: ingestion.id}) ==
                  {:cancel, {:ingestion_in_invalid_state, unquote(state)}}
       end
     end
@@ -40,10 +37,8 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorkerTest do
     } do
       insert(:chunk, ingestion: ingestion, library: library, embedding: nil)
 
-      assert perform_job(PollIngestionEmbeddingsWorker, %{
-               ingestion_id: ingestion.id,
-               parent_job_id: 1
-             }) == {:snooze, 60}
+      assert perform_job(PollIngestionEmbeddingsWorker, %{ingestion_id: ingestion.id}) ==
+               {:snooze, 60}
     end
 
     test "marks the ingestion as failed if at least one worker has exceeded all attempts", %{
@@ -64,16 +59,14 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorkerTest do
       Oban.insert(
         GenerateEmbeddingsWorker.new(%{
           ingestion_id: ingestion.id,
-          chunk_ids: [chunk.id],
-          parent_job_id: 12
+          chunk_ids: [chunk.id]
         })
       )
 
       Oban.insert(
         GenerateEmbeddingsWorker.new(%{
           ingestion_id: ingestion.id,
-          chunk_ids: [failing_chunk.id],
-          parent_job_id: 12
+          chunk_ids: [failing_chunk.id]
         })
       )
 
@@ -82,8 +75,7 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorkerTest do
 
       # Second job can retry so we continue to poll
       assert perform_job(PollIngestionEmbeddingsWorker, %{
-               ingestion_id: ingestion.id,
-               parent_job_id: 12
+               ingestion_id: ingestion.id
              }) == {:snooze, 60}
 
       # Let's retry the job again...
@@ -98,8 +90,7 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorkerTest do
 
       # Now if we poll again, we mark the ingestion as failed
       assert perform_job(PollIngestionEmbeddingsWorker, %{
-               ingestion_id: ingestion.id,
-               parent_job_id: 12
+               ingestion_id: ingestion.id
              }) == :ok
 
       ingestion = Repo.reload(ingestion)
@@ -118,8 +109,7 @@ defmodule Exmeralda.Topics.PollIngestionEmbeddingsWorkerTest do
       insert(:chunk, ingestion: ingestion, library: library)
 
       assert perform_job(PollIngestionEmbeddingsWorker, %{
-               ingestion_id: ingestion.id,
-               parent_job_id: 1
+               ingestion_id: ingestion.id
              }) == :ok
 
       ingestion = Repo.reload(ingestion)
