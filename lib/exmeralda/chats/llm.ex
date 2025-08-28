@@ -1,10 +1,10 @@
 defmodule Exmeralda.Chats.LLM do
   alias LangChain.Chains.LLMChain
-  alias Exmeralda.LLM.ModelConfigProvider
+  alias Exmeralda.Chats.GenerationEnvironment
   alias Exmeralda.Repo
 
-  def stream_responses(messages, model_config_id, provider_id, handler) do
-    %{llm: llm(model_config_id, provider_id)}
+  def stream_responses(messages, generation_environment_id, handler) do
+    %{llm: llm(generation_environment_id)}
     |> LLMChain.new!()
     |> LLMChain.add_message(system_prompt() |> LangChain.Message.new_system!())
     |> LLMChain.add_messages(Enum.map(messages, &to_langchain_message/1))
@@ -22,11 +22,11 @@ defmodule Exmeralda.Chats.LLM do
     do: LangChain.Message.new_assistant!(content)
 
   # Public for testing
-  def llm(model_config_id, provider_id) do
-    %{name: model_name, provider: provider, model_config: model_config} =
-      ModelConfigProvider
-      |> Repo.get_by!(model_config_id: model_config_id, provider_id: provider_id)
-      |> Repo.preload([:model_config, :provider])
+  def llm(generation_environment_id) do
+    %{model_config_provider: %{name: model_name, provider: provider, model_config: model_config}} =
+      GenerationEnvironment
+      |> Repo.get!(generation_environment_id)
+      |> Repo.preload(model_config_provider: [:model_config, :provider])
 
     params =
       %{"model" => model_name}

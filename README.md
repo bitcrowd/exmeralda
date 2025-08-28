@@ -62,12 +62,11 @@ For example, if you need to test the chatbot against the Together AI api, first 
 config :exmeralda,
   llm_api_keys: %{together_ai: <<<TOGETHER API KEY>>>},
   llm_config: %{
-    provider_id: "684b2566-3cce-4711-963a-f646eb398388",
-    model_config_id: "eff70662-1576-491d-a1ef-1d025772e637"
+    model_config_provider_id: "073a0faf-024b-4144-b0f0-e1f906968d08"
   }
 ```
 
-This works because the provider and model config for Together AI is seeded in the dev environment. To use another provider like Lambda AI, Hyperbolic AI, or Groq AI, another `Provider` record has to be created. Then you can use its ID and set it as the `provider_id` in the config. Check the [test/support/seeds.ex](test/support/seeds.ex) file as well for inspiration. It is also possible to change the model being used by creating another `ModelConfig` record. For more details check [docs/model.png](docs/model.png) and the modules documentation.
+This works because the provider and model config for Together AI is seeded in the dev environment. To use another provider like Lambda AI, Hyperbolic AI, or Groq AI, another `Provider` and `ModelConfigProvider` record has to be created. Then you can use its ID and set it as the `model_config_provider_id` in the config. Check the [test/support/seeds.ex](test/support/seeds.ex) file as well for inspiration. It is also possible to change the model being used by creating another `ModelConfig` record. For more details check [docs/model.png](docs/model.png) and the modules documentation.
 
 
 ## Dev tools

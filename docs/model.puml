@@ -39,10 +39,15 @@ package LLM {
     template: string
   }
 
-  ModelConfigProvider "n" -l- "1" Provider
-  ModelConfigProvider "n" -d- "1" ModelConfig
-  SystemPrompt "1" -r- "n" ModelConfig
-  PromptTemplate "1" -u- "n" ModelConfig
+  object GenerationEnvironment {
+    id: string
+  }
+
+  ModelConfig "1" -d- "n" ModelConfigProvider
+  Provider "1" -d- "n" ModelConfigProvider
+  SystemPrompt "1" -r- "n" GenerationEnvironment
+  PromptTemplate "1" -u- "n" GenerationEnvironment
+  ModelConfigProvider "1" -d- "n" GenerationEnvironment
 }
 
 package Chats {
@@ -98,8 +103,7 @@ package Topics {
   Chunk "n" -u- "1" Ingestion
 }
 
-Message "n" -l- "1" ModelConfig
-Message "n" -l- "1" Provider
+Message "n" -l- "1" GenerationEnvironment
 Session "n" -- "1" Ingestion
 Source "n" -- "1" Chunk
 

@@ -3,31 +3,17 @@ defmodule Exmeralda.Chats.LLMTest do
 
   alias Exmeralda.Chats.LLM
 
-  describe "stream_responses/2" do
+  describe "stream_responses/3" do
     test "raises when model config provider does not exist" do
-      assert_raise Ecto.NoResultsError, fn -> LLM.stream_responses([], uuid(), uuid(), %{}) end
-    end
-
-    test "raises when model config provider does not exist for the given provider" do
-      provider = insert(:provider)
-
-      assert_raise Ecto.NoResultsError, fn ->
-        LLM.stream_responses([], uuid(), provider.id, %{})
-      end
-    end
-
-    test "raises when model config provider does not exist for the given model config" do
-      model_config = insert(:model_config)
-
-      assert_raise Ecto.NoResultsError, fn ->
-        LLM.stream_responses([], model_config.id, uuid(), %{})
-      end
+      assert_raise Ecto.NoResultsError, fn -> LLM.stream_responses([], uuid(), %{}) end
     end
 
     test "stream responses for mock provider" do
       provider = insert(:provider, type: :mock)
-      model_config = insert(:model_config)
-      insert(:model_config_provider, model_config: model_config, provider: provider)
+      model_config_provider = insert(:model_config_provider, provider: provider)
+
+      generation_environment =
+        insert(:generation_environment, model_config_provider: model_config_provider)
 
       assert {:ok,
               %LangChain.Chains.LLMChain{
@@ -37,20 +23,25 @@ defmodule Exmeralda.Chats.LLMTest do
                   callbacks: []
                 },
                 messages: [prompt_message, response]
-              }} = LLM.stream_responses([], model_config.id, provider.id, %{})
+              }} = LLM.stream_responses([], generation_environment.id, %{})
 
       assert prompt_message.content =~ "You are an expert in Elixir programming"
       assert response.content == "This is a streaming response!"
     end
   end
 
-  describe "llm/2" do
+  describe "llm/1" do
     test "with a mock provider" do
       provider = insert(:provider, type: :mock)
       model_config = insert(:model_config)
-      insert(:model_config_provider, model_config: model_config, provider: provider)
 
-      assert LLM.llm(model_config.id, provider.id) == %Exmeralda.LLM.Fake{
+      model_config_provider =
+        insert(:model_config_provider, model_config: model_config, provider: provider)
+
+      generation_environment =
+        insert(:generation_environment, model_config_provider: model_config_provider)
+
+      assert LLM.llm(generation_environment.id) == %Exmeralda.LLM.Fake{
                name: "MockChatModel",
                version: "1.0",
                callbacks: []
@@ -61,14 +52,18 @@ defmodule Exmeralda.Chats.LLMTest do
       provider = insert(:provider, type: :ollama)
       model_config = insert(:model_config, name: "fake-model", config: %{stream: true})
 
-      insert(:model_config_provider,
-        model_config: model_config,
-        provider: provider,
-        name: "Fake-Model"
-      )
+      model_config_provider =
+        insert(:model_config_provider,
+          model_config: model_config,
+          provider: provider,
+          name: "Fake-Model"
+        )
+
+      generation_environment =
+        insert(:generation_environment, model_config_provider: model_config_provider)
 
       assert %LangChain.ChatModels.ChatOllamaAI{model: "Fake-Model", stream: true} =
-               LLM.llm(model_config.id, provider.id)
+               LLM.llm(generation_environment.id)
     end
 
     test "with an openai provider" do
@@ -81,18 +76,22 @@ defmodule Exmeralda.Chats.LLMTest do
 
       model_config = insert(:model_config, name: "qwen25", config: %{stream: true})
 
-      insert(:model_config_provider,
-        model_config: model_config,
-        provider: provider,
-        name: "Qwen/Qwen25"
-      )
+      model_config_provider =
+        insert(:model_config_provider,
+          model_config: model_config,
+          provider: provider,
+          name: "Qwen/Qwen25"
+        )
+
+      generation_environment =
+        insert(:generation_environment, model_config_provider: model_config_provider)
 
       assert %LangChain.ChatModels.ChatOpenAI{
                model: "Qwen/Qwen25",
                stream: true,
                endpoint: "https://example.com/v1/chat/completions",
                api_key: "abcde"
-             } = LLM.llm(model_config.id, provider.id)
+             } = LLM.llm(generation_environment.id)
     end
   end
 end

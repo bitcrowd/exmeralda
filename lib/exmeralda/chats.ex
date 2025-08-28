@@ -9,8 +9,8 @@ defmodule Exmeralda.Chats do
   alias Phoenix.PubSub
 
   alias Exmeralda.Topics.{Rag, Chunk, Ingestion, Library}
-  alias Exmeralda.Chats.{LLM, Message, Reaction, Session, Source}
-  alias Exmeralda.LLM.{ModelConfig, Provider}
+  alias Exmeralda.Chats.{LLM, Message, Reaction, Session, Source, GenerationEnvironment}
+  alias Exmeralda.LLM.ModelConfigProvider
   alias Exmeralda.Accounts.User
 
   @message_preload [:source_chunks, :reaction]
@@ -75,16 +75,18 @@ defmodule Exmeralda.Chats do
       {:ok, Repo.advisory_xact_lock("library:#{Map.fetch!(attrs, "library_id")}")}
     end)
     |> Multi.insert(:session, Session.create_changeset(%Session{user_id: user.id}, attrs))
-    |> Multi.insert(:message, fn %{session: session} ->
-      Map.merge(
-        %Message{
-          role: :user,
-          content: session.prompt,
-          index: 0,
-          session_id: session.id
-        },
-        current_llm_config()
-      )
+    |> upsert_generation_environment()
+    |> Multi.insert(:message, fn %{
+                                   session: session,
+                                   generation_environment: generation_environment
+                                 } ->
+      %Message{
+        role: :user,
+        content: session.prompt,
+        index: 0,
+        session_id: session.id,
+        generation_environment_id: generation_environment.id
+      }
     end)
     |> Multi.put(:previous_messages, [])
     |> assistant_message()
@@ -112,12 +114,16 @@ defmodule Exmeralda.Chats do
     Multi.new()
     |> Multi.put(:session, session)
     |> Multi.put(:previous_messages, all_messages(session))
-    |> Multi.insert(:message, fn %{session: session} ->
+    |> upsert_generation_environment()
+    |> Multi.insert(:message, fn %{
+                                   session: session,
+                                   generation_environment: generation_environment
+                                 } ->
       %Message{
         role: :user,
-        session_id: session.id
+        session_id: session.id,
+        generation_environment_id: generation_environment.id
       }
-      |> Map.merge(current_llm_config())
       |> Message.changeset(params)
     end)
     |> assistant_message()
@@ -139,6 +145,25 @@ defmodule Exmeralda.Chats do
     |> Repo.all()
   end
 
+  defp upsert_generation_environment(multi) do
+    %{model_config_provider_id: model_config_provider_id} = current_llm_config()
+
+    multi
+    |> Multi.insert(
+      :generation_environment,
+      fn _ ->
+        %GenerationEnvironment{
+          model_config_provider_id: model_config_provider_id
+        }
+      end,
+      returning: [:id],
+      conflict_target: [:model_config_provider_id],
+      # See https://hexdocs.pm/ecto/constraints-and-upserts.html#upserts
+      # We are setting to force an update and return the same ID as the existing record.
+      on_conflict: [set: [model_config_provider_id: model_config_provider_id]]
+    )
+  end
+
   defp assistant_message(multi) do
     multi
     |> Multi.insert(:assistant_message, fn %{session: session, message: message} ->
@@ -146,8 +171,7 @@ defmodule Exmeralda.Chats do
         role: :assistant,
         content: "",
         session_id: session.id,
-        model_config_id: message.model_config_id,
-        provider_id: message.provider_id,
+        generation_environment_id: message.generation_environment_id,
         index: message.index + 1,
         incomplete: true
       }
@@ -185,8 +209,7 @@ defmodule Exmeralda.Chats do
 
       case LLM.stream_responses(
              previous_messages ++ [%{message | content: generation.prompt}],
-             message.model_config_id,
-             message.provider_id,
+             message.generation_environment_id,
              handler
            ) do
         {:ok, responses} ->
@@ -307,16 +330,13 @@ defmodule Exmeralda.Chats do
     |> Enum.group_by(& &1.ingestion_id, & &1.count)
   end
 
-  def current_llm_config do
-    %{provider_id: provider_id, model_config_id: model_config_id} =
+  defp current_llm_config do
+    %{model_config_provider_id: model_config_provider_id} =
       Application.fetch_env!(:exmeralda, :llm_config)
 
-    Repo.get(ModelConfig, model_config_id) ||
-      raise "Could not find the current LLM model config!"
+    Repo.get(ModelConfigProvider, model_config_provider_id) ||
+      raise "Could not find the current LLM model config provider!"
 
-    Repo.get(Provider, provider_id) ||
-      raise "Could not find the current LLM provider!"
-
-    %{provider_id: provider_id, model_config_id: model_config_id}
+    %{model_config_provider_id: model_config_provider_id}
   end
 end

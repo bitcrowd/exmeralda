@@ -32,9 +32,14 @@ defmodule ExmeraldaWeb.ChatLiveTest do
   end
 
   defp insert_llm_config(_) do
-    provider = insert(:provider, type: :mock, id: test_provider_id())
-    model_config = insert(:model_config, id: test_model_config_id())
-    insert(:model_config_provider, model_config: model_config, provider: provider)
+    provider = insert(:provider, type: :mock)
+    model_config = insert(:model_config)
+
+    insert(:model_config_provider,
+      model_config: model_config,
+      provider: provider,
+      id: test_model_config_provider_id()
+    )
 
     :ok
   end

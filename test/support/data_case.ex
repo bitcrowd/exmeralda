@@ -73,6 +73,5 @@ defmodule Exmeralda.DataCase do
     end
   end
 
-  def test_model_config_id, do: "3846dd40-1fcd-4ba2-83d5-bd2d7f0986e7"
-  def test_provider_id, do: "9a21bfd3-cb0a-433c-a9b3-826143782c81"
+  def test_model_config_provider_id, do: "9a21bfd3-cb0a-433c-a9b3-826143782c81"
 end
