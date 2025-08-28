@@ -3,7 +3,14 @@ defmodule ExmeraldaWeb.Admin.LibraryLiveTest do
 
   import Phoenix.LiveViewTest
   alias Exmeralda.Repo
-  alias Exmeralda.Topics.{IngestLibraryWorker, Ingestion, GenerateEmbeddingsWorker}
+
+  alias Exmeralda.Topics.{
+    IngestLibraryWorker,
+    Ingestion,
+    EnqueueGenerateEmbeddingsWorker,
+    GenerateEmbeddingsWorker,
+    PollIngestionEmbeddingsWorker
+  }
 
   defp insert_user(_) do
     %{user: insert(:user)}
@@ -110,14 +117,16 @@ defmodule ExmeraldaWeb.Admin.LibraryLiveTest do
       assert ingestion.state == :embedding
 
       assert_enqueued(
-        worker: GenerateEmbeddingsWorker,
-        args: %{ingestion_id: ingestion.id, library_id: library.id}
+        worker: EnqueueGenerateEmbeddingsWorker,
+        args: %{ingestion_id: ingestion.id}
       )
 
       %{success: 1, failure: 0} = Oban.drain_queue(queue: :ingest)
 
       ingestion = Repo.reload(ingestion)
       assert ingestion.state == :embedding
+
+      assert_enqueued(worker: PollIngestionEmbeddingsWorker, args: %{ingestion_id: ingestion.id})
 
       # Chunks version
       assert all_enqueued(worker: GenerateEmbeddingsWorker, args: %{ingestion_id: ingestion.id})
@@ -126,6 +135,10 @@ defmodule ExmeraldaWeb.Admin.LibraryLiveTest do
       %{success: 22, failure: 0} = Oban.drain_queue(queue: :ingest)
 
       assert all_enqueued(queue: :ingest) == []
+      ingestion = Repo.reload(ingestion)
+      assert ingestion.state == :embedding
+
+      %{success: 1, failure: 0} = Oban.drain_queue(queue: :poll_ingestion)
 
       ingestion = Repo.reload(ingestion)
       assert ingestion.state == :ready

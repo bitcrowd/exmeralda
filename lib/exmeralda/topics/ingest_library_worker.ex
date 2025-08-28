@@ -3,7 +3,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
 
   alias Exmeralda.Repo
   alias Exmeralda.Topics
-  alias Exmeralda.Topics.{Chunk, Ingestion, Library, Rag, GenerateEmbeddingsWorker}
+  alias Exmeralda.Topics.{Chunk, Ingestion, Library, Rag, EnqueueGenerateEmbeddingsWorker}
 
   @insert_batch_size 1000
 
@@ -66,7 +66,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
   end
 
   defp schedule_embeddings_worker(ingestion) do
-    GenerateEmbeddingsWorker.new(%{library_id: ingestion.library_id, ingestion_id: ingestion.id})
+    EnqueueGenerateEmbeddingsWorker.new(%{ingestion_id: ingestion.id})
     |> Oban.insert()
   end
 
