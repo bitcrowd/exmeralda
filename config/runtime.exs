@@ -83,26 +83,35 @@ if config_env() == :prod do
 end
 
 cond do
-  config_env() == :prod || System.get_env("TOGETHER_API_KEY") ->
+  config_env() == :prod ->
     config :exmeralda,
-           :llm,
-           LangChain.ChatModels.ChatOpenAI.new!(%{
-             endpoint: "https://api.together.xyz/v1/chat/completions",
-             api_key: System.fetch_env!("TOGETHER_API_KEY"),
-             model: "Qwen/Qwen2.5-Coder-32B-Instruct",
-             stream: true
-           })
+      llm_api_keys: %{
+        # Keys are the provider's `name` column
+        "lambda_ai" => System.fetch_env!("LAMBDA_API_KEY"),
+        "groq_ai" => System.fetch_env!("GROQ_API_KEY"),
+        "together_ai" => System.fetch_env!("TOGETHER_API_KEY"),
+        "hyperbolic_ai" => System.fetch_env!("HYPERBOLIC_API_KEY")
+      },
+      llm_config: %{
+        # The CURRENT_LLM_MODEL_CONFIG_PROVIDER_ID must match an existing ModelConfigProvider record in the database
+        model_config_provider_id: System.fetch_env!("CURRENT_LLM_MODEL_CONFIG_PROVIDER_ID")
+      }
 
   config_env() == :dev ->
     config :exmeralda,
-           :llm,
-           LangChain.ChatModels.ChatOllamaAI.new!(%{
-             model: "llama3.2:latest",
-             stream: true
-           })
+      llm_api_keys: %{},
+      # Points to the Ollama dev config set in the seeds
+      llm_config: %{
+        model_config_provider_id: "1f0e49ff-a985-4c03-a89b-fa443842fa95"
+      }
 
   true ->
-    config :exmeralda, :llm, Exmeralda.LLM.Fake
+    config :exmeralda,
+      llm_api_keys: %{"foo_ai" => "abcde"},
+      llm_config: %{
+        # Random IDs that is used in the tests!
+        model_config_provider_id: "9a21bfd3-cb0a-433c-a9b3-826143782c81"
+      }
 end
 
 cond do

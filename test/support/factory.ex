@@ -12,7 +12,8 @@ defmodule Exmeralda.Factory do
   def message_factory do
     %Exmeralda.Chats.Message{
       session: build(:chat_session),
-      index: sequence(:gitub_id, & &1),
+      generation_environment: build(:generation_environment),
+      index: sequence(:index, & &1),
       content: "I am a message",
       role: :user
     }
@@ -114,6 +115,12 @@ defmodule Exmeralda.Factory do
       name: "Fake/Fake-model",
       provider: build(:provider),
       model_config: build(:model_config)
+    }
+  end
+
+  def generation_environment_factory do
+    %Exmeralda.Chats.GenerationEnvironment{
+      model_config_provider: build(:model_config_provider)
     }
   end
 end

@@ -14,8 +14,8 @@ defmodule Exmeralda.Seeds do
       mock_model_config =
         insert_idempotently(%Exmeralda.LLM.ModelConfig{
           id: "8270fc8e-d0df-4af1-9ddf-b208f5a8059e",
-          name: "fake-model",
-          config: %{}
+          name: "llm-fake-model",
+          config: %{stream: true}
         })
 
       insert_idempotently(%Exmeralda.LLM.ModelConfigProvider{

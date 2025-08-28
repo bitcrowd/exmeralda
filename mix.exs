@@ -104,7 +104,8 @@ defmodule Exmeralda.MixProject do
       lint: [
         "format --check-formatted",
         "credo --strict"
-      ]
+      ],
+      seed: ["run priv/repo/seeds.exs"]
     ]
   end
 end

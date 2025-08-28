@@ -2,7 +2,7 @@ defmodule Exmeralda.ChatsTest do
   use Exmeralda.DataCase, async: false
 
   alias Exmeralda.Chats
-  alias Exmeralda.Chats.{Message, Session, Reaction}
+  alias Exmeralda.Chats.{Message, Session, Reaction, GenerationEnvironment}
   alias Exmeralda.Repo
 
   def insert_user(_) do
@@ -137,7 +137,23 @@ defmodule Exmeralda.ChatsTest do
   describe "start_session/2" do
     setup [:insert_user]
 
-    test "errors with a changeset for invalid attrs", %{user: user} do
+    setup do
+      library = insert(:library)
+      ingestion = insert(:ingestion, library: library)
+      provider = insert(:provider, type: :mock)
+      model_config = insert(:model_config)
+
+      model_config_provider =
+        insert(:model_config_provider,
+          model_config: model_config,
+          provider: provider,
+          id: test_model_config_provider_id()
+        )
+
+      %{library: library, ingestion: ingestion, model_config_provider: model_config_provider}
+    end
+
+    test "errors with a changeset with invalid attrs", %{user: user} do
       assert {:error, changeset} = Chats.start_session(user, %{"ingestion_id" => uuid()})
       assert_required_error_on(changeset, :prompt)
     end
@@ -153,39 +169,92 @@ defmodule Exmeralda.ChatsTest do
       assert_foreign_key_constraint_on(changeset, :ingestion_id)
     end
 
-    test "creates a session, a message", %{user: user} do
-      library = insert(:library)
-      ingestion = insert(:ingestion, library: library)
+    test "raises if the current model config provider does not exist", %{
+      user: user,
+      library: library,
+      ingestion: ingestion,
+      model_config_provider: model_config_provider
+    } do
+      Repo.delete(model_config_provider)
 
-      assert_count_differences(Repo, [{Session, 1}, {Message, 2}], fn ->
-        assert {:ok, session} =
-                 Chats.start_session(user, %{
-                   "ingestion_id" => ingestion.id,
-                   "library_id" => library.id,
-                   "prompt" => "Hello"
-                 })
+      assert_raise RuntimeError, ~r/Could not find the current LLM model config provider!/, fn ->
+        Chats.start_session(user, %{
+          "ingestion_id" => ingestion.id,
+          "library_id" => library.id,
+          "prompt" => "Hello"
+        })
+      end
+    end
 
-        assert session.ingestion_id == ingestion.id
-        assert session.title == "Hello"
-        assert session.user_id == user.id
+    test "creates a session, a message and a upserts generation environment", %{
+      user: user,
+      library: library,
+      ingestion: ingestion,
+      model_config_provider: model_config_provider
+    } do
+      generation_environment =
+        assert_count_differences(
+          Repo,
+          [{Session, 1}, {Message, 2}, {GenerationEnvironment, 1}],
+          fn ->
+            assert {:ok, session} =
+                     Chats.start_session(user, %{
+                       "ingestion_id" => ingestion.id,
+                       "library_id" => library.id,
+                       "prompt" => "Hello"
+                     })
 
-        # messages are sorted asc: :index on sessions
-        [message, assistant_message] = session.messages
-        assert message.index == 0
-        assert message.role == :user
-        assert message.content == "Hello"
-        refute message.incomplete
+            assert session.ingestion_id == ingestion.id
+            assert session.title == "Hello"
+            assert session.user_id == user.id
 
-        assert assistant_message.index == 1
-        assert assistant_message.role == :assistant
-        assert assistant_message.content == ""
-        assert assistant_message.incomplete
-        assert assistant_message.sources == []
+            [generation_environment] = Repo.all(GenerationEnvironment)
+            assert generation_environment.model_config_provider_id == model_config_provider.id
 
-        wait_for_generation_task()
+            # messages are sorted asc: :index on sessions
+            [message, assistant_message] = session.messages
+            assert message.index == 0
+            assert message.role == :user
+            assert message.content == "Hello"
+            refute message.incomplete
+            assert message.generation_environment_id == generation_environment.id
 
-        refute Repo.reload(assistant_message).incomplete
-      end)
+            assert assistant_message.index == 1
+            assert assistant_message.role == :assistant
+            assert assistant_message.content == ""
+            assert assistant_message.incomplete
+            assert assistant_message.sources == []
+            assert assistant_message.generation_environment_id == generation_environment.id
+
+            wait_for_generation_task()
+
+            refute Repo.reload(assistant_message).incomplete
+
+            generation_environment
+          end
+        )
+
+      # Starting a session with the same generation environment does not create a new one
+      assert_count_differences(
+        Repo,
+        [{Session, 1}, {Message, 2}, {GenerationEnvironment, 0}],
+        fn ->
+          assert {:ok, session} =
+                   Chats.start_session(user, %{
+                     "ingestion_id" => ingestion.id,
+                     "library_id" => library.id,
+                     "prompt" => "Hello again"
+                   })
+
+          [message, assistant_message] = session.messages
+          assert assistant_message.generation_environment_id == generation_environment.id
+          assert message.generation_environment_id == generation_environment.id
+
+          wait_for_generation_task()
+        end
+      )
+
+      assert Repo.aggregate(GenerationEnvironment, :count) == 1
     end
   end
 
@@ -199,7 +268,17 @@ defmodule Exmeralda.ChatsTest do
       insert(:message, session: session, index: 0, role: :user, content: "Hello")
       insert(:message, session: session, index: 1, role: :assistant, content: "Howdie!")
 
-      %{session: session}
+      provider = insert(:provider, type: :mock)
+      model_config = insert(:model_config)
+
+      model_config_provider =
+        insert(:model_config_provider,
+          model_config: model_config,
+          provider: provider,
+          id: test_model_config_provider_id()
+        )
+
+      %{session: session, model_config_provider: model_config_provider}
     end
 
     test "errors with a changeset for invalid attrs", %{session: session} do
@@ -214,29 +293,73 @@ defmodule Exmeralda.ChatsTest do
       end
     end
 
-    test "creates a message", %{session: session} do
-      assert_count_differences(Repo, [{Message, 2}], fn ->
+    test "raises if the current model config provider does not exist", %{
+      session: session,
+      model_config_provider: model_config_provider
+    } do
+      Repo.delete(model_config_provider)
+
+      assert_raise RuntimeError, ~r/Could not find the current LLM model config provider!/, fn ->
+        Chats.continue_session(session, %{
+          index: 2,
+          content: "What's the recipe for cookies?"
+        })
+      end
+    end
+
+    test "creates a message and upserts a generation environment", %{
+      session: session,
+      model_config_provider: model_config_provider
+    } do
+      assert Repo.aggregate(GenerationEnvironment, :count) == 2
+
+      generation_environment =
+        assert_count_differences(Repo, [{Message, 2}, {GenerationEnvironment, 1}], fn ->
+          assert {:ok, [message, assistant_message]} =
+                   Chats.continue_session(session, %{
+                     index: 2,
+                     content: "What's the recipe for cookies?"
+                   })
+
+          generation_environment =
+            Repo.get_by(GenerationEnvironment, model_config_provider_id: model_config_provider.id)
+
+          assert generation_environment.model_config_provider_id == model_config_provider.id
+
+          assert message.index == 2
+          assert message.role == :user
+          assert message.content == "What's the recipe for cookies?"
+          refute message.incomplete
+          assert message.generation_environment_id == generation_environment.id
+
+          assert assistant_message.index == 3
+          assert assistant_message.role == :assistant
+          assert assistant_message.content == ""
+          assert assistant_message.incomplete
+          assert assistant_message.sources == []
+          assert assistant_message.generation_environment_id == generation_environment.id
+
+          wait_for_generation_task()
+
+          refute Repo.reload(assistant_message).incomplete
+          generation_environment
+        end)
+
+      # Continuing with the same model config does not create a new generation environment
+      assert_count_differences(Repo, [{Message, 2}, {GenerationEnvironment, 0}], fn ->
         assert {:ok, [message, assistant_message]} =
                  Chats.continue_session(session, %{
-                   index: 2,
-                   content: "What's the recipe for cookies?"
+                   index: 4,
+                   content: "What's the recipe for cookies again?"
                  })
 
-        assert message.index == 2
-        assert message.role == :user
-        assert message.content == "What's the recipe for cookies?"
-        refute message.incomplete
-
-        assert assistant_message.index == 3
-        assert assistant_message.role == :assistant
-        assert assistant_message.content == ""
-        assert assistant_message.incomplete
-        assert assistant_message.sources == []
+        assert message.generation_environment_id == generation_environment.id
+        assert assistant_message.generation_environment_id == generation_environment.id
 
         wait_for_generation_task()
-
-        refute Repo.reload(assistant_message).incomplete
       end)
+
+      assert Repo.aggregate(GenerationEnvironment, :count) == 3
     end
   end
 

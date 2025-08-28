@@ -72,4 +72,6 @@ defmodule Exmeralda.DataCase do
       assert_receive {:DOWN, ^ref, _, _, _}, 100_000
     end
   end
+
+  def test_model_config_provider_id, do: "9a21bfd3-cb0a-433c-a9b3-826143782c81"
 end
