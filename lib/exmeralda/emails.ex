@@ -28,7 +28,7 @@ defmodule Exmeralda.Emails do
   end
 
   def ingestion_in_progress_email(%{name: name, email: email}, library_name) do
-    from = {"Exmeralda", "exmeralda@bitcrowd.net"}
+    from = {"Exmeralda", System.get_env("EMAIL_USERNAME") || "exmeralda@bitcrowd.net"}
     to = {name, email}
     subject = "We are ingesting the package #{library_name} for you"
 
@@ -40,7 +40,7 @@ defmodule Exmeralda.Emails do
         <h1>We are ingesting the package {@library_name} for you</h1>
 
         <p>
-          The ingestion process typically takes some time. Watch your <a href="https://exmeralda.chat/ingestions">ingestion in realtime</a>.
+          The ingestion process typically takes some time. Watch your <a href={"#{ExmeraldaWeb.Endpoint.url()}/ingestions"}>ingestion in realtime</a>.
         </p>
       </.email_layout>
       """
