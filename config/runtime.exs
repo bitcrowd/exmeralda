@@ -74,6 +74,7 @@ if config_env() == :prod do
     password: password,
     auth: :always,
     tls: :always,
+    port: 587,
     tls_options: [
       versions: [:"tlsv1.3"],
       cacerts: :public_key.cacerts_get(),
