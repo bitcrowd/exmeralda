@@ -379,17 +379,23 @@ defmodule Exmeralda.Chats do
   end
 
   defp get_previous_messages(%{index: index, session_id: session_id}, generation_environment_id) do
-    from(m in Message, where: m.session_id == ^session_id and m.index <= ^index)
+    from(m in Message,
+      where: m.session_id == ^session_id and m.index <= ^index,
+      preload: [:sources]
+    )
     |> Repo.all()
     |> Enum.map(fn message ->
       params =
         Map.take(message, [:index, :role, :content, :incomplete, :generation_environment_id])
 
-      if params.index == index do
-        Map.put(params, :generation_environment_id, generation_environment_id)
-      else
-        params
-      end
+      params =
+        if params.index == index do
+          Map.put(params, :generation_environment_id, generation_environment_id)
+        else
+          params
+        end
+
+      Map.put(params, :sources, Enum.map(message.sources, &Map.take(&1, [:chunk_id])))
     end)
   end
 

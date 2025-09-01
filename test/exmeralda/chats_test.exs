@@ -2,7 +2,7 @@ defmodule Exmeralda.ChatsTest do
   use Exmeralda.DataCase, async: false
 
   alias Exmeralda.Chats
-  alias Exmeralda.Chats.{Message, Session, Reaction, GenerationEnvironment}
+  alias Exmeralda.Chats.{Message, Session, Reaction, GenerationEnvironment, Source}
   alias Exmeralda.Repo
 
   def insert_user(_) do
@@ -540,6 +540,8 @@ defmodule Exmeralda.ChatsTest do
       user = insert(:user)
       other_generation_environment = insert(:generation_environment)
       session = insert(:chat_session, user: user, ingestion: ingestion)
+      chunk = insert(:chunk, library: library, ingestion: ingestion)
+      other_chunk = insert(:chunk, library: library, ingestion: ingestion)
 
       # Messages
       initial_message =
@@ -559,6 +561,9 @@ defmodule Exmeralda.ChatsTest do
           content: "Howdie!",
           generation_environment: other_generation_environment
         )
+
+      insert(:chat_source, chunk: chunk, message: assistant_message)
+      insert(:chat_source, chunk: other_chunk, message: assistant_message)
 
       message =
         insert(:message,
@@ -606,7 +611,9 @@ defmodule Exmeralda.ChatsTest do
         ingestion: ingestion,
         generation_environment: generation_environment,
         other_generation_environment: other_generation_environment,
-        initial_message: initial_message
+        initial_message: initial_message,
+        chunk: chunk,
+        other_chunk: other_chunk
       }
     end
 
@@ -615,11 +622,13 @@ defmodule Exmeralda.ChatsTest do
       message: message,
       ingestion: ingestion,
       generation_environment: generation_environment,
-      other_generation_environment: other_generation_environment
+      other_generation_environment: other_generation_environment,
+      chunk: chunk,
+      other_chunk: other_chunk
     } do
       assert_count_differences(
         Repo,
-        [{Session, 1}, {Message, 4}, {GenerationEnvironment, 0}, {Reaction, 0}],
+        [{Session, 1}, {Message, 4}, {GenerationEnvironment, 0}, {Reaction, 0}, {Source, 4}],
         fn ->
           assert {:ok, duplicated_session_id} =
                    Chats.regenerate(message.id, generation_environment.id)
@@ -633,10 +642,12 @@ defmodule Exmeralda.ChatsTest do
           assert duplicated_session.ingestion_id == ingestion.id
 
           %{messages: [first_message, second_message, third_message, fourth_message]} =
-            Repo.preload(duplicated_session, [:messages])
+            Repo.preload(duplicated_session, messages: [:sources])
 
           # Copied message 0
-          assert %{index: 0, role: :user, content: "Hello", incomplete: false} = first_message
+          assert %{index: 0, role: :user, content: "Hello", incomplete: false, sources: []} =
+                   first_message
+
           assert first_message.generation_environment_id == other_generation_environment.id
 
           # Copied message 1
@@ -645,8 +656,19 @@ defmodule Exmeralda.ChatsTest do
 
           assert second_message.generation_environment_id == other_generation_environment.id
 
+          assert_sorted_equal(Enum.map(second_message.sources, & &1.chunk_id), [
+            chunk.id,
+            other_chunk.id
+          ])
+
           # Copied message 2 -> The message we want to start from has the new generation environment set
-          assert %{index: 2, role: :user, content: "Where's the cookie jar?", incomplete: false} =
+          assert %{
+                   index: 2,
+                   role: :user,
+                   content: "Where's the cookie jar?",
+                   incomplete: false,
+                   sources: []
+                 } =
                    third_message
 
           assert third_message.generation_environment_id == generation_environment.id
@@ -660,6 +682,7 @@ defmodule Exmeralda.ChatsTest do
                  } = fourth_message
 
           assert fourth_message.generation_environment_id == generation_environment.id
+          assert length(fourth_message.sources) == 2
         end
       )
     end
@@ -672,7 +695,7 @@ defmodule Exmeralda.ChatsTest do
     } do
       assert_count_differences(
         Repo,
-        [{Session, 1}, {Message, 2}, {GenerationEnvironment, 0}, {Reaction, 0}],
+        [{Session, 1}, {Message, 2}, {GenerationEnvironment, 0}, {Reaction, 0}, {Source, 2}],
         fn ->
           assert {:ok, duplicated_session_id} =
                    Chats.regenerate(initial_message.id, generation_environment.id)
@@ -686,10 +709,12 @@ defmodule Exmeralda.ChatsTest do
           assert duplicated_session.ingestion_id == ingestion.id
 
           %{messages: [first_message, second_message]} =
-            Repo.preload(duplicated_session, [:messages])
+            Repo.preload(duplicated_session, messages: [:sources])
 
           # Copied message 0
-          assert %{index: 0, role: :user, content: "Hello", incomplete: false} = first_message
+          assert %{index: 0, role: :user, content: "Hello", incomplete: false, sources: []} =
+                   first_message
+
           assert first_message.generation_environment_id == generation_environment.id
 
           # Regenerated message
@@ -701,6 +726,7 @@ defmodule Exmeralda.ChatsTest do
                  } = second_message
 
           assert second_message.generation_environment_id == generation_environment.id
+          assert length(second_message.sources) == 2
         end
       )
     end

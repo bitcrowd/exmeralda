@@ -34,7 +34,7 @@ defmodule Exmeralda.Chats.Message do
   def duplicate_changeset(struct, attrs) do
     struct
     |> cast(attrs, @duplicate_attrs)
-    # TODO: duplicate source chunks?
     |> validate_required(@duplicate_attrs)
+    |> cast_assoc(:sources, with: &Source.duplicate_changeset/2)
   end
 end
