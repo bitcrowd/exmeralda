@@ -20,6 +20,8 @@ defmodule Exmeralda.Chats.Session do
     timestamps()
   end
 
+  @duplicate_attrs [:ingestion_id, :title, :original_session_id, :copied_from_message_id]
+
   @doc false
   def create_changeset(session, attrs) do
     changeset =
@@ -44,5 +46,13 @@ defmodule Exmeralda.Chats.Session do
   @doc false
   def unset_user_changeset(session) do
     change(session, user_id: nil)
+  end
+
+  def duplicate_changeset(attrs) do
+    %__MODULE__{}
+    |> cast(attrs, @duplicate_attrs)
+    |> validate_required(@duplicate_attrs)
+    |> foreign_key_constraint(:ingestion_id)
+    |> cast_assoc(:messages, with: &Message.duplicate_changeset/2)
   end
 end
