@@ -75,6 +75,16 @@ This works because the provider and model config for Together AI is seeded in th
 - http://localhost:4000/oban for the Oban dashboard
 - http://localhost:4000/admin for our admin interface
 
+## Regeneration
+
+To regenerate an assistant message for a different generation environment, do the following:
+
+1. Create the generation environment in the console - or get its ID if it already exists
+2. Get the message ID (with role: :user) for which you want to regenerate an answer
+3. Start an iex console and run: `Exmeralda.Chats.regenerate(<<< MESSAGE ID >>>, <<< GENERATION_ENVIRONMENT ID >>>)`.
+
+Running this function will create a copy of the original chat session and all previous messages, as well as their sources.
+
 ## Deployment
 
 The deployment is done with [Fly.io](https://fly.io/docs/elixir/).
