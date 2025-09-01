@@ -22,10 +22,19 @@ defmodule Exmeralda.Chats.Message do
   end
 
   @attrs [:session_id, :generation_environment_id, :role, :index, :content, :incomplete]
+  @duplicate_attrs @attrs -- [:session_id]
+
   @doc false
   def changeset(message \\ %__MODULE__{}, attrs) do
     message
     |> cast(attrs, @attrs)
     |> validate_required(@attrs)
+  end
+
+  def duplicate_changeset(struct, attrs) do
+    struct
+    |> cast(attrs, @duplicate_attrs)
+    # TODO: duplicate source chunks?
+    |> validate_required(@duplicate_attrs)
   end
 end
