@@ -1,5 +1,5 @@
 defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
-  alias Exmeralda.Topics.GenerateEmbeddingsWorker
+  alias Exmeralda.Topics.EnqueueGenerateEmbeddingsWorker
   use Exmeralda.DataCase
 
   alias Exmeralda.Topics.IngestLibraryWorker
@@ -78,13 +78,13 @@ defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
         assert is_binary(chunk.content)
       end
 
-      # GenerateEmbeddingsWorker is enqueued and associated to ingestion
+      # EnqueueGenerateEmbeddingsWorker is enqueued and associated to ingestion
       job_id = ingestion.job_id
 
       assert_enqueued(
         id: job_id,
-        worker: GenerateEmbeddingsWorker,
-        args: %{library_id: library.id, ingestion_id: ingestion.id}
+        worker: EnqueueGenerateEmbeddingsWorker,
+        args: %{ingestion_id: ingestion.id}
       )
     end
 
@@ -97,7 +97,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
                perform_job(IngestLibraryWorker, %{ingestion_id: ingestion.id})
 
       assert Repo.reload(ingestion).state == :failed
-      refute_enqueued(worker: GenerateEmbeddingsWorker)
+      refute_enqueued(worker: EnqueueGenerateEmbeddingsWorker)
     end
 
     test "errors if fetching from hex fails and does not mark ingestion as failed", %{
@@ -111,7 +111,7 @@ defmodule Exmeralda.Topics.IngestLibraryWorkerTest do
                perform_job(IngestLibraryWorker, %{ingestion_id: ingestion.id})
 
       assert Repo.reload(ingestion).state == :queued
-      refute_enqueued(worker: GenerateEmbeddingsWorker)
+      refute_enqueued(worker: EnqueueGenerateEmbeddingsWorker)
     end
   end
 end
