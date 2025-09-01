@@ -7,12 +7,15 @@ defmodule Exmeralda.Chats.Session do
   @title_max_length 255
 
   schema "chat_sessions" do
-    field :title, :string
-    field :prompt, :string, virtual: true
     belongs_to :user, User
     belongs_to :ingestion, Ingestion
+    belongs_to :original_session, __MODULE__
+    belongs_to :copied_from_message, Message
     has_many :messages, Message, preload_order: [asc: :index]
     has_one :library, through: [:ingestion, :library]
+
+    field :title, :string
+    field :prompt, :string, virtual: true
 
     timestamps()
   end

@@ -3,6 +3,64 @@ defmodule Exmeralda.Chats.SessionTest do
 
   alias Exmeralda.Chats.Session
 
+  describe "table" do
+    setup do
+      # original session
+      user = insert(:user)
+
+      chat_session =
+        insert(:chat_session, user: user, original_session: nil, copied_from_message: nil)
+
+      message = insert(:message, session: chat_session)
+
+      %{user: user, chat_session: chat_session, message: message}
+    end
+
+    test "original_session_when_copied_from_message constraint", %{
+      user: user,
+      chat_session: chat_session,
+      message: message
+    } do
+      # Works
+      insert(:chat_session, user: user, original_session: nil, copied_from_message: nil)
+
+      insert(:chat_session,
+        user: nil,
+        original_session: chat_session,
+        copied_from_message: message
+      )
+
+      assert_raise Ecto.ConstraintError, ~r/original_session_when_copied_from_message/, fn ->
+        insert(:chat_session, user: nil, original_session: chat_session, copied_from_message: nil)
+      end
+
+      assert_raise Ecto.ConstraintError, ~r/original_session_when_copied_from_message/, fn ->
+        insert(:chat_session, user: nil, original_session: nil, copied_from_message: message)
+      end
+    end
+
+    test "used_id_null_when_regeneration_fields constraint", %{
+      user: user,
+      chat_session: chat_session,
+      message: message
+    } do
+      # Works
+      insert(:chat_session,
+        user: nil,
+        original_session: chat_session,
+        copied_from_message: message
+      )
+
+      assert_raise Ecto.ConstraintError, ~r/used_id_null_when_regeneration_fields/, fn ->
+        insert(:chat_session,
+          user: user,
+          original_session: chat_session,
+          copied_from_message: message
+        )
+      end
+    end
+  end
+
   describe "create_changeset/2" do
     test "errors with invalid params" do
       %Session{}
