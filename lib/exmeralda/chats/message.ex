@@ -34,7 +34,8 @@ defmodule Exmeralda.Chats.Message do
   def duplicate_changeset(struct, attrs) do
     struct
     |> cast(attrs, @duplicate_attrs)
-    |> validate_required(@duplicate_attrs)
+    # generation_environment_id was added later and its possible that past messages do not have one set
+    |> validate_required(@duplicate_attrs -- [:generation_environment_id])
     |> cast_assoc(:sources, with: &Source.duplicate_changeset/2)
   end
 end

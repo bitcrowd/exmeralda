@@ -327,10 +327,11 @@ defmodule Exmeralda.Chats do
   end
 
   @spec regenerate(Message.id(), GenerationEnvironment.id()) ::
-          {:ok, Session.id()}
+          {:ok, %{session_id: Session.id()}}
           | {:error, {:not_found, Message}}
           | {:error, {:message_not_from_user, String.t()}}
           | {:error, {:not_found, GenerationEnvironment}}
+          | {:error, Ecto.Changeset.t()}
   def regenerate(message_id, generation_environment_id) do
     Multi.new()
     |> Multi.put(:message_id, message_id)
@@ -342,7 +343,7 @@ defmodule Exmeralda.Chats do
     |> assistant_message()
     |> Repo.transaction()
     |> case do
-      {:ok, %{session: session}} -> {:ok, session.id}
+      {:ok, %{session: session}} -> {:ok, %{session_id: session.id}}
       {:error, _, error, _} -> {:error, error}
     end
   end
