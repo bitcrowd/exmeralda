@@ -4,6 +4,7 @@ defmodule Exmeralda.Topics.Rag do
   import Ecto.Query
   import Pgvector.Ecto.Query
   alias Exmeralda.Topics.{Hex, LineCheck}
+  alias Exmeralda.Chats.GenerationEnvironment
   alias Rag.{Embedding, Generation, Retrieval}
   alias LangChain.TextSplitter.{RecursiveCharacterTextSplitter, LanguageSeparators}
   require Logger
@@ -88,7 +89,9 @@ defmodule Exmeralda.Topics.Rag do
     |> RecursiveCharacterTextSplitter.split_text(content)
   end
 
-  def build_generation(scope, query, opts \\ []) do
+  def build_generation(scope, message, opts \\ []) do
+    %{generation_environment_id: generation_environment_id, content: query} = message
+
     generation =
       Generation.new(query, opts)
       |> Embedding.generate_embedding(embedding_provider())
@@ -101,7 +104,7 @@ defmodule Exmeralda.Topics.Rag do
     context = Enum.map_join(result, "\n\n", & &1.content)
     context_sources = Enum.map(result, & &1.source)
 
-    prompt = prompt(query, context)
+    prompt = prompt(generation_environment_id, query, context)
 
     {result,
      generation
@@ -129,16 +132,14 @@ defmodule Exmeralda.Topics.Rag do
      )}
   end
 
-  defp prompt(query, context) do
-    """
-    Context information is below.
-    ---------------------
-    #{context}
-    ---------------------
-    Given the context information and no prior knowledge, answer the query.
-    Query: #{query}
-    Answer:
-    """
+  defp prompt(generation_environment_id, query, context) do
+    %{generation_prompt: generation_prompt} =
+      Repo.get!(GenerationEnvironment, generation_environment_id)
+      |> Repo.preload([:generation_prompt])
+
+    generation_prompt.prompt
+    |> String.replace("%{query}", query, global: true)
+    |> String.replace("%{context}", context, global: true)
   end
 
   defp embedding_provider do

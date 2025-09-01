@@ -150,7 +150,16 @@ defmodule Exmeralda.ChatsTest do
           id: test_model_config_provider_id()
         )
 
-      %{library: library, ingestion: ingestion, model_config_provider: model_config_provider}
+      system_prompt = insert(:system_prompt, id: test_system_prompt_id())
+      generation_prompt = insert(:generation_prompt, id: test_generation_prompt_id())
+
+      %{
+        library: library,
+        ingestion: ingestion,
+        model_config_provider: model_config_provider,
+        system_prompt: system_prompt,
+        generation_prompt: generation_prompt
+      }
     end
 
     test "errors with a changeset with invalid attrs", %{user: user} do
@@ -190,7 +199,9 @@ defmodule Exmeralda.ChatsTest do
       user: user,
       library: library,
       ingestion: ingestion,
-      model_config_provider: model_config_provider
+      model_config_provider: model_config_provider,
+      system_prompt: system_prompt,
+      generation_prompt: generation_prompt
     } do
       generation_environment =
         assert_count_differences(
@@ -210,6 +221,8 @@ defmodule Exmeralda.ChatsTest do
 
             [generation_environment] = Repo.all(GenerationEnvironment)
             assert generation_environment.model_config_provider_id == model_config_provider.id
+            assert generation_environment.system_prompt_id == system_prompt.id
+            assert generation_environment.generation_prompt_id == generation_prompt.id
 
             # messages are sorted asc: :index on sessions
             [message, assistant_message] = session.messages
@@ -278,7 +291,15 @@ defmodule Exmeralda.ChatsTest do
           id: test_model_config_provider_id()
         )
 
-      %{session: session, model_config_provider: model_config_provider}
+      system_prompt = insert(:system_prompt, id: test_system_prompt_id())
+      generation_prompt = insert(:generation_prompt, id: test_generation_prompt_id())
+
+      %{
+        session: session,
+        model_config_provider: model_config_provider,
+        system_prompt: system_prompt,
+        generation_prompt: generation_prompt
+      }
     end
 
     test "errors with a changeset for invalid attrs", %{session: session} do
@@ -309,7 +330,9 @@ defmodule Exmeralda.ChatsTest do
 
     test "creates a message and upserts a generation environment", %{
       session: session,
-      model_config_provider: model_config_provider
+      model_config_provider: model_config_provider,
+      system_prompt: system_prompt,
+      generation_prompt: generation_prompt
     } do
       assert Repo.aggregate(GenerationEnvironment, :count) == 2
 
@@ -325,6 +348,8 @@ defmodule Exmeralda.ChatsTest do
             Repo.get_by(GenerationEnvironment, model_config_provider_id: model_config_provider.id)
 
           assert generation_environment.model_config_provider_id == model_config_provider.id
+          assert generation_environment.system_prompt_id == system_prompt.id
+          assert generation_environment.generation_prompt_id == generation_prompt.id
 
           assert message.index == 2
           assert message.role == :user

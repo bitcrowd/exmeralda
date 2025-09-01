@@ -120,7 +120,29 @@ defmodule Exmeralda.Factory do
 
   def generation_environment_factory do
     %Exmeralda.Chats.GenerationEnvironment{
-      model_config_provider: build(:model_config_provider)
+      model_config_provider: build(:model_config_provider),
+      system_prompt: build(:system_prompt),
+      generation_prompt: build(:generation_prompt)
+    }
+  end
+
+  def system_prompt_factory do
+    %Exmeralda.LLM.SystemPrompt{
+      prompt: "You are an expert in Elixir programming with in-depth knowledge of Elixir."
+    }
+  end
+
+  def generation_prompt_factory do
+    %Exmeralda.Topics.GenerationPrompt{
+      prompt: """
+      Context information is below.
+      ---------------------
+      %{context}
+      ---------------------
+      Given the context information and no prior knowledge, answer the query.
+      Query: %{query}
+      Answer:
+      """
     }
   end
 end

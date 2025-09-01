@@ -4,9 +4,14 @@ defmodule Exmeralda.Chats.LLM do
   alias Exmeralda.Repo
 
   def stream_responses(messages, generation_environment_id, handler) do
-    %{llm: llm(generation_environment_id)}
+    generation_environment = get_generation_environment(generation_environment_id)
+
+    %{llm: llm(generation_environment.model_config_provider)}
     |> LLMChain.new!()
-    |> LLMChain.add_message(system_prompt() |> LangChain.Message.new_system!())
+    |> LLMChain.add_message(
+      system_prompt(generation_environment)
+      |> LangChain.Message.new_system!()
+    )
     |> LLMChain.add_messages(Enum.map(messages, &to_langchain_message/1))
     |> LLMChain.add_callback(handler)
     |> LLMChain.run()
@@ -21,13 +26,14 @@ defmodule Exmeralda.Chats.LLM do
   defp to_langchain_message(%{role: :assistant, content: content}),
     do: LangChain.Message.new_assistant!(content)
 
-  # Public for testing
-  def llm(generation_environment_id) do
-    %{model_config_provider: %{name: model_name, provider: provider, model_config: model_config}} =
-      GenerationEnvironment
-      |> Repo.get!(generation_environment_id)
-      |> Repo.preload(model_config_provider: [:model_config, :provider])
+  defp get_generation_environment(generation_environment_id) do
+    GenerationEnvironment
+    |> Repo.get!(generation_environment_id)
+    |> Repo.preload([:system_prompt, model_config_provider: [:model_config, :provider]])
+  end
 
+  # Public for testing
+  def llm(%{name: model_name, provider: provider, model_config: model_config}) do
     params =
       %{"model" => model_name}
       |> Map.merge(model_config.config)
@@ -53,7 +59,7 @@ defmodule Exmeralda.Chats.LLM do
     end
   end
 
-  defp system_prompt do
-    Application.fetch_env!(:exmeralda, :system_prompt)
+  defp system_prompt(%{system_prompt: system_prompt}) do
+    system_prompt.prompt
   end
 end
