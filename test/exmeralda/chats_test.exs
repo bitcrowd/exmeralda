@@ -510,4 +510,199 @@ defmodule Exmeralda.ChatsTest do
       assert Keyword.fetch!(votes, :upvote) == 3
     end
   end
+
+  describe "regenerate/2 when the message does not exist" do
+    test "returns an error" do
+      assert Chats.regenerate(uuid(), uuid()) == {:error, {:not_found, Message}}
+    end
+  end
+
+  describe "regenerate/2 when the generation environment does not exist" do
+    test "returns an error" do
+      message = insert(:message)
+      assert Chats.regenerate(message.id, uuid()) == {:error, {:not_found, GenerationEnvironment}}
+    end
+  end
+
+  describe "regenerate/2 when the message is from the assistant" do
+    test "returns an error" do
+      message = insert(:message, role: :assistant)
+
+      assert Chats.regenerate(message.id, uuid()) ==
+               {:error, {:message_not_from_user, "message \"#{message.id}\" has role: :assitant"}}
+    end
+  end
+
+  describe "regenerate/2" do
+    setup do
+      library = insert(:library)
+      ingestion = insert(:ingestion, library: library)
+      user = insert(:user)
+      other_generation_environment = insert(:generation_environment)
+      session = insert(:chat_session, user: user, ingestion: ingestion)
+
+      # Messages
+      initial_message =
+        insert(:message,
+          session: session,
+          index: 0,
+          role: :user,
+          content: "Hello",
+          generation_environment: other_generation_environment
+        )
+
+      assistant_message =
+        insert(:message,
+          session: session,
+          index: 1,
+          role: :assistant,
+          content: "Howdie!",
+          generation_environment: other_generation_environment
+        )
+
+      message =
+        insert(:message,
+          session: session,
+          index: 2,
+          role: :user,
+          content: "Where's the cookie jar?",
+          generation_environment: other_generation_environment
+        )
+
+      insert(:message,
+        session: session,
+        index: 3,
+        role: :assistant,
+        content: "I ate all of the cookies...",
+        generation_environment: other_generation_environment
+      )
+
+      # Reactions (not copied)
+      insert(:reaction, message: assistant_message)
+
+      provider = insert(:provider, type: :mock)
+      model_config = insert(:model_config)
+
+      model_config_provider =
+        insert(:model_config_provider,
+          model_config: model_config,
+          provider: provider,
+          id: test_model_config_provider_id()
+        )
+
+      system_prompt = insert(:system_prompt, id: test_system_prompt_id())
+      generation_prompt = insert(:generation_prompt, id: test_generation_prompt_id())
+
+      generation_environment =
+        insert(:generation_environment,
+          model_config_provider: model_config_provider,
+          system_prompt: system_prompt,
+          generation_prompt: generation_prompt
+        )
+
+      %{
+        session: session,
+        message: message,
+        ingestion: ingestion,
+        generation_environment: generation_environment,
+        other_generation_environment: other_generation_environment,
+        initial_message: initial_message
+      }
+    end
+
+    test "duplicates the session and its messages, generates a new answer", %{
+      session: session,
+      message: message,
+      ingestion: ingestion,
+      generation_environment: generation_environment,
+      other_generation_environment: other_generation_environment
+    } do
+      assert_count_differences(
+        Repo,
+        [{Session, 1}, {Message, 4}, {GenerationEnvironment, 0}, {Reaction, 0}],
+        fn ->
+          assert {:ok, duplicated_session_id} =
+                   Chats.regenerate(message.id, generation_environment.id)
+
+          wait_for_generation_task()
+
+          duplicated_session = Repo.get!(Session, duplicated_session_id)
+          assert duplicated_session.original_session_id == session.id
+          assert duplicated_session.copied_from_message_id == message.id
+          assert duplicated_session.title == session.title
+          assert duplicated_session.ingestion_id == ingestion.id
+
+          %{messages: [first_message, second_message, third_message, fourth_message]} =
+            Repo.preload(duplicated_session, [:messages])
+
+          # Copied message 0
+          assert %{index: 0, role: :user, content: "Hello", incomplete: false} = first_message
+          assert first_message.generation_environment_id == other_generation_environment.id
+
+          # Copied message 1
+          assert %{index: 1, role: :assistant, content: "Howdie!", incomplete: false} =
+                   second_message
+
+          assert second_message.generation_environment_id == other_generation_environment.id
+
+          # Copied message 2 -> The message we want to start from has the new generation environment set
+          assert %{index: 2, role: :user, content: "Where's the cookie jar?", incomplete: false} =
+                   third_message
+
+          assert third_message.generation_environment_id == generation_environment.id
+
+          # Regenerated message
+          assert %{
+                   index: 3,
+                   role: :assistant,
+                   content: "This is a streaming response!",
+                   incomplete: false
+                 } = fourth_message
+
+          assert fourth_message.generation_environment_id == generation_environment.id
+        end
+      )
+    end
+
+    test "works if we start from another message", %{
+      session: session,
+      initial_message: initial_message,
+      ingestion: ingestion,
+      generation_environment: generation_environment
+    } do
+      assert_count_differences(
+        Repo,
+        [{Session, 1}, {Message, 2}, {GenerationEnvironment, 0}, {Reaction, 0}],
+        fn ->
+          assert {:ok, duplicated_session_id} =
+                   Chats.regenerate(initial_message.id, generation_environment.id)
+
+          wait_for_generation_task()
+
+          duplicated_session = Repo.get!(Session, duplicated_session_id)
+          assert duplicated_session.original_session_id == session.id
+          assert duplicated_session.copied_from_message_id == initial_message.id
+          assert duplicated_session.title == session.title
+          assert duplicated_session.ingestion_id == ingestion.id
+
+          %{messages: [first_message, second_message]} =
+            Repo.preload(duplicated_session, [:messages])
+
+          # Copied message 0
+          assert %{index: 0, role: :user, content: "Hello", incomplete: false} = first_message
+          assert first_message.generation_environment_id == generation_environment.id
+
+          # Regenerated message
+          assert %{
+                   index: 1,
+                   role: :assistant,
+                   content: "This is a streaming response!",
+                   incomplete: false
+                 } = second_message
+
+          assert second_message.generation_environment_id == generation_environment.id
+        end
+      )
+    end
+  end
 end
