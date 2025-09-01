@@ -76,4 +76,41 @@ defmodule Exmeralda.Chats.MessageTest do
       |> assert_changes(:generation_environment_id, params.generation_environment_id)
     end
   end
+
+  describe "duplicate_changeset/2" do
+    test "errors with invalid params" do
+      %Message{}
+      |> Message.duplicate_changeset(%{})
+      |> refute_changeset_valid()
+      |> assert_required_error_on(:role)
+      |> assert_required_error_on(:index)
+      |> assert_required_error_on(:content)
+    end
+
+    test "is valid with valid params" do
+      chunk_id = uuid()
+
+      params =
+        params_for(:message,
+          generation_environment_id: uuid(),
+          incomplete: true,
+          sources: [
+            %{chunk_id: chunk_id}
+          ]
+        )
+
+      changeset =
+        %Message{}
+        |> Message.duplicate_changeset(params)
+        |> assert_changeset_valid()
+        |> assert_changes(:role, params.role)
+        |> assert_changes(:index, params.index)
+        |> assert_changes(:content, params.content)
+        |> assert_changes(:incomplete, params.incomplete)
+        |> assert_changes(:generation_environment_id, params.generation_environment_id)
+
+      assert [source_cs] = changeset.changes.sources
+      assert_changes(source_cs, :chunk_id, chunk_id)
+    end
+  end
 end

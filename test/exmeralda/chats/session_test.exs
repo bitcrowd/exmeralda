@@ -120,4 +120,57 @@ defmodule Exmeralda.Chats.SessionTest do
       assert Repo.reload(reaction)
     end
   end
+
+  describe "duplicate_changeset/1" do
+    test "errors with invalid params" do
+      %{}
+      |> Session.duplicate_changeset()
+      |> refute_changeset_valid()
+      |> assert_required_error_on(:ingestion_id)
+      |> assert_required_error_on(:original_session_id)
+      |> assert_required_error_on(:copied_from_message_id)
+      |> assert_required_error_on(:title)
+    end
+
+    test "is valid with valid params" do
+      chunk_id = uuid()
+
+      params = %{
+        ingestion_id: uuid(),
+        original_session_id: uuid(),
+        copied_from_message_id: uuid(),
+        title: "Foo",
+        messages: [
+          params_for(:message,
+            generation_environment_id: uuid(),
+            content: "hello there!",
+            sources: [
+              %{chunk_id: chunk_id}
+            ]
+          )
+        ]
+      }
+
+      cs =
+        params
+        |> Session.duplicate_changeset()
+        |> assert_changeset_valid()
+        |> assert_changes(:ingestion_id, params.ingestion_id)
+        |> assert_changes(:copied_from_message_id, params.copied_from_message_id)
+        |> assert_changes(:original_session_id, params.original_session_id)
+        |> assert_changes(:title, "Foo")
+
+      [message_cs] = cs.changes.messages
+
+      message_cs
+      |> assert_changeset_valid()
+      |> assert_changes(:content, "hello there!")
+
+      [source_cs] = message_cs.changes.sources
+
+      source_cs
+      |> assert_changeset_valid()
+      |> assert_changes(:chunk_id, chunk_id)
+    end
+  end
 end
