@@ -152,9 +152,11 @@ defmodule Exmeralda.Chats do
     )
   end
 
-  defp assistant_message(multi) do
+  def assistant_message(multi, opts \\ %{}) do
     multi
     |> Multi.insert(:assistant_message, fn %{session: session, message: message} ->
+      extra_attrs = Map.take(opts, [:regenerated_from_message_id])
+
       %Message{
         role: :assistant,
         content: "",
@@ -163,6 +165,7 @@ defmodule Exmeralda.Chats do
         index: message.index + 1,
         incomplete: true
       }
+      |> Map.merge(extra_attrs)
     end)
     |> Multi.run(:request_generation, &request_generation/2)
   end
@@ -187,7 +190,11 @@ defmodule Exmeralda.Chats do
           )
           |> Repo.preload(@message_preload)
 
-        send_session_update(session, {:message_completed, assistant_message})
+        if session.user_id do
+          send_session_update(session, {:message_completed, assistant_message})
+        else
+          send_message_regenerated(assistant_message)
+        end
       end
     }
 
@@ -237,6 +244,14 @@ defmodule Exmeralda.Chats do
       Exmeralda.PubSub,
       "user-#{session.user_id}",
       {:session_update, session.id, payload}
+    )
+  end
+
+  defp send_message_regenerated(message) do
+    PubSub.broadcast(
+      Exmeralda.PubSub,
+      "regenerations",
+      {:message_regenerated, message.regenerated_from_message_id}
     )
   end
 
@@ -324,84 +339,6 @@ defmodule Exmeralda.Chats do
     )
     |> Repo.all()
     |> Enum.group_by(& &1.ingestion_id, & &1.count)
-  end
-
-  @spec regenerate(Message.id(), GenerationEnvironment.id()) ::
-          {:ok, %{session_id: Session.id()}}
-          | {:error, {:not_found, Message}}
-          | {:error, {:message_not_from_user, String.t()}}
-          | {:error, {:not_found, GenerationEnvironment}}
-          | {:error, Ecto.Changeset.t()}
-  def regenerate(message_id, generation_environment_id) do
-    Multi.new()
-    |> Multi.put(:message_id, message_id)
-    |> Multi.put(:generation_environment_id, generation_environment_id)
-    |> Multi.run(:original_message, &fetch_message_for_regeneration/2)
-    |> Multi.run(:generation_environment, &fetch_generation_environment/2)
-    |> Multi.insert(:session, &duplicate_session/1)
-    |> Multi.run(:message, &get_duplicated_message/2)
-    |> assistant_message()
-    |> Repo.transaction()
-    |> case do
-      {:ok, %{session: session}} -> {:ok, %{session_id: session.id}}
-      {:error, _, error, _} -> {:error, error}
-    end
-  end
-
-  defp fetch_message_for_regeneration(_repo, %{message_id: message_id}) do
-    case Repo.fetch(Message, message_id, preload: [:session]) do
-      {:ok, %{role: :assistant}} ->
-        {:error, {:message_not_from_user, "message #{inspect(message_id)} has role: :assitant"}}
-
-      {:ok, message} ->
-        {:ok, message}
-
-      {:error, {:not_found, Message}} ->
-        {:error, {:not_found, Message}}
-    end
-  end
-
-  defp fetch_generation_environment(_repo, %{generation_environment_id: generation_environment_id}) do
-    Repo.fetch(GenerationEnvironment, generation_environment_id)
-  end
-
-  defp duplicate_session(%{
-         original_message: %{id: message_id, session: session} = original_message,
-         generation_environment_id: generation_environment_id
-       }) do
-    session
-    |> Map.take([:title, :ingestion_id])
-    |> Map.merge(%{
-      original_session_id: session.id,
-      copied_from_message_id: message_id,
-      messages: get_previous_messages(original_message, generation_environment_id)
-    })
-    |> Session.duplicate_changeset()
-  end
-
-  defp get_previous_messages(%{index: index, session_id: session_id}, generation_environment_id) do
-    from(m in Message,
-      where: m.session_id == ^session_id and m.index <= ^index,
-      preload: [:sources]
-    )
-    |> Repo.all()
-    |> Enum.map(fn message ->
-      params =
-        Map.take(message, [:index, :role, :content, :incomplete, :generation_environment_id])
-
-      params =
-        if params.index == index do
-          Map.put(params, :generation_environment_id, generation_environment_id)
-        else
-          params
-        end
-
-      Map.put(params, :sources, Enum.map(message.sources, &Map.take(&1, [:chunk_id])))
-    end)
-  end
-
-  defp get_duplicated_message(_, %{original_message: %{index: index}, session: session}) do
-    {:ok, Enum.find(session.messages, &(&1.index == index))}
   end
 
   defp current_llm_config do
