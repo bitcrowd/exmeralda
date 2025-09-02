@@ -81,7 +81,7 @@ To regenerate an assistant message for a different generation environment, do th
 
 1. Create the generation environment in the console - or get its ID if it already exists
 2. Get the message ID (with role: :user) for which you want to regenerate an answer
-3. Start an iex console and run: `Exmeralda.Chats.regenerate(<<< MESSAGE ID >>>, <<< GENERATION_ENVIRONMENT ID >>>)`.
+3. Start an iex console and run: `Exmeralda.Regenerations.regenerate(<<< MESSAGE ID >>>, <<< GENERATION_ENVIRONMENT ID >>>)`.
 
 Running this function will create a copy of the original chat session and all previous messages, as well as their sources.
 

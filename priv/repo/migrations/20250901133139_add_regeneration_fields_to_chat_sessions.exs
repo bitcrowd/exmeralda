@@ -26,5 +26,10 @@ defmodule Exmeralda.Repo.Migrations.AddRegenerationFieldsToChatSessions do
         check: "(original_session_id IS NULL) = (copied_from_message_id IS NULL)"
       )
     )
+
+    alter table(:chat_messages) do
+      add :regenerated_from_message_id, references(:chat_messages, on_delete: :restrict),
+        null: true
+    end
   end
 end
