@@ -33,10 +33,12 @@ defmodule Exmeralda.Regenerations.Server do
 
   def handle_info({:message_regenerated, message_id}, state) do
     completion = Map.replace!(state.completion, message_id, true)
+    completion_status = Map.values(completion)
 
     Logger.info("⌛️ Message #{message_id} regenerated!")
 
-    if Enum.all?(Map.values(completion)) do
+    if Enum.all?(completion_status) do
+      Phoenix.PubSub.unsubscribe(Exmeralda.PubSub, "regenerations")
       {:stop, :normal, %{state | completion: completion}}
     else
       {:noreply, %{state | completion: completion}}
