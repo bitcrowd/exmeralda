@@ -203,6 +203,9 @@ defmodule Exmeralda.ChatsTest do
       system_prompt: system_prompt,
       generation_prompt: generation_prompt
     } do
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "regenerations")
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "user-#{user.id}")
+
       generation_environment =
         assert_count_differences(
           Repo,
@@ -247,6 +250,9 @@ defmodule Exmeralda.ChatsTest do
           end
         )
 
+      assert_received {:session_update, _, _}
+      refute_received {:message_regenerated, _}
+
       # Starting a session with the same generation environment does not create a new one
       assert_count_differences(
         Repo,
@@ -268,6 +274,9 @@ defmodule Exmeralda.ChatsTest do
       )
 
       assert Repo.aggregate(GenerationEnvironment, :count) == 1
+
+      assert_received {:session_update, _, _}
+      refute_received {:message_regenerated, _}
     end
   end
 
@@ -329,11 +338,15 @@ defmodule Exmeralda.ChatsTest do
     end
 
     test "creates a message and upserts a generation environment", %{
+      user: user,
       session: session,
       model_config_provider: model_config_provider,
       system_prompt: system_prompt,
       generation_prompt: generation_prompt
     } do
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "regenerations")
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "user-#{user.id}")
+
       assert Repo.aggregate(GenerationEnvironment, :count) == 2
 
       generation_environment =
@@ -370,6 +383,9 @@ defmodule Exmeralda.ChatsTest do
           generation_environment
         end)
 
+      assert_received {:session_update, _, _}
+      refute_received {:message_regenerated, _}
+
       # Continuing with the same model config does not create a new generation environment
       assert_count_differences(Repo, [{Message, 2}, {GenerationEnvironment, 0}], fn ->
         assert {:ok, [message, assistant_message]} =
@@ -385,6 +401,9 @@ defmodule Exmeralda.ChatsTest do
       end)
 
       assert Repo.aggregate(GenerationEnvironment, :count) == 3
+
+      assert_received {:session_update, _, _}
+      refute_received {:message_regenerated, _}
     end
   end
 

@@ -93,6 +93,7 @@ defmodule Exmeralda.Chats.MessageTest do
       params =
         params_for(:message,
           generation_environment_id: uuid(),
+          regenerated_from_message_id: uuid(),
           incomplete: true,
           sources: [
             %{chunk_id: chunk_id}
@@ -108,9 +109,20 @@ defmodule Exmeralda.Chats.MessageTest do
         |> assert_changes(:content, params.content)
         |> assert_changes(:incomplete, params.incomplete)
         |> assert_changes(:generation_environment_id, params.generation_environment_id)
+        |> assert_changes(:regenerated_from_message_id, params.regenerated_from_message_id)
 
       assert [source_cs] = changeset.changes.sources
       assert_changes(source_cs, :chunk_id, chunk_id)
+    end
+
+    test "allows optional params" do
+      params = params_for(:message)
+
+      %Message{}
+      |> Message.duplicate_changeset(params)
+      |> assert_changeset_valid()
+      |> refute_changes(:generation_environment_id)
+      |> refute_changes(:regenerated_from_message_id)
     end
   end
 end
