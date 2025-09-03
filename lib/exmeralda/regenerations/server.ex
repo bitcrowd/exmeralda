@@ -1,5 +1,6 @@
 defmodule Exmeralda.Regenerations.Server do
   use GenServer
+  require Logger
   alias Exmeralda.Regenerations
   alias Exmeralda.Repo
   alias Ecto.Multi
@@ -32,6 +33,8 @@ defmodule Exmeralda.Regenerations.Server do
 
   def handle_info({:message_regenerated, message_id}, state) do
     completion = Map.replace!(state.completion, message_id, true)
+
+    Logger.info("⌛️ Message #{message_id} regenerated!")
 
     if Enum.all?(Map.values(completion)) do
       {:stop, :normal, %{state | completion: completion}}
