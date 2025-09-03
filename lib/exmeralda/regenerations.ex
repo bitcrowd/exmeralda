@@ -18,6 +18,10 @@ defmodule Exmeralda.Regenerations do
           | {:error, {:message, Message.id()}, {:not_found, GenerationEnvironment}}
           | {:error, {:message, Message.id()}, Ecto.Changeset.t()}
   def download(message_ids, generation_environment_id) do
+    if Mix.env() != :dev do
+      raise "sorry this only works in dev mode for now"
+    end
+
     Logger.info("Initiating the regeneration")
     Process.flag(:trap_exit, true)
 
@@ -34,16 +38,21 @@ defmodule Exmeralda.Regenerations do
 
     receive do
       {:DOWN, ^ref, :process, ^pid, :normal} ->
-        Logger.info("Regneration finished, building JSON file...")
+        Logger.info("Regeneration finished, building JSON file...")
         do_download(result)
     end
   end
 
+  @path "./regenerations"
   defp do_download(result) do
+    if !File.exists?(@path), do: File.mkdir!(@path)
+
     File.write!(
-      "regeneration_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.json",
+      "#{@path}/regeneration_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.json",
       Jason.encode!(format_regeneration(result))
     )
+
+    Logger.info("✅ Regeneration finished!")
   end
 
   defp format_regeneration(result) do
