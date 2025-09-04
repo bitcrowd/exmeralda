@@ -1,38 +1,55 @@
 defmodule Exmeralda.RegenerationsTest do
   use Exmeralda.DataCase, async: false
-
+  require Logger
+  import ExUnit.CaptureLog
   alias Exmeralda.Regenerations
   alias Exmeralda.Chats.{Message, Session, Reaction, GenerationEnvironment, Source}
   alias Exmeralda.Repo
 
-  describe "download/2 when the message does not exist" do
+  describe "regenerate_and_download/2 when the message does not exist" do
     test "returns an error" do
-      assert {:error, {:message, _}, {:not_found, Message}} =
-               Regenerations.download([uuid()], uuid())
+      message_id = uuid()
+
+      {result, log} =
+        with_log(fn -> Regenerations.regenerate_and_download([message_id], uuid()) end)
+
+      assert result == %{message_id => {:not_found, Message}}
+      assert log =~ "💥 Nothing to regenerate! Reason:"
     end
   end
 
-  describe "download/2 when the generation environment does not exist" do
-    test "returns an error" do
-      %{id: message_id} = insert(:message)
-
-      assert {:error, {:message, ^message_id}, {:not_found, GenerationEnvironment}} =
-               Regenerations.download([message_id], uuid())
-    end
-  end
-
-  describe "download/2 when the message is from the assistant" do
+  describe "regenerate_and_download/2 when the generation environment does not exist" do
     test "returns an error" do
       %{id: message_id} = insert(:message, role: :assistant)
 
-      assert {:error, {:message, ^message_id}, {:message_not_from_user, error}} =
-               Regenerations.download([message_id], uuid())
+      {result, log} =
+        with_log(fn -> Regenerations.regenerate_and_download([message_id], uuid()) end)
 
-      assert error == "message \"#{message_id}\" has role: :assitant"
+      assert result == %{message_id => {:not_found, GenerationEnvironment}}
+      assert log =~ "💥 Nothing to regenerate! Reason:"
     end
   end
 
-  describe "download/2" do
+  describe "regenerate_and_download/2 when the message is from the user" do
+    test "returns an error" do
+      %{id: message_id} = insert(:message, role: :user)
+      generation_environment = insert(:generation_environment)
+
+      {result, log} =
+        with_log(fn ->
+          Regenerations.regenerate_and_download([message_id], generation_environment.id)
+        end)
+
+      assert result == %{
+               message_id =>
+                 {:message_not_from_assistant, "message \"#{message_id}\" has role: :user"}
+             }
+
+      assert log =~ "💥 Nothing to regenerate! Reason:"
+    end
+  end
+
+  describe "regenerate_and_download/2" do
     setup do
       library = insert(:library)
       ingestion = insert(:ingestion, library: library)
@@ -43,16 +60,15 @@ defmodule Exmeralda.RegenerationsTest do
       other_chunk = insert(:chunk, library: library, ingestion: ingestion)
 
       # Messages
-      initial_message =
-        insert(:message,
-          session: session,
-          index: 0,
-          role: :user,
-          content: "Hello",
-          generation_environment: other_generation_environment
-        )
+      insert(:message,
+        session: session,
+        index: 0,
+        role: :user,
+        content: "Hello",
+        generation_environment: other_generation_environment
+      )
 
-      assistant_message =
+      first_assistant_message =
         insert(:message,
           session: session,
           index: 1,
@@ -61,25 +77,25 @@ defmodule Exmeralda.RegenerationsTest do
           generation_environment: other_generation_environment
         )
 
-      insert(:chat_source, chunk: chunk, message: assistant_message)
-      insert(:chat_source, chunk: other_chunk, message: assistant_message)
-
-      message =
-        insert(:message,
-          session: session,
-          index: 2,
-          role: :user,
-          content: "Where's the cookie jar?",
-          generation_environment: other_generation_environment
-        )
+      insert(:chat_source, chunk: chunk, message: first_assistant_message)
+      insert(:chat_source, chunk: other_chunk, message: first_assistant_message)
 
       insert(:message,
         session: session,
-        index: 3,
-        role: :assistant,
-        content: "I ate all of the cookies...",
+        index: 2,
+        role: :user,
+        content: "Where's the cookie jar?",
         generation_environment: other_generation_environment
       )
+
+      second_assistant_message =
+        insert(:message,
+          session: session,
+          index: 3,
+          role: :assistant,
+          content: "I ate all of the cookies...",
+          generation_environment: other_generation_environment
+        )
 
       provider = insert(:provider, type: :mock)
       model_config = insert(:model_config)
@@ -103,41 +119,41 @@ defmodule Exmeralda.RegenerationsTest do
 
       %{
         session: session,
-        message: message,
+        first_assistant_message: first_assistant_message,
+        second_assistant_message: second_assistant_message,
         ingestion: ingestion,
         generation_environment: generation_environment,
         other_generation_environment: other_generation_environment,
-        initial_message: initial_message,
         chunk: chunk,
         other_chunk: other_chunk
       }
     end
 
-    test "regenerates the messages, formats as JSON and downloads the file", %{
-      session: session,
-      message: message,
+    test "regenerates a message, formats as JSON and downloads the file", %{
+      first_assistant_message: first_assistant_message,
       ingestion: ingestion,
       generation_environment: generation_environment,
       other_generation_environment: other_generation_environment,
       chunk: chunk,
-      other_chunk: other_chunk,
-      initial_message: initial_message
+      other_chunk: other_chunk
     } do
-      # assert_count_differences(
-      #   Repo,
-      #   [{Session, 1}, {Message, 4}, {GenerationEnvironment, 0}, {Reaction, 0}, {Source, 4}],
-      #   fn ->
-      # assert {:ok,
-      #         %{
-      #           session_id: duplicated_session_id,
-      #           message_id: regenerated_message_id,
-      #           original_message_id: original_message_id
-      #         }} =
-      Regenerations.download([initial_message.id, message.id], generation_environment.id)
+      first_assistant_message_id = first_assistant_message.id
 
-      wait_for_generation_task()
-      # wait_for_generation_task()
-      # end)
+      assert_count_differences(
+        Repo,
+        [{Session, 1}, {Message, 2}, {GenerationEnvironment, 0}, {Reaction, 0}, {Source, 2}],
+        fn ->
+          assert [
+                   {^first_assistant_message_id, %{assistant_message_id: assitant_message_id}}
+                 ] =
+                   Regenerations.regenerate_and_download(
+                     [first_assistant_message_id],
+                     generation_environment.id
+                   )
+
+          wait_for_generation_task()
+        end
+      )
     end
   end
 
@@ -147,21 +163,22 @@ defmodule Exmeralda.RegenerationsTest do
     end
   end
 
-  describe "regenerate/2 when the generation environment does not exist" do
+  describe "regenerate/2 when the message is from the user" do
     test "returns an error" do
-      message = insert(:message)
+      message = insert(:message, role: :user)
 
       assert Regenerations.regenerate(message.id, uuid()) ==
-               {:error, {:not_found, GenerationEnvironment}}
+               {:error,
+                {:message_not_from_assistant, "message \"#{message.id}\" has role: :user"}}
     end
   end
 
-  describe "regenerate/2 when the message is from the assistant" do
+  describe "regenerate/2 when the generation environment does not exist" do
     test "returns an error" do
       message = insert(:message, role: :assistant)
 
       assert Regenerations.regenerate(message.id, uuid()) ==
-               {:error, {:message_not_from_user, "message \"#{message.id}\" has role: :assitant"}}
+               {:error, {:not_found, GenerationEnvironment}}
     end
   end
 
@@ -176,16 +193,15 @@ defmodule Exmeralda.RegenerationsTest do
       other_chunk = insert(:chunk, library: library, ingestion: ingestion)
 
       # Messages
-      initial_message =
-        insert(:message,
-          session: session,
-          index: 0,
-          role: :user,
-          content: "Hello",
-          generation_environment: other_generation_environment
-        )
+      insert(:message,
+        session: session,
+        index: 0,
+        role: :user,
+        content: "Hello",
+        generation_environment: other_generation_environment
+      )
 
-      assistant_message =
+      first_assistant_message =
         insert(:message,
           session: session,
           index: 1,
@@ -194,10 +210,10 @@ defmodule Exmeralda.RegenerationsTest do
           generation_environment: other_generation_environment
         )
 
-      insert(:chat_source, chunk: chunk, message: assistant_message)
-      insert(:chat_source, chunk: other_chunk, message: assistant_message)
+      insert(:chat_source, chunk: chunk, message: first_assistant_message)
+      insert(:chat_source, chunk: other_chunk, message: first_assistant_message)
 
-      message =
+      second_user_message =
         insert(:message,
           session: session,
           index: 2,
@@ -206,16 +222,17 @@ defmodule Exmeralda.RegenerationsTest do
           generation_environment: other_generation_environment
         )
 
-      insert(:message,
-        session: session,
-        index: 3,
-        role: :assistant,
-        content: "I ate all of the cookies...",
-        generation_environment: other_generation_environment
-      )
+      second_assistant_message =
+        insert(:message,
+          session: session,
+          index: 3,
+          role: :assistant,
+          content: "I ate all of the cookies...",
+          generation_environment: other_generation_environment
+        )
 
       # Reactions (not copied)
-      insert(:reaction, message: assistant_message)
+      insert(:reaction, message: first_assistant_message)
 
       provider = insert(:provider, type: :mock)
       model_config = insert(:model_config)
@@ -239,11 +256,12 @@ defmodule Exmeralda.RegenerationsTest do
 
       %{
         session: session,
-        message: message,
+        first_assistant_message: first_assistant_message,
+        second_assistant_message: second_assistant_message,
+        second_user_message: second_user_message,
         ingestion: ingestion,
         generation_environment: generation_environment,
         other_generation_environment: other_generation_environment,
-        initial_message: initial_message,
         chunk: chunk,
         other_chunk: other_chunk
       }
@@ -251,7 +269,8 @@ defmodule Exmeralda.RegenerationsTest do
 
     test "duplicates the session and its messages, generates a new answer", %{
       session: session,
-      message: message,
+      second_assistant_message: second_assistant_message,
+      second_user_message: second_user_message,
       ingestion: ingestion,
       generation_environment: generation_environment,
       other_generation_environment: other_generation_environment,
@@ -265,21 +284,26 @@ defmodule Exmeralda.RegenerationsTest do
           assert {:ok,
                   %{
                     session_id: duplicated_session_id,
-                    message_id: regenerated_message_id,
-                    original_message_id: original_message_id
+                    user_message: user_message,
+                    assistant_message: assistant_message,
+                    generation_environment: returned_generation_environment
                   }} =
-                   Regenerations.regenerate(message.id, generation_environment.id)
+                   Regenerations.regenerate(
+                     second_assistant_message.id,
+                     generation_environment.id
+                   )
 
           wait_for_generation_task()
 
-          assert original_message_id == message.id
-
           duplicated_session = Repo.get!(Session, duplicated_session_id)
           assert duplicated_session.original_session_id == session.id
-          assert duplicated_session.copied_from_message_id == message.id
+          assert duplicated_session.copied_from_message_id == second_assistant_message.id
           assert duplicated_session.title == session.title
           assert duplicated_session.ingestion_id == ingestion.id
           refute duplicated_session.user_id
+
+          assert second_user_message.content == user_message.content
+          assert returned_generation_environment.id == generation_environment.id
 
           %{messages: [first_message, second_message, third_message, fourth_message]} =
             Repo.preload(duplicated_session, messages: [:sources])
@@ -301,7 +325,7 @@ defmodule Exmeralda.RegenerationsTest do
             other_chunk.id
           ])
 
-          # Copied message 2 -> The message we want to start from has the new generation environment set
+          # Copied message 2 -> The user message we want regenerate an answer for has the new generation environment set
           assert %{
                    index: 2,
                    role: :user,
@@ -323,14 +347,14 @@ defmodule Exmeralda.RegenerationsTest do
 
           assert fourth_message.generation_environment_id == generation_environment.id
           assert length(fourth_message.sources) == 2
-          assert fourth_message.id == regenerated_message_id
+          assert fourth_message.id == assistant_message.id
         end
       )
     end
 
     test "works if we start from another message", %{
       session: session,
-      initial_message: initial_message,
+      first_assistant_message: first_assistant_message,
       ingestion: ingestion,
       generation_environment: generation_environment
     } do
@@ -339,13 +363,13 @@ defmodule Exmeralda.RegenerationsTest do
         [{Session, 1}, {Message, 2}, {GenerationEnvironment, 0}, {Reaction, 0}, {Source, 2}],
         fn ->
           assert {:ok, %{session_id: duplicated_session_id}} =
-                   Regenerations.regenerate(initial_message.id, generation_environment.id)
+                   Regenerations.regenerate(first_assistant_message.id, generation_environment.id)
 
           wait_for_generation_task()
 
           duplicated_session = Repo.get!(Session, duplicated_session_id)
           assert duplicated_session.original_session_id == session.id
-          assert duplicated_session.copied_from_message_id == initial_message.id
+          assert duplicated_session.copied_from_message_id == first_assistant_message.id
           assert duplicated_session.title == session.title
           assert duplicated_session.ingestion_id == ingestion.id
 
@@ -368,6 +392,7 @@ defmodule Exmeralda.RegenerationsTest do
 
           assert second_message.generation_environment_id == generation_environment.id
           assert length(second_message.sources) == 2
+          assert second_message.regenerated_from_message_id == first_assistant_message.id
         end
       )
     end
@@ -384,16 +409,15 @@ defmodule Exmeralda.RegenerationsTest do
       other_chunk = insert(:chunk, library: library, ingestion: ingestion)
 
       # Messages
-      initial_message =
-        insert(:message,
-          session: session,
-          index: 0,
-          role: :user,
-          content: "Hello",
-          generation_environment: nil
-        )
+      insert(:message,
+        session: session,
+        index: 0,
+        role: :user,
+        content: "Hello",
+        generation_environment: nil
+      )
 
-      assistant_message =
+      first_assistant_message =
         insert(:message,
           session: session,
           index: 1,
@@ -402,28 +426,28 @@ defmodule Exmeralda.RegenerationsTest do
           generation_environment: nil
         )
 
-      insert(:chat_source, chunk: chunk, message: assistant_message)
-      insert(:chat_source, chunk: other_chunk, message: assistant_message)
-
-      message =
-        insert(:message,
-          session: session,
-          index: 2,
-          role: :user,
-          content: "Where's the cookie jar?",
-          generation_environment: other_generation_environment
-        )
+      insert(:chat_source, chunk: chunk, message: first_assistant_message)
+      insert(:chat_source, chunk: other_chunk, message: first_assistant_message)
 
       insert(:message,
         session: session,
-        index: 3,
-        role: :assistant,
-        content: "I ate all of the cookies...",
+        index: 2,
+        role: :user,
+        content: "Where's the cookie jar?",
         generation_environment: other_generation_environment
       )
 
+      second_assistant_message =
+        insert(:message,
+          session: session,
+          index: 3,
+          role: :assistant,
+          content: "I ate all of the cookies...",
+          generation_environment: other_generation_environment
+        )
+
       # Reactions (not copied)
-      insert(:reaction, message: assistant_message)
+      insert(:reaction, message: first_assistant_message)
 
       provider = insert(:provider, type: :mock)
       model_config = insert(:model_config)
@@ -447,11 +471,11 @@ defmodule Exmeralda.RegenerationsTest do
 
       %{
         session: session,
-        message: message,
+        first_assistant_message: first_assistant_message,
+        second_assistant_message: second_assistant_message,
         ingestion: ingestion,
         generation_environment: generation_environment,
         other_generation_environment: other_generation_environment,
-        initial_message: initial_message,
         chunk: chunk,
         other_chunk: other_chunk
       }
@@ -459,7 +483,7 @@ defmodule Exmeralda.RegenerationsTest do
 
     test "still works", %{
       session: session,
-      message: message,
+      second_assistant_message: second_assistant_message,
       ingestion: ingestion,
       generation_environment: generation_environment,
       chunk: chunk,
@@ -470,13 +494,16 @@ defmodule Exmeralda.RegenerationsTest do
         [{Session, 1}, {Message, 4}, {GenerationEnvironment, 0}, {Reaction, 0}, {Source, 4}],
         fn ->
           assert {:ok, %{session_id: duplicated_session_id}} =
-                   Regenerations.regenerate(message.id, generation_environment.id)
+                   Regenerations.regenerate(
+                     second_assistant_message.id,
+                     generation_environment.id
+                   )
 
           wait_for_generation_task()
 
           duplicated_session = Repo.get!(Session, duplicated_session_id)
           assert duplicated_session.original_session_id == session.id
-          assert duplicated_session.copied_from_message_id == message.id
+          assert duplicated_session.copied_from_message_id == second_assistant_message.id
           assert duplicated_session.title == session.title
           assert duplicated_session.ingestion_id == ingestion.id
 
@@ -500,7 +527,7 @@ defmodule Exmeralda.RegenerationsTest do
             other_chunk.id
           ])
 
-          # Copied message 2 -> The message we want to start from has the new generation environment set
+          # Copied message 2 -> The message we want to regenerate an answer from has the new generation environment set
           assert %{
                    index: 2,
                    role: :user,

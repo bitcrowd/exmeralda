@@ -11,18 +11,18 @@ defmodule Exmeralda.Regenerations do
   alias Ecto.Multi
   alias Exmeralda.Chats.{Message, Session, GenerationEnvironment}
 
-  @spec download([Message.id()], GenerationEnvironment.id()) ::
+  @spec regenerate_and_download([Message.id()], GenerationEnvironment.id()) ::
           {:ok, map()}
           | {:error, {:message, Message.id()}, {:not_found, Message}}
           | {:error, {:message, Message.id()}, {:message_not_from_user, String.t()}}
           | {:error, {:message, Message.id()}, {:not_found, GenerationEnvironment}}
           | {:error, {:message, Message.id()}, Ecto.Changeset.t()}
-  def download(message_ids, generation_environment_id) do
-    if Mix.env() != :dev do
-      raise "sorry this only works in dev mode for now"
+  def regenerate_and_download(message_ids, generation_environment_id) do
+    if Mix.env() == :prod do
+      raise "sorry this only works locally for now"
     end
 
-    Logger.info("Initiating the regeneration")
+    Logger.info("🏁 Initiating the regeneration. This can take some time...")
     Process.flag(:trap_exit, true)
 
     {:ok, pid} =
@@ -33,30 +33,46 @@ defmodule Exmeralda.Regenerations do
 
     ref = Process.monitor(pid)
 
-    Logger.info("Regenerating...")
-    result = GenServer.call(pid, :regenerate)
+    state = GenServer.call(pid, :regenerate)
+
+    if state.regenerated_messages == %{} do
+      GenServer.stop(pid, {:shutdown, :nothing_to_regenerate})
+      Logger.info("💥 Nothing to regenerate! Reason:")
+    end
 
     receive do
+      {:DOWN, ^ref, :process, ^pid, {:shutdown, :nothing_to_regenerate}} ->
+        Logger.info("Skipped Messages:")
+        state.skipped_messages
+
       {:DOWN, ^ref, :process, ^pid, :normal} ->
-        Logger.info("Regeneration finished, building JSON file...")
-        do_download(result)
+        Logger.info("✅ Regeneration finished")
+        Logger.info("Skipped Messages:")
+        state.skipped_messages
+        Logger.info("Regenerated Messages:")
+
+        Enum.map(state.regenerated_messages, fn {k, v} ->
+          {k, Map.take(v, [:assistant_message_id])}
+        end)
+
+        # download(Enum.map(state.regenerated_messages, & &1.assistant_message_id))
     end
   end
 
   @path "./regenerations"
-  defp do_download(result) do
+  def download(assistant_message_ids) do
     if !File.exists?(@path), do: File.mkdir!(@path)
 
     File.write!(
       "#{@path}/regeneration_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.json",
-      Jason.encode!(format_regeneration(result))
+      Jason.encode!(format_regeneration(assistant_message_ids))
     )
 
-    Logger.info("✅ Regeneration finished!")
+    Logger.info("✅ Download finished!")
   end
 
-  defp format_regeneration(result) do
-    result
+  defp format_regeneration(assistant_message_ids) do
+    assistant_message_ids
     |> Map.values()
     |> Enum.map(fn %{
                      generation_environment: generation_environment,
@@ -142,7 +158,6 @@ defmodule Exmeralda.Regenerations do
            assistant_message: assistant_message,
            generation_environment: generation_environment
          }}
-        |> dbg()
 
       {:error, _, error, _} ->
         {:error, error}
@@ -198,7 +213,7 @@ defmodule Exmeralda.Regenerations do
         Map.take(message, [:index, :role, :content, :incomplete, :generation_environment_id])
 
       params =
-        if params.index == index do
+        if params.index == index - 1 do
           Map.put(params, :generation_environment_id, generation_environment_id)
         else
           params
