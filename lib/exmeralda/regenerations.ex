@@ -11,16 +11,15 @@ defmodule Exmeralda.Regenerations do
   alias Ecto.Multi
   alias Exmeralda.Chats.{Message, Session, GenerationEnvironment}
 
-  @spec regenerate_and_download([Message.id()], GenerationEnvironment.id()) ::
-          {:ok, map()}
-          | {:error, {:message, Message.id()}, {:not_found, Message}}
-          | {:error, {:message, Message.id()}, {:message_not_from_user, String.t()}}
-          | {:error, {:message, Message.id()}, {:not_found, GenerationEnvironment}}
-          | {:error, {:message, Message.id()}, Ecto.Changeset.t()}
-  def regenerate_and_download(message_ids, generation_environment_id) do
+  @path "./regenerations"
+  @spec regenerate_messages([Message.id()], GenerationEnvironment.id()) :: map()
+  def regenerate_messages(message_ids, generation_environment_id, opts \\ []) do
     if Mix.env() == :prod do
       raise "sorry this only works locally for now"
     end
+
+    download? = Keyword.get(opts, :download, false)
+    download_path = Keyword.get(opts, :download_path, @path)
 
     Logger.info("🏁 Initiating the regeneration. This can take some time...")
     Process.flag(:trap_exit, true)
@@ -32,7 +31,6 @@ defmodule Exmeralda.Regenerations do
       })
 
     ref = Process.monitor(pid)
-
     state = GenServer.call(pid, :regenerate)
 
     if state.regenerated_messages == %{} do
@@ -51,38 +49,57 @@ defmodule Exmeralda.Regenerations do
         state.skipped_messages
         Logger.info("Regenerated Messages:")
 
-        Enum.map(state.regenerated_messages, fn {k, v} ->
-          {k, Map.take(v, [:assistant_message_id])}
-        end)
-
-        # download(Enum.map(state.regenerated_messages, & &1.assistant_message_id))
+        if download? do
+          download(
+            Enum.map(state.regenerated_messages, fn {_k, v} -> v.assistant_message_id end),
+            download_path
+          )
+        else
+          %{
+            regenerated_messages:
+              Enum.map(state.regenerated_messages, fn {k, v} ->
+                {k, Map.take(v, [:assistant_message_id])}
+              end),
+            skipped_messages: state.skipped_messages
+          }
+        end
     end
   end
 
-  @path "./regenerations"
-  def download(assistant_message_ids) do
+  def download(assistant_message_ids, download_path) do
     if !File.exists?(@path), do: File.mkdir!(@path)
+    path = "#{download_path}/regeneration_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.json"
+    File.write!(path, Jason.encode!(format_regeneration(assistant_message_ids)))
 
-    File.write!(
-      "#{@path}/regeneration_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.json",
-      Jason.encode!(format_regeneration(assistant_message_ids))
-    )
-
-    Logger.info("✅ Download finished!")
+    Logger.info("✅ Download finished! Check the file: #{path}")
+    {:ok, path}
   end
 
   defp format_regeneration(assistant_message_ids) do
-    assistant_message_ids
-    |> Map.values()
-    |> Enum.map(fn %{
-                     generation_environment: generation_environment,
-                     assistant_message: assistant_message,
-                     user_message: user_message
-                   } ->
-      assistant_message = Repo.reload(assistant_message)
+    from(m in Message,
+      where: m.id in ^assistant_message_ids,
+      preload: [
+        generation_environment: [
+          :system_prompt,
+          :generation_prompt,
+          model_config_provider: [:model_config, :provider]
+        ]
+      ]
+    )
+    |> Repo.all()
+    |> Enum.map(fn assistant_message ->
+      user_message =
+        Repo.one(
+          from(m in Message,
+            where:
+              m.session_id == ^assistant_message.session_id and
+                m.index == ^assistant_message.index - 1
+          )
+        )
 
       %{
-        generation_environment: format_generation_environment(generation_environment),
+        generation_environment:
+          format_generation_environment(assistant_message.generation_environment),
         generation: %{
           user_query: user_message.content,
           user_message_id: user_message.id,
