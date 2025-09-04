@@ -1,0 +1,188 @@
+defmodule Exmeralda.Topics.Rag.Evaluation do
+  @moduledoc """
+  ⚠️ The generation environment needs to exist. Create it yourself or run the seeds first. ⚠️
+  (with `mix seed`).
+
+  Usage:
+  1. Run the server with an iex console: `iex -S mix phx.server`
+  2. Call with:
+    - `Exmeralda.Topics.Rag.Evaluation.batch_question_generation(<<< INGESTION ID >>>, "1667da4f-249a-4e23-ae13-85a4efa5d1f5", download: true)`
+    - `Exmeralda.Topics.Rag.Evaluation.evaluate(%{chunk_id: <<< CHUNK ID >>>, generation_environment_id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5", question: <<< QUESTION >>>})`
+  """
+  require Logger
+  import Ecto.Query
+  alias Exmeralda.Chats.GenerationEnvironment
+  alias Exmeralda.Repo
+  alias Exmeralda.Chats.LLM
+  alias Exmeralda.Chats
+  alias Exmeralda.Topics.{Chunk, Ingestion}
+
+  @path "./rag_evaluations"
+
+  @doc """
+  Generates a question for all the chunks of a given ingestion, using the provided
+  generation environment.
+
+  # Opts
+  - limit: By default, only 2 chunks are randomly picked from the ingestion. This can be changed
+    by passing the option.
+  - download: By default, only printing the questions in the console. To download the questions
+  as JSON, pass download: true.
+  - download_path: Where to download the JSON, defaults to "./rag_evaluations"
+  """
+  @type batch_opts :: [limit: non_neg_integer(), download: boolean(), download_path: String.t()]
+  @spec batch_question_generation(Ingestion.id(), GenerationEnvironment.id(), batch_opts()) ::
+          [map()] | {:ok, String.t()}
+  def batch_question_generation(ingestion_id, generation_environment_id, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 2)
+    download? = Keyword.get(opts, :download, false)
+    download_path = Keyword.get(opts, :download_path, @path)
+    ingestion = Repo.get!(Ingestion, ingestion_id) |> Repo.preload([:library])
+
+    if ingestion.state != :ready, do: raise("ingestion not ready")
+
+    results =
+      from(c in Chunk,
+        where: c.ingestion_id == ^ingestion_id and not is_nil(c.embedding),
+        # TODO: Well this is random, ideally we don't want to reuse always the same chunks
+        # But since the LLM request is so long, it could make sense to involve Oban in the mix
+        # and save the questions in a DB table.
+        order_by: fragment("RANDOM()"),
+        limit: ^limit
+      )
+      |> Repo.all()
+      |> Enum.with_index()
+      |> Enum.map(fn {chunk, index} ->
+        Logger.info("⌛️ Generating question #{index + 1}/#{limit}")
+
+        case do_question_generation(chunk, generation_environment_id) do
+          {:ok, result} -> result
+          {:error, error} -> raise error
+        end
+      end)
+
+    if download? && Mix.env() != :prod do
+      if !File.exists?(@path), do: File.mkdir!(@path)
+      path = download_path(download_path, ingestion)
+      File.write!(path, Jason.encode!(results))
+      Logger.info("✅ Download finished! Check the file: #{path}")
+      {:ok, path}
+    else
+      results
+    end
+  end
+
+  defp download_path(download_path, ingestion) do
+    "#{download_path}/rag_evaluation_#{ingestion.library.name}_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.json"
+  end
+
+  @rag_evaluation_generation_prompt """
+  You are given a piece of technical documentation.
+
+  Perform three tasks:
+
+  1. **Extract the key assertions**
+  • Read the text carefully.
+  • List every important assertion the docs make (what the feature *is*, how it *works*, guarantees, limits, options, notes, etc.).
+  • Phrase each important assertion as a single, self-contained sentence.
+  • Outline the assertions that only this document makes and that will most likely be unique to this document in a list.
+
+  2. **Invent realistic Stack-Overflow-style questions**
+  • Think of developers encountering issues that this doc resolves.
+  • For **each** imagined user, write a Question:
+  –It should start with a first-person sentence that includes a tiny code snippet or concrete detail (e.g. `Req.get!("…", into: :self)`). the direct question they would post (“Why does …?”, “How can I …?”).
+
+  3. Select the most significant question and output it
+
+  • The question must be answerable solely with the assertions from task 1.
+
+  The documentation is:
+  ======= begin documentation =======
+  %{content}
+  ======= end documentation =======
+
+
+  Do not output the assertions
+  Do output only the question
+  Output only the one selected Question
+  """
+
+  @doc """
+  Generates a question for a given chunk ID and generation environment.
+  By default the question uses the chunk's content. If a `content` option is passed,
+  we use this content string instead of the chunk's content.
+  """
+  @type opts :: [content: String.t()]
+  @spec question_generation(Chunk.id(), GenerationEnvironment.id(), opts()) ::
+          {:ok, map()} | {:error, :chunk_not_embedded} | {:error, any()}
+  def question_generation(
+        chunk_id,
+        generation_environment_id,
+        opts \\ []
+      ) do
+    Chunk
+    |> Repo.get!(chunk_id)
+    |> case do
+      %{embedding: nil} -> {:error, :chunk_not_embedded}
+      chunk -> do_question_generation(chunk, generation_environment_id, opts)
+    end
+  end
+
+  defp do_question_generation(
+         chunk,
+         generation_environment_id,
+         opts \\ []
+       ) do
+    content = Keyword.get(opts, :content, chunk.content)
+
+    case LLM.stream_responses([build_message(content)], generation_environment_id, %{}) do
+      {:ok, %{last_message: last_message}} ->
+        {:ok,
+         %{
+           chunk_id: chunk.id,
+           question: last_message.content,
+           generation_environment_id: generation_environment_id
+         }}
+
+      {:error, _chain, error} ->
+        {:error, error}
+    end
+  end
+
+  defp build_message(content) do
+    %{
+      role: :user,
+      content:
+        String.replace(@rag_evaluation_generation_prompt, "%{content}", content, global: true)
+    }
+  end
+
+  @doc """
+  Evaluates the retrieval for a given chunk, question and generation environment.
+  Ideally, that should be used after generating questions with batch_generating_question.
+  """
+  def evaluate(%{
+        chunk_id: chunk_id,
+        question: question,
+        generation_environment_id: generation_environment_id
+      }) do
+    chunk = Repo.get!(Chunk, chunk_id)
+
+    {chunks, _generation} =
+      %{
+        generation_environment_id: generation_environment_id,
+        content: question
+      }
+      |> Chats.build_generation(chunk.ingestion_id)
+
+    %{
+      first_hit_correct?: first_hit_correct?(chunks, chunk),
+      total_chunks_found: length(chunks),
+      chunk_was_found?: Enum.any?(chunks, &(&1.id == chunk.id)),
+      chunk_rank: Enum.find_index(chunks, &(&1.id == chunk.id)) + 1
+    }
+  end
+
+  defp first_hit_correct?([%{id: id}], %{id: id}), do: true
+  defp first_hit_correct?(_, _), do: false
+end
