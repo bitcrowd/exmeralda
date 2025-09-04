@@ -80,7 +80,7 @@ defmodule Exmeralda.Factory do
 
   def chunk_factory do
     %Exmeralda.Topics.Chunk{
-      library: build(:library),
+      ingestion: build(:ingestion),
       content: "I am a message",
       embedding: Enum.map(1..768, fn _ -> :rand.uniform() end),
       source: "file.ex",
