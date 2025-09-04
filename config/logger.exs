@@ -9,7 +9,7 @@ if config_env() == :dev do
 end
 
 if config_env() == :test do
-  config :logger, level: :info
+  config :logger, level: :warning
 end
 
 if config_env() == :prod do

@@ -1,55 +1,42 @@
 defmodule Exmeralda.RegenerationsTest do
   use Exmeralda.DataCase, async: false
-  require Logger
-  import ExUnit.CaptureLog
   alias Exmeralda.Regenerations
   alias Exmeralda.Chats.{Message, Session, Reaction, GenerationEnvironment, Source}
   alias Exmeralda.Repo
 
-  describe "regenerate_and_download/2 when the message does not exist" do
+  describe "regenerate_messages/2 when the message does not exist" do
     test "returns an error" do
       message_id = uuid()
 
-      {result, log} =
-        with_log(fn -> Regenerations.regenerate_and_download([message_id], uuid()) end)
-
-      assert result == %{message_id => {:not_found, Message}}
-      assert log =~ "💥 Nothing to regenerate! Reason:"
+      assert Regenerations.regenerate_messages([message_id], uuid()) == %{
+               message_id => {:not_found, Message}
+             }
     end
   end
 
-  describe "regenerate_and_download/2 when the generation environment does not exist" do
+  describe "regenerate_messages/2 when the generation environment does not exist" do
     test "returns an error" do
       %{id: message_id} = insert(:message, role: :assistant)
 
-      {result, log} =
-        with_log(fn -> Regenerations.regenerate_and_download([message_id], uuid()) end)
-
-      assert result == %{message_id => {:not_found, GenerationEnvironment}}
-      assert log =~ "💥 Nothing to regenerate! Reason:"
+      assert Regenerations.regenerate_messages([message_id], uuid()) == %{
+               message_id => {:not_found, GenerationEnvironment}
+             }
     end
   end
 
-  describe "regenerate_and_download/2 when the message is from the user" do
+  describe "regenerate_messages/2 when the message is from the user" do
     test "returns an error" do
       %{id: message_id} = insert(:message, role: :user)
       generation_environment = insert(:generation_environment)
 
-      {result, log} =
-        with_log(fn ->
-          Regenerations.regenerate_and_download([message_id], generation_environment.id)
-        end)
-
-      assert result == %{
+      assert Regenerations.regenerate_messages([message_id], generation_environment.id) == %{
                message_id =>
                  {:message_not_from_assistant, "message \"#{message_id}\" has role: :user"}
              }
-
-      assert log =~ "💥 Nothing to regenerate! Reason:"
     end
   end
 
-  describe "regenerate_and_download/2" do
+  describe "regenerate_messages/2" do
     setup do
       library = insert(:library)
       ingestion = insert(:ingestion, library: library)
@@ -129,13 +116,9 @@ defmodule Exmeralda.RegenerationsTest do
       }
     end
 
-    test "regenerates a message, formats as JSON and downloads the file", %{
+    test "regenerates many messages", %{
       first_assistant_message: first_assistant_message,
-      ingestion: ingestion,
-      generation_environment: generation_environment,
-      other_generation_environment: other_generation_environment,
-      chunk: chunk,
-      other_chunk: other_chunk
+      generation_environment: generation_environment
     } do
       first_assistant_message_id = first_assistant_message.id
 
@@ -143,15 +126,122 @@ defmodule Exmeralda.RegenerationsTest do
         Repo,
         [{Session, 1}, {Message, 2}, {GenerationEnvironment, 0}, {Reaction, 0}, {Source, 2}],
         fn ->
-          assert [
-                   {^first_assistant_message_id, %{assistant_message_id: assitant_message_id}}
-                 ] =
-                   Regenerations.regenerate_and_download(
+          assert %{
+                   regenerated_messages: [
+                     {^first_assistant_message_id, %{assistant_message_id: assitant_message_id}}
+                   ],
+                   skipped_messages: %{}
+                 } =
+                   Regenerations.regenerate_messages(
                      [first_assistant_message_id],
                      generation_environment.id
                    )
 
           wait_for_generation_task()
+
+          regenerated_message = Repo.get(Message, assitant_message_id)
+          assert regenerated_message.regenerated_from_message_id == first_assistant_message_id
+          refute regenerated_message.incomplete
+          assert regenerated_message.role == :assistant
+          assert regenerated_message.index == 1
+          assert regenerated_message.generation_environment_id == generation_environment.id
+        end
+      )
+    end
+
+    test "handles missing messages", %{
+      first_assistant_message: first_assistant_message,
+      generation_environment: generation_environment
+    } do
+      first_assistant_message_id = first_assistant_message.id
+      message_id = uuid()
+
+      assert_count_differences(
+        Repo,
+        [{Session, 1}, {Message, 2}, {GenerationEnvironment, 0}, {Reaction, 0}, {Source, 2}],
+        fn ->
+          assert %{
+                   regenerated_messages: [
+                     {^first_assistant_message_id, %{assistant_message_id: assitant_message_id}}
+                   ],
+                   skipped_messages: %{
+                     ^message_id => {:not_found, Message}
+                   }
+                 } =
+                   Regenerations.regenerate_messages(
+                     [first_assistant_message_id, message_id],
+                     generation_environment.id
+                   )
+
+          wait_for_generation_task()
+
+          regenerated_message = Repo.get(Message, assitant_message_id)
+          assert regenerated_message.regenerated_from_message_id == first_assistant_message_id
+          refute regenerated_message.incomplete
+          assert regenerated_message.role == :assistant
+          assert regenerated_message.index == 1
+          assert regenerated_message.generation_environment_id == generation_environment.id
+        end
+      )
+    end
+
+    @tag :tmp_dir
+    test "saves to a json file optionally", %{
+      first_assistant_message: first_assistant_message,
+      generation_environment: generation_environment,
+      tmp_dir: tmp_dir
+    } do
+      first_assistant_message_id = first_assistant_message.id
+
+      assert_count_differences(
+        Repo,
+        [{Session, 1}, {Message, 2}, {GenerationEnvironment, 0}, {Reaction, 0}, {Source, 2}],
+        fn ->
+          assert {:ok, filepath} =
+                   Regenerations.regenerate_messages(
+                     [first_assistant_message_id],
+                     generation_environment.id,
+                     download: true,
+                     download_path: tmp_dir
+                   )
+
+          assert String.ends_with?(filepath, ".json")
+          wait_for_generation_task()
+          result = File.read!(filepath) |> Jason.decode!()
+
+          assert result == [
+                   %{
+                     "generation" => %{
+                       "assistant_response" => "This is a streaming response!",
+                       "chunks" => [
+                         %{
+                           "content" => "I am a message",
+                           "id" => "e4340aba-a4ab-4d1b-833d-2ce6b0ed8383",
+                           "source" => "file.ex"
+                         },
+                         %{
+                           "content" => "I am a message",
+                           "id" => "72a5f814-6b8d-4e9c-a685-fbc088eb80e5",
+                           "source" => "file.ex"
+                         }
+                       ],
+                       "full_user_prompt" => "Hello",
+                       "user_message_id" => "d780cb30-ab21-4a08-ad9a-1164494752e0",
+                       "user_query" => "Hello"
+                     },
+                     "generation_environment" => %{
+                       "embedding_model" => "TODO",
+                       "id" => "38920162-d2ed-439d-b35a-0a37f5640ac9",
+                       "model_name" => "fake-model",
+                       "model_provider" => "mock",
+                       "model_provider_config" => %{"model" => "Fake/Fake-model"},
+                       "prompt_template" =>
+                         "Context information is below.\n---------------------\n%{context}\n---------------------\nGiven the context information and no prior knowledge, answer the query.\nQuery: %{query}\nAnswer:\n",
+                       "system_prompt" =>
+                         "You are an expert in Elixir programming with in-depth knowledge of Elixir."
+                     }
+                   }
+                 ]
         end
       )
     end
