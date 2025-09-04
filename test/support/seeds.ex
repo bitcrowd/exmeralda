@@ -27,6 +27,13 @@ defmodule Exmeralda.Seeds do
   Answer:
   """
 
+  @rag_evaluation_system_prompt """
+  You are an experienced Elixir library author. For the FAQ of your library, you need questions
+  users could have. For each piece of markdown, come up with a question that is answered by
+  the piece of markdown.
+
+  """
+
   def run do
     if Mix.env() == :dev do
       _system_prompt =
@@ -35,10 +42,16 @@ defmodule Exmeralda.Seeds do
           prompt: @default_system_prompt
         })
 
-      _generation_prompt =
+      generation_prompt =
         insert_idempotently(%Exmeralda.Topics.GenerationPrompt{
           id: "3ef5b20b-bb71-467d-8364-898df9926a95",
           prompt: @default_generation_prompt
+        })
+
+      rag_evaluation_system_prompt =
+        insert_idempotently(%Exmeralda.LLM.SystemPrompt{
+          id: "3c792450-d57c-449b-a996-54101c41aede",
+          prompt: @rag_evaluation_system_prompt
         })
 
       mock_provider =
@@ -100,12 +113,35 @@ defmodule Exmeralda.Seeds do
           config: %{stream: true}
         })
 
+      gpt_oss_model_config =
+        insert_idempotently(%Exmeralda.LLM.ModelConfig{
+          id: "eff70662-1576-491d-a1ef-1d025772e637",
+          name: "gpt-oss:latest",
+          config: %{stream: true, json: true}
+        })
+
       insert_idempotently(%Exmeralda.LLM.ModelConfigProvider{
         id: "073a0faf-024b-4144-b0f0-e1f906968d08",
         model_config_id: qwen_25_32b_model_config.id,
         provider_id: together_provider.id,
         name: "Qwen/Qwen2.5-Coder-32B-Instruct"
       })
+
+      rag_evaluation_model_config_provider =
+        insert_idempotently(%Exmeralda.LLM.ModelConfigProvider{
+          id: "a66ddb78-cfab-4d6f-9f3e-f388da822ed1",
+          model_config_id: gpt_oss_model_config.id,
+          provider_id: ollama_provider.id,
+          name: "gpt-oss:latest"
+        })
+
+      _rag_evaluation_model_config =
+        insert_idempotently(%Exmeralda.Chats.GenerationEnvironment{
+          id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5",
+          system_prompt_id: rag_evaluation_system_prompt.id,
+          generation_prompt_id: generation_prompt.id,
+          model_config_provider_id: rag_evaluation_model_config_provider.id
+        })
     end
   end
 
