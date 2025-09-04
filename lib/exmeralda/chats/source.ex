@@ -8,4 +8,10 @@ defmodule Exmeralda.Chats.Source do
     belongs_to :chunk, Chunk
     belongs_to :message, Message
   end
+
+  def duplicate_changeset(struct, attrs) do
+    struct
+    |> cast(attrs, [:chunk_id])
+    |> validate_required([:chunk_id])
+  end
 end
