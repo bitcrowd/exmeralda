@@ -224,7 +224,7 @@ defmodule Exmeralda.Chats do
     |> Repo.all()
   end
 
-  defp build_generation(message, ingestion_id) do
+  def build_generation(message, ingestion_id) do
     scope = from c in Chunk, where: c.ingestion_id == ^ingestion_id
 
     Rag.build_generation(scope, message, ref: message)
