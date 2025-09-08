@@ -143,9 +143,27 @@ defmodule Exmeralda.Topics.Rag do
   end
 
   defp embedding_provider do
-    case Application.fetch_env!(:exmeralda, :embedding) do
-      embedding when is_struct(embedding) -> embedding
-      mod when is_atom(mod) -> mod.new(%{})
+    embedding = Application.fetch_env!(:exmeralda, :embedding_config)
+    attrs = embedding.config
+    |> Map.put(:embeddings_model, embedding.model)
+    |> maybe_add_api_key(embedding)
+
+    embedding_mod(embedding).new(attrs)
+  end
+
+  defp embedding_mod(%{type: type}) do
+    case type do
+      :mock -> Exmeralda.Rag.Fake
+      :ollama -> Exmeralda.Rag.Ollama
+      :openai -> Rag.Ai.OpenAI
     end
   end
+
+  defp maybe_add_api_key(params, %{type: :openai, provider: provider}) do
+    api_keys = Application.fetch_env!(:exmeralda, :embedding_api_keys)
+
+    Map.put(params, :api_key, Map.get(api_keys, provider))
+  end
+
+  defp maybe_add_api_key(params, _type), do: params
 end

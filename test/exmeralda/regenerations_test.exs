@@ -232,7 +232,9 @@ defmodule Exmeralda.RegenerationsTest do
                        "user_query" => "Hello buttercup!"
                      },
                      "generation_environment" => %{
-                       "embedding_model" => "TODO",
+                       "embedding_model" => "fake",
+                       "embedding_provider" => "mock",
+                       "embedding_provider_config" => %{},
                        "model_name" => "fake-model",
                        "model_provider" => "mock",
                        "model_provider_config" => %{"model" => "Fake/Fake-model"},

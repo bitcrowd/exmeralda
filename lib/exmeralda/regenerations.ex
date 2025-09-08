@@ -117,6 +117,8 @@ defmodule Exmeralda.Regenerations do
          %{model_config_provider: %{model_config: model_config, provider: provider}} =
            generation_environment
        ) do
+    embedding = Application.fetch_env!(:exmeralda, :embedding_config)
+
     %{
       model_name: model_config.name,
       model_provider: provider.type,
@@ -128,7 +130,9 @@ defmodule Exmeralda.Regenerations do
         |> Map.merge(provider.config),
       system_prompt: generation_environment.system_prompt.prompt,
       prompt_template: generation_environment.generation_prompt.prompt,
-      embedding_model: "TODO",
+      embedding_model: embedding.model,
+      embedding_provider: embedding.provider,
+      embedding_provider_config: embedding.config,
       id: generation_environment.id
     }
   end
