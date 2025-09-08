@@ -81,7 +81,7 @@ To regenerate a set of assistant messages for a different generation environment
 
 1. Create the generation environment in the console - or get its ID if it already exists
 2. Get the message IDs (with role: :assistant) that you want to regenerate
-3. Start an iex console and run: `Exmeralda.Regenerations.download([<<< MESSAGE IDs >>>], <<< GENERATION_ENVIRONMENT ID >>>)`.
+3. Start an iex console and run: `Exmeralda.Regenerations.regenerate_messages([<<< MESSAGE IDs >>>], <<< GENERATION_ENVIRONMENT ID >>>)`.
 
 Running this function will create a copy of the original chat session and all previous messages for each message, as well as their sources. The results will be downloaded in a JSON file locally.
 
