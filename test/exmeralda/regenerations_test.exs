@@ -47,13 +47,14 @@ defmodule Exmeralda.RegenerationsTest do
       other_chunk = insert(:chunk, library: library, ingestion: ingestion)
 
       # Messages
-      insert(:message,
-        session: session,
-        index: 0,
-        role: :user,
-        content: "Hello",
-        generation_environment: other_generation_environment
-      )
+      initial_message =
+        insert(:message,
+          session: session,
+          index: 0,
+          role: :user,
+          content: "Hello buttercup!",
+          generation_environment: other_generation_environment
+        )
 
       first_assistant_message =
         insert(:message,
@@ -111,6 +112,7 @@ defmodule Exmeralda.RegenerationsTest do
         ingestion: ingestion,
         generation_environment: generation_environment,
         other_generation_environment: other_generation_environment,
+        initial_message: initial_message,
         chunk: chunk,
         other_chunk: other_chunk
       }
@@ -188,6 +190,7 @@ defmodule Exmeralda.RegenerationsTest do
     @tag :tmp_dir
     test "saves to a json file optionally", %{
       first_assistant_message: first_assistant_message,
+      initial_message: initial_message,
       generation_environment: generation_environment,
       tmp_dir: tmp_dir
     } do
@@ -209,29 +212,27 @@ defmodule Exmeralda.RegenerationsTest do
           wait_for_generation_task()
           result = File.read!(filepath) |> Jason.decode!()
 
-          assert result == [
+          assert [
                    %{
                      "generation" => %{
                        "assistant_response" => "This is a streaming response!",
                        "chunks" => [
                          %{
                            "content" => "I am a message",
-                           "id" => "e4340aba-a4ab-4d1b-833d-2ce6b0ed8383",
                            "source" => "file.ex"
                          },
                          %{
                            "content" => "I am a message",
-                           "id" => "72a5f814-6b8d-4e9c-a685-fbc088eb80e5",
                            "source" => "file.ex"
                          }
                        ],
-                       "full_user_prompt" => "Hello",
-                       "user_message_id" => "d780cb30-ab21-4a08-ad9a-1164494752e0",
-                       "user_query" => "Hello"
+                       "full_user_prompt" => "TODO",
+                       "user_message_id" => user_message_id,
+                       "assistant_message_id" => assistant_message_id,
+                       "user_query" => "Hello buttercup!"
                      },
                      "generation_environment" => %{
                        "embedding_model" => "TODO",
-                       "id" => "38920162-d2ed-439d-b35a-0a37f5640ac9",
                        "model_name" => "fake-model",
                        "model_provider" => "mock",
                        "model_provider_config" => %{"model" => "Fake/Fake-model"},
@@ -241,7 +242,21 @@ defmodule Exmeralda.RegenerationsTest do
                          "You are an expert in Elixir programming with in-depth knowledge of Elixir."
                      }
                    }
-                 ]
+                 ] = result
+
+          # Duplicated initial user message
+          user_message = Repo.get(Message, user_message_id)
+          assert user_message.index == 0
+          assert user_message.content == "Hello buttercup!"
+          assert user_message.generation_environment_id == generation_environment.id
+          refute initial_message.id == user_message.id
+
+          duplicated_session =
+            Repo.get(Session, user_message.session_id) |> Repo.preload([:messages])
+
+          # Regenerated assistant message
+          [_, assistant_message] = duplicated_session.messages
+          assert assistant_message.id == assistant_message_id
         end
       )
     end

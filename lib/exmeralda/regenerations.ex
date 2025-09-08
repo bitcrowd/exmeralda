@@ -19,7 +19,6 @@ defmodule Exmeralda.Regenerations do
     end
 
     download? = Keyword.get(opts, :download, false)
-    download_path = Keyword.get(opts, :download_path, @path)
 
     Logger.info("🏁 Initiating the regeneration. This can take some time...")
     Process.flag(:trap_exit, true)
@@ -52,7 +51,7 @@ defmodule Exmeralda.Regenerations do
         if download? do
           download(
             Enum.map(state.regenerated_messages, fn {_k, v} -> v.assistant_message_id end),
-            download_path
+            opts
           )
         else
           %{
@@ -66,8 +65,10 @@ defmodule Exmeralda.Regenerations do
     end
   end
 
-  def download(assistant_message_ids, download_path) do
-    if !File.exists?(@path), do: File.mkdir!(@path)
+  def download(assistant_message_ids, opts) do
+    download_path = Keyword.get(opts, :download_path, @path)
+
+    if !File.exists?(download_path), do: File.mkdir!(download_path)
     path = "#{download_path}/regeneration_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.json"
     File.write!(path, Jason.encode!(format_regeneration(assistant_message_ids)))
 
@@ -77,7 +78,7 @@ defmodule Exmeralda.Regenerations do
 
   defp format_regeneration(assistant_message_ids) do
     from(m in Message,
-      where: m.id in ^assistant_message_ids,
+      where: m.id in ^assistant_message_ids and not is_nil(m.regenerated_from_message_id),
       preload: [
         generation_environment: [
           :system_prompt,
@@ -104,8 +105,9 @@ defmodule Exmeralda.Regenerations do
           user_query: user_message.content,
           user_message_id: user_message.id,
           chunks: format_chunks(assistant_message),
-          full_user_prompt: user_message.content,
-          assistant_response: assistant_message.content
+          full_user_prompt: "TODO",
+          assistant_response: assistant_message.content,
+          assistant_message_id: assistant_message.id
         }
       }
     end)
