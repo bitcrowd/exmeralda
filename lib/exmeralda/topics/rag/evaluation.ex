@@ -28,6 +28,10 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
           download: boolean(),
           download_dir: filepath()
         ]
+  @type batch_evaluation_opts :: [
+          download: boolean(),
+          download_dir: filepath()
+        ]
   @type question_opts :: [content: String.t()]
   @type evaluation :: %{
           question: question(),
@@ -228,7 +232,8 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   defp first_hit_correct?(_, _), do: false
 
   @spec batch_evaluation(String.t()) :: [evaluation()]
-  @spec batch_evaluation(String.t(), keyword()) :: [evaluation()] | {:ok, filepath()}
+  @spec batch_evaluation(String.t(), batch_evaluation_opts()) ::
+          [evaluation()] | {:ok, filepath()}
   def batch_evaluation(json_file_path, opts \\ []) do
     download? = Keyword.get(opts, :download, false)
     download_dir = Keyword.get(opts, :download_dir, @download_dir)
