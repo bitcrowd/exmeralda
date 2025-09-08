@@ -268,6 +268,8 @@ defmodule Exmeralda.ChatsTest do
           [message, assistant_message] = session.messages
           assert assistant_message.generation_environment_id == generation_environment.id
           assert message.generation_environment_id == generation_environment.id
+          refute message.regenerated_from_message_id
+          refute assistant_message.regenerated_from_message_id
 
           wait_for_generation_task()
         end
@@ -369,6 +371,7 @@ defmodule Exmeralda.ChatsTest do
           assert message.content == "What's the recipe for cookies?"
           refute message.incomplete
           assert message.generation_environment_id == generation_environment.id
+          refute message.regenerated_from_message_id
 
           assert assistant_message.index == 3
           assert assistant_message.role == :assistant
@@ -376,6 +379,7 @@ defmodule Exmeralda.ChatsTest do
           assert assistant_message.incomplete
           assert assistant_message.sources == []
           assert assistant_message.generation_environment_id == generation_environment.id
+          refute assistant_message.regenerated_from_message_id
 
           wait_for_generation_task()
 
