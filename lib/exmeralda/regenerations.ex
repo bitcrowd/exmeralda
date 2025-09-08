@@ -98,14 +98,23 @@ defmodule Exmeralda.Regenerations do
           )
         )
 
+      chunks = format_chunks(assistant_message)
+      generation_environment = assistant_message.generation_environment
+
+      {full_user_prompt, _} =
+        Exmeralda.Topics.Rag.full_prompt(
+          generation_environment.generation_prompt,
+          user_message.content,
+          chunks
+        )
+
       %{
-        generation_environment:
-          format_generation_environment(assistant_message.generation_environment),
+        generation_environment: format_generation_environment(generation_environment),
         generation: %{
           user_query: user_message.content,
           user_message_id: user_message.id,
-          chunks: format_chunks(assistant_message),
-          full_user_prompt: "TODO",
+          chunks: chunks,
+          full_user_prompt: full_user_prompt,
           assistant_response: assistant_message.content,
           assistant_message_id: assistant_message.id
         }

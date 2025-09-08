@@ -226,7 +226,8 @@ defmodule Exmeralda.RegenerationsTest do
                            "source" => "file.ex"
                          }
                        ],
-                       "full_user_prompt" => "TODO",
+                       "full_user_prompt" =>
+                         "Context information is below.\n---------------------\nI am a message\n\nI am a message\n---------------------\nGiven the context information and no prior knowledge, answer the query.\nQuery: Hello buttercup!\nAnswer:\n",
                        "user_message_id" => user_message_id,
                        "assistant_message_id" => assistant_message_id,
                        "user_query" => "Hello buttercup!"
