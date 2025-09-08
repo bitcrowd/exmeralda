@@ -38,7 +38,7 @@ defmodule Exmeralda.RegenerationsTest do
 
   describe "regenerate_messages/2" do
     setup do
-      library = insert(:library)
+      library = insert(:library, name: "ecto", version: "0.1.0")
       ingestion = insert(:ingestion, library: library)
       user = insert(:user)
       other_generation_environment = insert(:generation_environment)
@@ -164,7 +164,7 @@ defmodule Exmeralda.RegenerationsTest do
         fn ->
           assert %{
                    regenerated_messages: [
-                     {^first_assistant_message_id, %{assistant_message_id: assitant_message_id}}
+                     {^first_assistant_message_id, %{assistant_message_id: assistant_message_id}}
                    ],
                    skipped_messages: %{
                      ^message_id => {:not_found, Message}
@@ -177,7 +177,7 @@ defmodule Exmeralda.RegenerationsTest do
 
           wait_for_generation_task()
 
-          regenerated_message = Repo.get(Message, assitant_message_id)
+          regenerated_message = Repo.get(Message, assistant_message_id)
           assert regenerated_message.regenerated_from_message_id == first_assistant_message_id
           refute regenerated_message.incomplete
           assert regenerated_message.role == :assistant
@@ -214,6 +214,10 @@ defmodule Exmeralda.RegenerationsTest do
 
           assert [
                    %{
+                     "ingestion" => %{
+                       "library_name" => "ecto",
+                       "library_version" => "0.1.0"
+                     },
                      "generation" => %{
                        "assistant_response" => "This is a streaming response!",
                        "chunks" => [
@@ -267,7 +271,7 @@ defmodule Exmeralda.RegenerationsTest do
 
   describe "download/2" do
     setup do
-      library = insert(:library)
+      library = insert(:library, name: "ecto", version: "0.1.0")
       ingestion = insert(:ingestion, library: library)
       user = insert(:user)
       session = insert(:chat_session, user: user, ingestion: ingestion)
@@ -332,6 +336,10 @@ defmodule Exmeralda.RegenerationsTest do
 
           assert [
                    %{
+                     "ingestion" => %{
+                       "library_name" => "ecto",
+                       "library_version" => "0.1.0"
+                     },
                      "generation" => %{
                        "assistant_response" => "I ate all of the cookies...",
                        "chunks" => [

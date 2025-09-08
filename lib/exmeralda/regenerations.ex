@@ -46,23 +46,25 @@ defmodule Exmeralda.Regenerations do
 
       {:DOWN, ^ref, :process, ^pid, :normal} ->
         Logger.info("✅ Regeneration finished")
-        Logger.info("Skipped Messages:")
-        state.skipped_messages
-        Logger.info("Regenerated Messages:")
+
+        result = %{
+          regenerated_messages:
+            Enum.map(state.regenerated_messages, fn {k, v} ->
+              {k, Map.take(v, [:assistant_message_id])}
+            end),
+          skipped_messages: state.skipped_messages
+        }
 
         if download? do
+          Logger.info("🎁 Results: #{inspect(result)}")
+
           download(
             Enum.map(state.regenerated_messages, fn {_k, v} -> v.assistant_message_id end),
             opts
           )
         else
-          %{
-            regenerated_messages:
-              Enum.map(state.regenerated_messages, fn {k, v} ->
-                {k, Map.take(v, [:assistant_message_id])}
-              end),
-            skipped_messages: state.skipped_messages
-          }
+          Logger.info("🎁 Results:")
+          result
         end
     end
   end
@@ -86,6 +88,7 @@ defmodule Exmeralda.Regenerations do
     from(m in Message,
       where: m.id in ^assistant_message_ids and not is_nil(m.regenerated_from_message_id),
       preload: [
+        session: [ingestion: [:library]],
         generation_environment: [
           :system_prompt,
           :generation_prompt,
@@ -106,6 +109,7 @@ defmodule Exmeralda.Regenerations do
 
       chunks = format_chunks(assistant_message)
       generation_environment = assistant_message.generation_environment
+      ingestion = assistant_message.session.ingestion
 
       {full_user_prompt, _} =
         Exmeralda.Topics.Rag.full_prompt(
@@ -116,6 +120,11 @@ defmodule Exmeralda.Regenerations do
 
       %{
         generation_environment: format_generation_environment(generation_environment),
+        ingestion: %{
+          id: ingestion.id,
+          library_name: ingestion.library.name,
+          library_version: ingestion.library.version
+        },
         generation: %{
           user_query: user_message.content,
           user_message_id: user_message.id,
