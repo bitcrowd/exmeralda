@@ -265,6 +265,106 @@ defmodule Exmeralda.RegenerationsTest do
     end
   end
 
+  describe "download/2" do
+    setup do
+      library = insert(:library)
+      ingestion = insert(:ingestion, library: library)
+      user = insert(:user)
+      session = insert(:chat_session, user: user, ingestion: ingestion)
+      chunk = insert(:chunk, library: library, ingestion: ingestion)
+      other_generation_environment = insert(:generation_environment)
+      generation_environment = insert(:generation_environment)
+
+      # Messages
+      first_assistant_message =
+        insert(:message,
+          session: session,
+          index: 1,
+          role: :assistant,
+          content: "Howdie!",
+          generation_environment: other_generation_environment
+        )
+
+      duplicated_session = insert(:chat_session, user: nil, ingestion: ingestion)
+
+      duplicated_message =
+        insert(:message,
+          session: duplicated_session,
+          index: 0,
+          role: :user,
+          content: "Hello buttercup!",
+          generation_environment: generation_environment
+        )
+
+      regenerated_assistant_message =
+        insert(:message,
+          session: duplicated_session,
+          index: 1,
+          role: :assistant,
+          content: "I ate all of the cookies...",
+          generation_environment: generation_environment,
+          regenerated_from_message_id: first_assistant_message.id
+        )
+
+      insert(:chat_source, chunk: chunk, message: regenerated_assistant_message)
+
+      %{
+        regenerated_assistant_message: regenerated_assistant_message,
+        duplicated_message: duplicated_message
+      }
+    end
+
+    @tag :tmp_dir
+    test "downloads a JSON", %{
+      regenerated_assistant_message: %{id: assistant_message_id},
+      duplicated_message: %{id: user_message_id},
+      tmp_dir: tmp_dir
+    } do
+      assert_count_differences(
+        Repo,
+        [{Session, 0}, {Message, 0}, {GenerationEnvironment, 0}, {Reaction, 0}, {Source, 0}],
+        fn ->
+          assert {:ok, filepath} =
+                   Regenerations.download([assistant_message_id], download_path: tmp_dir)
+
+          assert String.ends_with?(filepath, ".json")
+          result = File.read!(filepath) |> Jason.decode!()
+
+          assert [
+                   %{
+                     "generation" => %{
+                       "assistant_response" => "I ate all of the cookies...",
+                       "chunks" => [
+                         %{
+                           "content" => "I am a message",
+                           "source" => "file.ex"
+                         }
+                       ],
+                       "full_user_prompt" =>
+                         "Context information is below.\n---------------------\nI am a message\n---------------------\nGiven the context information and no prior knowledge, answer the query.\nQuery: Hello buttercup!\nAnswer:\n",
+                       "user_message_id" => ^user_message_id,
+                       "assistant_message_id" => ^assistant_message_id,
+                       "user_query" => "Hello buttercup!"
+                     },
+                     "generation_environment" => %{
+                       "embedding_model" => "fake",
+                       "embedding_provider" => "mock",
+                       "embedding_provider_config" => %{},
+                       "model_name" => "fake-model",
+                       "model_provider" => "mock",
+                       "model_provider_config" => %{"model" => "Fake/Fake-model"},
+                       "prompt_template" =>
+                         "Context information is below.\n---------------------\n%{context}\n---------------------\nGiven the context information and no prior knowledge, answer the query.\nQuery: %{query}\nAnswer:\n",
+                       "system_prompt" =>
+                         "You are an expert in Elixir programming with in-depth knowledge of Elixir."
+                     }
+                   }
+                 ] = result
+        end
+      )
+    end
+  end
+
   describe "regenerate/2 when the message does not exist" do
     test "returns an error" do
       assert Regenerations.regenerate(uuid(), uuid()) == {:error, {:not_found, Message}}

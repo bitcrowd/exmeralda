@@ -11,8 +11,10 @@ defmodule Exmeralda.Regenerations do
   alias Ecto.Multi
   alias Exmeralda.Chats.{Message, Session, GenerationEnvironment}
 
-  @path "./regenerations"
+  @type regenerate_opts :: [download: boolean(), download_path: String.t()]
   @spec regenerate_messages([Message.id()], GenerationEnvironment.id()) :: map()
+  @spec regenerate_messages([Message.id()], GenerationEnvironment.id(), regenerate_opts()) ::
+          map()
   def regenerate_messages(message_ids, generation_environment_id, opts \\ []) do
     if Mix.env() == :prod do
       raise "sorry this only works locally for now"
@@ -65,8 +67,12 @@ defmodule Exmeralda.Regenerations do
     end
   end
 
-  def download(assistant_message_ids, opts) do
-    download_path = Keyword.get(opts, :download_path, @path)
+  @default_download_path "./regenerations"
+  @type download_opts :: [download_path: String.t()]
+  @spec download([Message.id()]) :: {:ok, String.t()}
+  @spec download([Message.id()], download_opts()) :: {:ok, String.t()}
+  def download(assistant_message_ids, opts \\ []) do
+    download_path = Keyword.get(opts, :download_path, @default_download_path)
 
     if !File.exists?(download_path), do: File.mkdir!(download_path)
     path = "#{download_path}/regeneration_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.json"
