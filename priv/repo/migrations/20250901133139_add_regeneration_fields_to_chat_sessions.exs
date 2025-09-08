@@ -13,7 +13,7 @@ defmodule Exmeralda.Repo.Migrations.AddRegenerationFieldsToChatSessions do
     create(
       constraint(
         :chat_sessions,
-        :used_id_null_when_regeneration_fields,
+        :user_id_null_when_regeneration_fields,
         check:
           "NOT (original_session_id IS NOT NULL AND copied_from_message_id IS NOT NULL AND user_id IS NOT NULL)"
       )
