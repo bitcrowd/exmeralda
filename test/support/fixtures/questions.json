@@ -1,0 +1,12 @@
+[
+    {
+        "question": "I’ve added a support notice to my README: `# support: available for a fee`. Can I offer a warranty or indemnity to customers under Apache 2.0, and what responsibilities do I need to assume to stay compliant?",
+        "generation_environment_id": "1667da4f-249a-4e23-ae13-85a4efa5d1f5",
+        "chunk_id": "79c9dff1-322c-4ddc-94b5-be49c76931f2"
+    },
+    {
+        "question": "I need to get Carbonite’s default audit trail prefix in my Phoenix app. I’ve called  \n`Carbonite.default_prefix()` but I’m not sure what it actually returns. How can I retrieve the default audit trail prefix?",
+        "generation_environment_id": "1667da4f-249a-4e23-ae13-85a4efa5d1f5",
+        "chunk_id": "143b7836-d7a0-46df-8398-3d36894d8b58"
+    }
+]
