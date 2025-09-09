@@ -147,7 +147,7 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
       assert {:ok, filepath} =
                Evaluation.batch_question_generation(ingestion.id, generation_environment.id,
                  download: true,
-                 download_path: tmp_dir
+                 download_dir: tmp_dir
                )
 
       assert String.ends_with?(filepath, ".json")
@@ -189,11 +189,75 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
                generation_environment_id: generation_environment.id,
                question: "Where is the cookie jar?"
              }) == %{
+               ingestion_id: ingestion.id,
+               question: %{
+                 question: "Where is the cookie jar?",
+                 chunk_id: chunk.id,
+                 generation_environment_id: generation_environment.id
+               },
                first_hit_correct?: true,
+               first_hit_id: chunk.id,
                total_chunks_found: 1,
                chunk_was_found?: true,
                chunk_rank: 1
              }
+    end
+  end
+
+  @fixture_file File.cwd!() |> Path.join("test/support/fixtures/questions.json")
+  describe "batch_evaluation/1,2" do
+    setup do
+      ingestion = insert(:ingestion, state: :ready, id: "db4e4dc9-43c5-44be-9521-58a8785071ab")
+      insert(:chunk, ingestion: ingestion, id: "79c9dff1-322c-4ddc-94b5-be49c76931f2")
+      insert(:chunk, ingestion: ingestion, id: "143b7836-d7a0-46df-8398-3d36894d8b58")
+      insert(:generation_environment, id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5")
+
+      :ok
+    end
+
+    test "runs the evaluation for the questions in a json" do
+      assert [
+               %{
+                 question: %{
+                   question:
+                     "I’ve added a support notice to my README: `# support: available for a fee`. Can I offer a warranty or indemnity to customers under Apache 2.0, and what responsibilities do I need to assume to stay compliant?",
+                   chunk_id: "79c9dff1-322c-4ddc-94b5-be49c76931f2",
+                   generation_environment_id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5"
+                 },
+                 ingestion_id: "db4e4dc9-43c5-44be-9521-58a8785071ab",
+                 first_hit_correct?: _,
+                 first_hit_id: _,
+                 total_chunks_found: 2,
+                 chunk_was_found?: true,
+                 chunk_rank: _
+               },
+               %{
+                 question: %{
+                   question:
+                     "I need to get Carbonite’s default audit trail prefix in my Phoenix app. I’ve called  \n`Carbonite.default_prefix()` but I’m not sure what it actually returns. How can I retrieve the default audit trail prefix?",
+                   chunk_id: "143b7836-d7a0-46df-8398-3d36894d8b58",
+                   generation_environment_id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5"
+                 },
+                 ingestion_id: "db4e4dc9-43c5-44be-9521-58a8785071ab",
+                 first_hit_correct?: _,
+                 first_hit_id: _,
+                 total_chunks_found: 2,
+                 chunk_was_found?: true,
+                 chunk_rank: _
+               }
+             ] = Evaluation.batch_evaluation(@fixture_file)
+    end
+
+    @tag :tmp_dir
+    test "accepts a download optional parameter", %{tmp_dir: tmp_dir} do
+      assert {:ok, filepath} =
+               Evaluation.batch_evaluation(@fixture_file, download: true, download_dir: tmp_dir)
+
+      assert String.ends_with?(filepath, ".csv")
+      result = File.read!(filepath)
+
+      assert result =~
+               "ingestion_id,generation_environment_id,chunk_id,question,first_hit_correct?,first_hit_id,total_chunks_found,chunk_was_found?,chunk_rank"
     end
   end
 end

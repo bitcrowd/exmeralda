@@ -3,11 +3,33 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   ⚠️ The generation environment needs to exist. Create it yourself or run the seeds first. ⚠️
   (with `mix seed`).
 
-  Usage:
+  ### Usage
+
   1. Run the server with an iex console: `iex -S mix phx.server`
-  2. Call with:
-    - `Exmeralda.Topics.Rag.Evaluation.batch_question_generation(<<< INGESTION ID >>>, "1667da4f-249a-4e23-ae13-85a4efa5d1f5", download: true)`
-    - `Exmeralda.Topics.Rag.Evaluation.evaluate(%{chunk_id: <<< CHUNK ID >>>, generation_environment_id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5", question: <<< QUESTION >>>})`
+  2. Call with
+  ```
+    Exmeralda.Topics.Rag.Evaluation.batch_question_generation(
+      <<< INGESTION ID >>>,
+      <<< GENERATION ENVIRONMENT ID >>>,
+      download: true
+    )
+  ```
+  That will save a json file in the default @download_dir.
+  3. To run the evaluation:
+
+  ```
+    Exmeralda.Topics.Rag.Evaluation.batch_evaluation(
+      <<< PATH TO QUESTION JSON FILE >>>,
+      download: true
+    )
+  ```
+  That will save a csv file with the results of the evaluation in the default @download_dir
+
+
+  ### Individual usage
+
+  - You can use `question_generation/2,3` to generate a *single* question for a given chunk
+  - You can use `evaluate/1` to run the evaluation for a *single* question
   """
   require Logger
   import Ecto.Query
@@ -17,10 +39,36 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   alias Exmeralda.Chats
   alias Exmeralda.Topics.{Chunk, Ingestion}
 
-  @path "./rag_evaluations"
+  @type question :: %{
+          chunk_id: Chunk.id(),
+          generation_environment_id: GenerationEnvironment.id(),
+          question: String.t()
+        }
+  @type filepath :: String.t()
+  @type batch_questions_opts :: [
+          limit: non_neg_integer(),
+          download: boolean(),
+          download_dir: filepath()
+        ]
+  @type batch_evaluation_opts :: [
+          download: boolean(),
+          download_dir: filepath()
+        ]
+  @type question_opts :: [content: String.t()]
+  @type evaluation :: %{
+          question: question(),
+          ingestion_id: Ingestion.id(),
+          first_hit_correct?: boolean(),
+          first_hit_id: Chunk.id(),
+          total_chunks_found: pos_integer(),
+          chunk_was_found?: boolean(),
+          chunk_rank: pos_integer() | nil
+        }
+
+  @download_dir "./rag_evaluations"
 
   @doc """
-  Generates a question for all the chunks of a given ingestion, using the provided
+  Generates a question for chunks of a given ingestion, using the provided
   generation environment.
 
   # Opts
@@ -30,14 +78,18 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   as JSON, pass download: true.
   - download_path: Where to download the JSON, defaults to "./rag_evaluations"
   """
-  @type batch_opts :: [limit: non_neg_integer(), download: boolean(), download_path: String.t()]
-  @spec batch_question_generation(Ingestion.id(), GenerationEnvironment.id(), batch_opts()) ::
-          [map()] | {:ok, String.t()}
+  @spec batch_question_generation(Ingestion.id(), GenerationEnvironment.id()) :: [question()]
+  @spec batch_question_generation(
+          Ingestion.id(),
+          GenerationEnvironment.id(),
+          batch_questions_opts()
+        ) ::
+          [question()] | {:ok, filepath()}
   def batch_question_generation(ingestion_id, generation_environment_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 2)
     download? = Keyword.get(opts, :download, false)
-    download_path = Keyword.get(opts, :download_path, @path)
-    ingestion = Repo.get!(Ingestion, ingestion_id) |> Repo.preload([:library])
+    download_dir = Keyword.get(opts, :download_dir, @download_dir)
+    ingestion = Repo.get!(Ingestion, ingestion_id)
 
     if ingestion.state != :ready, do: raise("ingestion not ready")
 
@@ -51,29 +103,42 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
         limit: ^limit
       )
       |> Repo.all()
-      |> Enum.with_index()
-      |> Enum.map(fn {chunk, index} ->
-        Logger.info("⌛️ Generating question #{index + 1}/#{limit}")
-
-        case do_question_generation(chunk, generation_environment_id) do
-          {:ok, result} -> result
-          {:error, error} -> raise error
-        end
-      end)
+      |> async_question_generation(generation_environment_id, limit)
 
     if download? && Mix.env() != :prod do
-      if !File.exists?(@path), do: File.mkdir!(@path)
-      path = download_path(download_path, ingestion)
-      File.write!(path, Jason.encode!(results))
-      Logger.info("✅ Download finished! Check the file: #{path}")
-      {:ok, path}
+      download(download_dir, questions_filename(ingestion), Jason.encode!(results))
     else
       results
     end
   end
 
-  defp download_path(download_path, ingestion) do
-    "#{download_path}/rag_evaluation_#{ingestion.library.name}_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.json"
+  defp async_question_generation(chunks, generation_environment_id, limit) do
+    chunks
+    |> Enum.with_index()
+    |> Enum.map(fn {chunk, index} ->
+      Logger.info("⌛️ Generating question #{index + 1}/#{limit}, please wait...")
+
+      Task.async(__MODULE__, :do_question_generation, [chunk, generation_environment_id, []])
+    end)
+    |> Task.await_many(:infinity)
+    |> Enum.map(fn result ->
+      case result do
+        {:ok, question} -> question
+        {:error, error} -> raise error
+      end
+    end)
+  end
+
+  defp questions_filename(ingestion) do
+    "#{ingestion.id}_questions_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.json"
+  end
+
+  defp download(download_dir, filename, data) do
+    if !File.exists?(download_dir), do: File.mkdir!(download_dir)
+    path = Path.join(download_dir, filename)
+    File.write!(path, data)
+    Logger.info("✅ Download finished! Check the file: #{path}")
+    {:ok, path}
   end
 
   @rag_evaluation_generation_prompt """
@@ -112,9 +177,10 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   By default the question uses the chunk's content. If a `content` option is passed,
   we use this content string instead of the chunk's content.
   """
-  @type opts :: [content: String.t()]
-  @spec question_generation(Chunk.id(), GenerationEnvironment.id(), opts()) ::
-          {:ok, map()} | {:error, :chunk_not_embedded} | {:error, any()}
+  @spec question_generation(Chunk.id(), GenerationEnvironment.id()) ::
+          {:ok, question} | {:error, :chunk_not_embedded} | {:error, any()}
+  @spec question_generation(Chunk.id(), GenerationEnvironment.id(), question_opts()) ::
+          {:ok, question} | {:error, :chunk_not_embedded} | {:error, any()}
   def question_generation(
         chunk_id,
         generation_environment_id,
@@ -128,11 +194,11 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
     end
   end
 
-  defp do_question_generation(
-         chunk,
-         generation_environment_id,
-         opts \\ []
-       ) do
+  def do_question_generation(
+        chunk,
+        generation_environment_id,
+        opts
+      ) do
     content = Keyword.get(opts, :content, chunk.content)
 
     case LLM.stream_responses([build_message(content)], generation_environment_id, %{}) do
@@ -161,6 +227,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   Evaluates the retrieval for a given chunk, question and generation environment.
   Ideally, that should be used after generating questions with batch_generating_question.
   """
+  @spec evaluate(question()) :: evaluation()
   def evaluate(%{
         chunk_id: chunk_id,
         question: question,
@@ -175,14 +242,88 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
       }
       |> Chats.build_generation(chunk.ingestion_id)
 
+    chunk_was_found = Enum.any?(chunks, &(&1.id == chunk.id))
+    first_hit_id = if Enum.any?(chunks), do: Enum.at(chunks, 0).id, else: nil
+
     %{
-      first_hit_correct?: first_hit_correct?(chunks, chunk),
+      question: %{
+        chunk_id: chunk_id,
+        generation_environment_id: generation_environment_id,
+        question: question
+      },
+      ingestion_id: chunk.ingestion_id,
+      first_hit_correct?: first_hit_id == chunk.id,
+      first_hit_id: first_hit_id,
       total_chunks_found: length(chunks),
-      chunk_was_found?: Enum.any?(chunks, &(&1.id == chunk.id)),
-      chunk_rank: Enum.find_index(chunks, &(&1.id == chunk.id)) + 1
+      chunk_was_found?: chunk_was_found,
+      chunk_rank:
+        if(chunk_was_found, do: Enum.find_index(chunks, &(&1.id == chunk.id)) + 1, else: nil)
     }
   end
 
-  defp first_hit_correct?([%{id: id}], %{id: id}), do: true
-  defp first_hit_correct?(_, _), do: false
+  @spec batch_evaluation(String.t()) :: [evaluation()]
+  @spec batch_evaluation(String.t(), batch_evaluation_opts()) ::
+          [evaluation()] | {:ok, filepath()}
+  def batch_evaluation(question_json_file_path, opts \\ []) do
+    download? = Keyword.get(opts, :download, false)
+    download_dir = Keyword.get(opts, :download_dir, @download_dir)
+
+    evaluation =
+      question_json_file_path
+      |> File.read!()
+      |> Jason.decode!()
+      |> Enum.map(fn %{
+                       "chunk_id" => chunk_id,
+                       "generation_environment_id" => generation_environment_id,
+                       "question" => question
+                     } ->
+        evaluate(%{
+          chunk_id: chunk_id,
+          question: question,
+          generation_environment_id: generation_environment_id
+        })
+      end)
+
+    if download? && Mix.env() != :prod do
+      evaluation_to_csv(evaluation, download_dir, evaluation_filename())
+    else
+      evaluation
+    end
+  end
+
+  defp evaluation_filename do
+    "evaluation_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.csv"
+  end
+
+  defp evaluation_to_csv(evaluation, download_dir, filename) do
+    headers = [
+      "ingestion_id",
+      "generation_environment_id",
+      "chunk_id",
+      "question",
+      "first_hit_correct?",
+      "first_hit_id",
+      "total_chunks_found",
+      "chunk_was_found?",
+      "chunk_rank"
+    ]
+
+    data =
+      Enum.map(
+        evaluation,
+        &[
+          &1.ingestion_id,
+          &1.question.generation_environment_id,
+          &1.question.chunk_id,
+          &1.question.question,
+          &1.first_hit_correct?,
+          &1.first_hit_id,
+          &1.total_chunks_found,
+          &1.chunk_was_found?,
+          &1.chunk_rank
+        ]
+      )
+
+    download(download_dir, filename, NimbleCSV.RFC4180.dump_to_iodata([headers] ++ data))
+  end
 end
