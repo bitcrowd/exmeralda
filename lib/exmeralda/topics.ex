@@ -7,8 +7,7 @@ defmodule Exmeralda.Topics do
     DeliverIngestionInProgressEmailWorker,
     Library,
     Chunk,
-    Ingestion,
-    PollIngestionEmbeddingsWorker
+    Ingestion
   }
 
   alias Exmeralda.Chats
@@ -394,10 +393,4 @@ defmodule Exmeralda.Topics do
     |> Ingestion.set_ingestion_inactive_changeset()
     |> Repo.update!()
   end
-
-  def poll_ingestion_state(%{state: :embedding} = ingestion) do
-    Oban.insert(PollIngestionEmbeddingsWorker.new(%{ingestion_id: ingestion.id}))
-  end
-
-  def poll_ingestion_state(%{state: state}), do: {:error, {:ingestion_in_invalid_state, state}}
 end

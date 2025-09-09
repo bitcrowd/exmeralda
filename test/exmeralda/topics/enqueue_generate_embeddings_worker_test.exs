@@ -4,7 +4,6 @@ defmodule Exmeralda.Topics.EnqueueGenerateEmbeddingsWorkerTest do
   alias Exmeralda.Topics.{
     EnqueueGenerateEmbeddingsWorker,
     GenerateEmbeddingsWorker,
-    PollIngestionEmbeddingsWorker,
     Chunk
   }
 
@@ -55,12 +54,6 @@ defmodule Exmeralda.Topics.EnqueueGenerateEmbeddingsWorkerTest do
 
       assert :ok = perform_job(EnqueueGenerateEmbeddingsWorker, %{ingestion_id: ingestion.id})
 
-      assert_enqueued(
-        queue: :poll_ingestion,
-        worker: PollIngestionEmbeddingsWorker,
-        args: %{ingestion_id: ingestion.id}
-      )
-
       workers =
         all_enqueued(
           queue: :ingest,
@@ -85,11 +78,6 @@ defmodule Exmeralda.Topics.EnqueueGenerateEmbeddingsWorkerTest do
       refute from(c in Chunk, where: is_nil(c.embedding)) |> Repo.one()
 
       ingestion = Repo.reload(ingestion)
-      assert ingestion.state == :embedding
-
-      %{success: 1, failure: 0, snoozed: 0} = Oban.drain_queue(queue: :poll_ingestion)
-
-      ingestion = Repo.reload(ingestion)
       assert ingestion.state == :ready
       assert ingestion.active
 
@@ -112,16 +100,11 @@ defmodule Exmeralda.Topics.EnqueueGenerateEmbeddingsWorkerTest do
 
       assert :ok = perform_job(EnqueueGenerateEmbeddingsWorker, %{ingestion_id: ingestion.id})
 
-      assert_enqueued(worker: PollIngestionEmbeddingsWorker, args: %{ingestion_id: ingestion.id})
-
       assert all_enqueued(worker: GenerateEmbeddingsWorker, args: %{ingestion_id: ingestion.id})
              |> length() == 2
 
       # one GenerateEmbeddingsWorker fails, one succeeds
       %{success: 1, failure: 1} = Oban.drain_queue(queue: :ingest)
-
-      # PollIngestionEmbeddingsWorker is snoozed
-      %{success: 0, failure: 0, snoozed: 1} = Oban.drain_queue(queue: :poll_ingestion)
 
       # Ingestion still embedding
       ingestion = Repo.reload(ingestion)
@@ -132,13 +115,11 @@ defmodule Exmeralda.Topics.EnqueueGenerateEmbeddingsWorkerTest do
       for _n <- 1..18 do
         retry_job()
         %{success: 0, failure: 1, snoozed: 0} = Oban.drain_queue(queue: :ingest)
-        %{success: 0, failure: 0, snoozed: 1} = Oban.drain_queue(queue: :poll_ingestion)
       end
 
       # One last attempt
       retry_job()
       %{success: 0, failure: 0, discard: 1} = Oban.drain_queue(queue: :ingest)
-      %{success: 1, failure: 0, snoozed: 0} = Oban.drain_queue(queue: :poll_ingestion)
 
       ingestion = Repo.reload(ingestion)
 
@@ -147,12 +128,5 @@ defmodule Exmeralda.Topics.EnqueueGenerateEmbeddingsWorkerTest do
 
       assert Repo.reload(active_ingestion).active
     end
-  end
-
-  defp retry_job do
-    {:ok, 2} =
-      Oban.Job
-      |> Ecto.Query.where([o], o.state in ["scheduled", "retryable"])
-      |> Oban.retry_all_jobs()
   end
 end

@@ -27,8 +27,6 @@ defmodule Exmeralda.Topics.EnqueueGenerateEmbeddingsWorker do
       )
       |> Oban.insert_all()
 
-      {:ok, _} = Exmeralda.Topics.poll_ingestion_state(ingestion)
-
       :ok
     end
   end
