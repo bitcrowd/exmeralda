@@ -46,7 +46,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   @download_dir "./rag_evaluations"
 
   @doc """
-  Generates a question for all the chunks of a given ingestion, using the provided
+  Generates a question for chunks of a given ingestion, using the provided
   generation environment.
 
   # Opts
