@@ -103,21 +103,30 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
         limit: ^limit
       )
       |> Repo.all()
-      |> Enum.with_index()
-      |> Enum.map(fn {chunk, index} ->
-        Logger.info("⌛️ Generating question #{index + 1}/#{limit}")
-
-        case do_question_generation(chunk, generation_environment_id) do
-          {:ok, result} -> result
-          {:error, error} -> raise error
-        end
-      end)
+      |> async_question_generation(generation_environment_id, limit)
 
     if download? && Mix.env() != :prod do
       download(download_dir, questions_filename(ingestion), Jason.encode!(results))
     else
       results
     end
+  end
+
+  defp async_question_generation(chunks, generation_environment_id, limit) do
+    chunks
+    |> Enum.with_index()
+    |> Enum.map(fn {chunk, index} ->
+      Logger.info("⌛️ Generating question #{index + 1}/#{limit}, please wait...")
+
+      Task.async(__MODULE__, :do_question_generation, [chunk, generation_environment_id, []])
+    end)
+    |> Task.await_many(:infinity)
+    |> Enum.map(fn result ->
+      case result do
+        {:ok, question} -> question
+        {:error, error} -> raise error
+      end
+    end)
   end
 
   defp questions_filename(ingestion) do
@@ -185,14 +194,13 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
     end
   end
 
-  defp do_question_generation(
-         chunk,
-         generation_environment_id,
-         opts \\ []
-       ) do
+  def do_question_generation(
+        chunk,
+        generation_environment_id,
+        opts
+      ) do
     content = Keyword.get(opts, :content, chunk.content)
 
-    # TODO: Run in parallel tasks instead of serial.
     case LLM.stream_responses([build_message(content)], generation_environment_id, %{}) do
       {:ok, %{last_message: last_message}} ->
         {:ok,
