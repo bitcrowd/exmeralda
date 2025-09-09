@@ -138,7 +138,8 @@ defmodule ExmeraldaWeb.LayoutComponents do
   end
 
   @admin_nav_items [
-    %{href: "/admin/library", icon: "inbox-stack", label: gettext("Libraries")}
+    %{href: "/admin/library", icon: "inbox-stack", label: gettext("Libraries")},
+    %{href: "/admin/system_prompts", icon: "command-line", label: gettext("System Prompts")}
   ]
   def admin_nav(assigns) do
     assigns = assign_new(assigns, :admin_nav_items, fn -> @admin_nav_items end)

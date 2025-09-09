@@ -43,7 +43,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
        {:error, {:not_found, _}} ->
          socket
          |> put_flash(:error, gettext("Library not found"))
-         |> push_navigate(to: ~p"/admin")
+         |> push_navigate(to: ~p"/admin/library")
      end}
   end
 
@@ -56,7 +56,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
         {:ok, _} ->
           socket
           |> put_flash(:info, gettext("Library successfully deleted!"))
-          |> push_navigate(to: ~p"/admin")
+          |> push_navigate(to: ~p"/admin/library")
 
         {:error, :library_has_chats} ->
           socket
@@ -118,7 +118,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
     ~H"""
     <.admin_nav_layout user={@current_user} current_path={@current_path}>
       <.breadcrumbs>
-        <:items title="Libraries" href={~p"/admin"} icon_name="hero-inbox-stack-micro" />
+        <:items title="Libraries" href={~p"/admin/library"} icon_name="hero-inbox-stack-micro" />
         <:items title={library_title(@library)} href={~p"/admin/library/#{@library.id}"} />
       </.breadcrumbs>
 

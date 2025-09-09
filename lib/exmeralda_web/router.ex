@@ -92,6 +92,9 @@ defmodule ExmeraldaWeb.Router do
         live "/library", LibraryLive.Index, :index
         live "/library/:id", LibraryLive.Show, :show
         live "/library/:library_id/ingestions/:id", IngestionLive.Show, :show
+
+        live "/system_prompts", SystemPromptLive.Index, :index
+        live "/system_prompts/new", SystemPromptLive.New, :new
       end
     end
   end

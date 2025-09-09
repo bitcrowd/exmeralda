@@ -20,7 +20,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLiveTest do
   end
 
   describe "authentication" do
-    for route <- ["/admin", "/admin/library/foo"] do
+    for route <- ["/admin/library", "/admin/library/foo"] do
       test "is required for #{route}", %{conn: conn} do
         assert {:error,
                 {:redirect, %{flash: %{"error" => "You must log in to access this page."}}}} =
@@ -36,7 +36,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLiveTest do
       conn = log_in_user(conn, user)
 
       {:ok, _index_live, html} =
-        live(conn, ~p"/admin")
+        live(conn, ~p"/admin/library")
 
       assert html =~ "rag"
       assert html =~ "0.1.0"
@@ -58,7 +58,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLiveTest do
       assert html =~ "Library rag 0.1.0"
       assert html =~ "Ingestions"
 
-      assert {:error, {:live_redirect, %{to: "/admin"}}} =
+      assert {:error, {:live_redirect, %{to: "/admin/library"}}} =
                view
                |> element("button", "Delete")
                |> render_click()
