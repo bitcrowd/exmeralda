@@ -116,7 +116,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
     assigns = assign_new(assigns, :library_deletable?, fn -> library_deletable?(assigns) end)
 
     ~H"""
-    <.navbar_layout user={@current_user}>
+    <.admin_nav_layout user={@current_user} current_path={@current_path}>
       <.breadcrumbs>
         <:items title="Libraries" href={~p"/admin"} icon_name="hero-inbox-stack-micro" />
         <:items title={library_title(@library)} href={~p"/admin/library/#{@library.id}"} />
@@ -236,7 +236,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
 
         <.pagination meta={@meta} path={~p"/admin/library/#{@library.id}"} />
       </.section>
-    </.navbar_layout>
+    </.admin_nav_layout>
     """
   end
 

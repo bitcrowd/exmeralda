@@ -82,9 +82,14 @@ defmodule ExmeraldaWeb.Router do
     oban_dashboard("/oban")
 
     scope "/admin", Admin do
+      get "/", HomeController, :index
+
       live_session :require_admin_authenticated_user,
-        on_mount: [{ExmeraldaWeb.UserAuth, :ensure_authenticated}] do
-        live "/", LibraryLive.Index, :index
+        on_mount: [
+          {ExmeraldaWeb.UserAuth, :ensure_authenticated},
+          {ExmeraldaWeb.Admin.LiveHooks, :global}
+        ] do
+        live "/library", LibraryLive.Index, :index
         live "/library/:id", LibraryLive.Show, :show
         live "/library/:library_id/ingestions/:id", IngestionLive.Show, :show
       end

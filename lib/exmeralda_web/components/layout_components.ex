@@ -123,4 +123,42 @@ defmodule ExmeraldaWeb.LayoutComponents do
   def full_screen_height(assigns) do
     if Map.has_key?(assigns, :inside_navbar), do: "h-[calc(100vh-4rem)]", else: "h-screen"
   end
+
+  def admin_nav_layout(assigns) do
+    ~H"""
+    <.navbar_layout user={@user}>
+      <:drawer>
+        <.admin_nav current_path={@current_path} />
+      </:drawer>
+      <div class="p-4">
+        {render_slot(@inner_block)}
+      </div>
+    </.navbar_layout>
+    """
+  end
+
+  @admin_nav_items [
+    %{href: "/admin/library", icon: "inbox-stack", label: gettext("Libraries")}
+  ]
+  def admin_nav(assigns) do
+    assigns = assign_new(assigns, :admin_nav_items, fn -> @admin_nav_items end)
+
+    ~H"""
+    <ul class="menu menu-vertical w-full">
+      <li :for={item <- @admin_nav_items}>
+        <a
+          href={item.href}
+          class={["btn justify-start gap-4", current_nav?(item.href, @current_path) && "btn-active"]}
+        >
+          <.icon name={"hero-#{item.icon}"} />
+          {item.label}
+        </a>
+      </li>
+    </ul>
+    """
+  end
+
+  defp current_nav?(href, current_path) do
+    String.starts_with?(current_path, href)
+  end
 end
