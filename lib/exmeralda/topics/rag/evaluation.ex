@@ -37,6 +37,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
           question: question(),
           ingestion_id: Ingestion.id(),
           first_hit_correct?: boolean(),
+          first_hit_id: Chunk.id(),
           total_chunks_found: pos_integer(),
           chunk_was_found?: boolean(),
           chunk_rank: pos_integer() | nil
@@ -212,6 +213,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
       |> Chats.build_generation(chunk.ingestion_id)
 
     chunk_was_found = Enum.any?(chunks, &(&1.id == chunk.id))
+    first_hit_id = if Enum.any?(chunks), do: Enum.at(chunks, 0).id, else: nil
 
     %{
       question: %{
@@ -220,16 +222,14 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
         question: question
       },
       ingestion_id: chunk.ingestion_id,
-      first_hit_correct?: first_hit_correct?(chunks, chunk),
+      first_hit_correct?: first_hit_id == chunk.id,
+      first_hit_id: first_hit_id,
       total_chunks_found: length(chunks),
       chunk_was_found?: chunk_was_found,
       chunk_rank:
         if(chunk_was_found, do: Enum.find_index(chunks, &(&1.id == chunk.id)) + 1, else: nil)
     }
   end
-
-  defp first_hit_correct?([%{id: id}], %{id: id}), do: true
-  defp first_hit_correct?(_, _), do: false
 
   @spec batch_evaluation(String.t()) :: [evaluation()]
   @spec batch_evaluation(String.t(), batch_evaluation_opts()) ::
@@ -272,6 +272,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
       "chunk_id",
       "question",
       "first_hit_correct?",
+      "first_hit_id",
       "total_chunks_found",
       "chunk_was_found?",
       "chunk_rank"
@@ -286,6 +287,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
           &1.question.chunk_id,
           &1.question.question,
           &1.first_hit_correct?,
+          &1.first_hit_id,
           &1.total_chunks_found,
           &1.chunk_was_found?,
           &1.chunk_rank

@@ -196,6 +196,7 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
                  generation_environment_id: generation_environment.id
                },
                first_hit_correct?: true,
+               first_hit_id: chunk.id,
                total_chunks_found: 1,
                chunk_was_found?: true,
                chunk_rank: 1
@@ -224,7 +225,8 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
                    generation_environment_id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5"
                  },
                  ingestion_id: "db4e4dc9-43c5-44be-9521-58a8785071ab",
-                 first_hit_correct?: false,
+                 first_hit_correct?: _,
+                 first_hit_id: _,
                  total_chunks_found: 2,
                  chunk_was_found?: true,
                  chunk_rank: _
@@ -237,7 +239,8 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
                    generation_environment_id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5"
                  },
                  ingestion_id: "db4e4dc9-43c5-44be-9521-58a8785071ab",
-                 first_hit_correct?: false,
+                 first_hit_correct?: _,
+                 first_hit_id: _,
                  total_chunks_found: 2,
                  chunk_was_found?: true,
                  chunk_rank: _
@@ -254,7 +257,7 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
       result = File.read!(filepath)
 
       assert result =~
-               "ingestion_id,generation_environment_id,chunk_id,question,first_hit_correct?,total_chunks_found,chunk_was_found?,chunk_rank"
+               "ingestion_id,generation_environment_id,chunk_id,question,first_hit_correct?,first_hit_id,total_chunks_found,chunk_was_found?,chunk_rank"
     end
   end
 end
