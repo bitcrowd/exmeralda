@@ -3,11 +3,33 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   ⚠️ The generation environment needs to exist. Create it yourself or run the seeds first. ⚠️
   (with `mix seed`).
 
-  Usage:
+  ### Usage
+
   1. Run the server with an iex console: `iex -S mix phx.server`
-  2. Call with:
-    - `Exmeralda.Topics.Rag.Evaluation.batch_question_generation(<<< INGESTION ID >>>, "1667da4f-249a-4e23-ae13-85a4efa5d1f5", download: true)`
-    - `Exmeralda.Topics.Rag.Evaluation.evaluate(%{chunk_id: <<< CHUNK ID >>>, generation_environment_id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5", question: <<< QUESTION >>>})`
+  2. Call with
+  ```
+    Exmeralda.Topics.Rag.Evaluation.batch_question_generation(
+      <<< INGESTION ID >>>,
+      <<< GENERATION ENVIRONMENT ID >>>,
+      download: true
+    )
+  ```
+  That will save a json file in the default @download_dir.
+  3. To run the evaluation:
+
+  ```
+    Exmeralda.Topics.Rag.Evaluation.batch_evaluation(
+      <<< PATH TO QUESTION JSON FILE >>>,
+      download: true
+    )
+  ```
+  That will save a csv file with the results of the evaluation in the default @download_dir
+
+
+  ### Individual usage
+
+  - You can use `question_generation/2,3` to generate a *single* question for a given chunk
+  - You can use `evaluate/1` to run the evaluation for a *single* question
   """
   require Logger
   import Ecto.Query
@@ -234,12 +256,12 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   @spec batch_evaluation(String.t()) :: [evaluation()]
   @spec batch_evaluation(String.t(), batch_evaluation_opts()) ::
           [evaluation()] | {:ok, filepath()}
-  def batch_evaluation(json_file_path, opts \\ []) do
+  def batch_evaluation(question_json_file_path, opts \\ []) do
     download? = Keyword.get(opts, :download, false)
     download_dir = Keyword.get(opts, :download_dir, @download_dir)
 
     evaluation =
-      json_file_path
+      question_json_file_path
       |> File.read!()
       |> Jason.decode!()
       |> Enum.map(fn %{
