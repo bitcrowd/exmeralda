@@ -118,7 +118,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Show do
     ~H"""
     <.admin_nav_layout user={@current_user} current_path={@current_path}>
       <.breadcrumbs>
-        <:items title="Libraries" href={~p"/admin/library"} icon_name="hero-inbox-stack-micro" />
+        <:items title="Libraries" href={~p"/admin/library"} icon_name="hero-archive-box-micro" />
         <:items title={library_title(@library)} href={~p"/admin/library/#{@library.id}"} />
       </.breadcrumbs>
 

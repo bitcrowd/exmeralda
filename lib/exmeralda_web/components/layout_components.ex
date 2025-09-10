@@ -138,8 +138,12 @@ defmodule ExmeraldaWeb.LayoutComponents do
   end
 
   @admin_nav_items [
-    %{href: "/admin/library", icon: "inbox-stack", label: gettext("Libraries")},
-    %{href: "/admin/system_prompts", icon: "command-line", label: gettext("System Prompts")}
+    %{href: "/admin/library", icon: "archive-box-micro", label: gettext("Libraries")},
+    %{
+      href: "/admin/system_prompts",
+      icon: "chat-bubble-bottom-center-text-micro",
+      label: gettext("System Prompts")
+    }
   ]
   def admin_nav(assigns) do
     assigns = assign_new(assigns, :admin_nav_items, fn -> @admin_nav_items end)
@@ -149,10 +153,13 @@ defmodule ExmeraldaWeb.LayoutComponents do
       <li :for={item <- @admin_nav_items}>
         <a
           href={item.href}
-          class={["btn justify-start gap-4", current_nav?(item.href, @current_path) && "btn-active"]}
+          class={[
+            "btn btn-ghost justify-start gap-2",
+            current_nav?(item.href, @current_path) && "btn-active"
+          ]}
         >
           <.icon name={"hero-#{item.icon}"} />
-          {item.label}
+          <span>{item.label}</span>
         </a>
       </li>
     </ul>

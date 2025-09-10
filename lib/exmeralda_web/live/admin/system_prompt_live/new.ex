@@ -34,7 +34,7 @@ defmodule ExmeraldaWeb.Admin.SystemPromptLive.New do
         <:items
           title={gettext("System Prompts")}
           href={~p"/admin/system_prompts"}
-          icon_name="hero-command-line-micro"
+          icon_name="hero-chat-bubble-bottom-center-text-micro"
         />
       </.breadcrumbs>
 
