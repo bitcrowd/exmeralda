@@ -259,5 +259,10 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
       assert result =~
                "ingestion_id,generation_environment_id,chunk_id,question,first_hit_correct?,first_hit_id,total_chunks_found,chunk_was_found?,chunk_rank"
     end
+
+    test "accepts an aggregate optional parameter" do
+      assert %{question_count: 2, first_hit_ratio: _, found_chunk_ratio: _} =
+               Evaluation.batch_evaluation(@fixture_file, aggregate: true)
+    end
   end
 end

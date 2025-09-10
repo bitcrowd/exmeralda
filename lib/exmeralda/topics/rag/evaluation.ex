@@ -24,7 +24,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
     )
   ```
   That will save a csv file with the results of the evaluation in the default @download_dir
-
+  To get aggregated results you can pass the `aggregate: true` option.
 
   ### Individual usage
 
@@ -265,6 +265,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   @spec batch_evaluation(String.t(), batch_evaluation_opts()) ::
           [evaluation()] | {:ok, filepath()}
   def batch_evaluation(question_json_file_path, opts \\ []) do
+    aggregate? = Keyword.get(opts, :aggregate, false)
     download? = Keyword.get(opts, :download, false)
     download_dir = Keyword.get(opts, :download_dir, @download_dir)
 
@@ -284,10 +285,15 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
         })
       end)
 
-    if download? && Mix.env() != :prod do
-      evaluation_to_csv(evaluation, download_dir, evaluation_filename())
-    else
-      evaluation
+    cond do
+      aggregate? ->
+        aggregate_batch_evaluation(evaluation)
+
+      download? && Mix.env() != :prod ->
+        evaluation_to_csv(evaluation, download_dir, evaluation_filename())
+
+      true ->
+        evaluation
     end
   end
 
@@ -325,5 +331,19 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
       )
 
     download(download_dir, filename, NimbleCSV.RFC4180.dump_to_iodata([headers] ++ data))
+  end
+
+  defp aggregate_batch_evaluation(evaluation) do
+    total = length(evaluation)
+    to_ratio = fn count -> (count / total) |> Float.round(2) end
+
+    first_hits_ratio = Enum.count(evaluation, & &1.first_hit_correct?) |> to_ratio.()
+    found_chunk_ratio = Enum.count(evaluation, & &1.chunk_was_found?) |> to_ratio.()
+
+    %{
+      question_count: total,
+      first_hit_ratio: first_hits_ratio,
+      found_chunk_ratio: found_chunk_ratio
+    }
   end
 end
