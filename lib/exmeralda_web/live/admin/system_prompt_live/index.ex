@@ -12,6 +12,7 @@ defmodule ExmeraldaWeb.Admin.SystemPromptLive.Index do
       |> assign(:page_title, gettext("System Prompts"))
       |> assign(:system_prompts, system_prompts)
       |> assign(:meta, meta)
+      |> assign(:current_system_prompt_id, current_system_prompt_id())
 
     {:noreply, socket}
   end
@@ -58,7 +59,10 @@ defmodule ExmeraldaWeb.Admin.SystemPromptLive.Index do
         path={~p"/admin/system_prompts"}
         opts={[table_attrs: [class: "table"]]}
       >
-        <:col :let={system_prompt} label={gettext("ID")} field={:id}>{system_prompt.id}</:col>
+        <:col :let={system_prompt} label={gettext("ID")} field={:id}>
+          <span>{system_prompt.id}</span>
+          <.active_badge :if={system_prompt.id == @current_system_prompt_id} />
+        </:col>
         <:col :let={system_prompt} label={gettext("Prompt")} field={:prompt}>
           {system_prompt.prompt}
         </:col>
@@ -79,6 +83,20 @@ defmodule ExmeraldaWeb.Admin.SystemPromptLive.Index do
 
       <.pagination meta={@meta} path={~p"/admin/system_prompts"} />
     </.admin_nav_layout>
+    """
+  end
+
+  defp current_system_prompt_id do
+    %{system_prompt_id: system_prompt_id} = Application.fetch_env!(:exmeralda, :llm_config)
+    system_prompt_id
+  end
+
+  defp active_badge(assigns) do
+    ~H"""
+    <span class="badge badge-success block mt-2">
+      <.icon name="hero-check-circle-micro" class="scale-75" />
+      {gettext("Active")}
+    </span>
     """
   end
 end

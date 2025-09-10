@@ -13,7 +13,7 @@ defmodule Exmeralda.LLM.SystemPrompts do
   """
   def list_system_prompts(params) do
     from(s in SystemPrompt,
-      left_join: ge in GenerationEnvironment,
+      left_join: ge in subquery(from(ge in GenerationEnvironment, distinct: ge.system_prompt_id)),
       on: ge.system_prompt_id == s.id,
       select: %{s | deletable: is_nil(ge.id)}
     )
