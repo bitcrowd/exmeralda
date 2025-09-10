@@ -90,13 +90,4 @@ defmodule ExmeraldaWeb.Admin.SystemPromptLive.Index do
     %{system_prompt_id: system_prompt_id} = Application.fetch_env!(:exmeralda, :llm_config)
     system_prompt_id
   end
-
-  defp active_badge(assigns) do
-    ~H"""
-    <span class="badge badge-success block mt-2">
-      <.icon name="hero-check-circle-micro" class="scale-75" />
-      {gettext("Active")}
-    </span>
-    """
-  end
 end

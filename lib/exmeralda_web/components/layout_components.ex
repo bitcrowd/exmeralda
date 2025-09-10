@@ -143,6 +143,11 @@ defmodule ExmeraldaWeb.LayoutComponents do
       href: "/admin/system_prompts",
       icon: "hero-chat-bubble-bottom-center-text-micro",
       label: gettext("System Prompts")
+    },
+    %{
+      href: "/admin/generation_prompts",
+      icon: "command-line-micro",
+      label: gettext("Generation Prompts")
     }
   ]
   def admin_nav(assigns) do
