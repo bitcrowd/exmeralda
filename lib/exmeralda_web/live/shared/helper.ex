@@ -33,7 +33,7 @@ defmodule ExmeraldaWeb.Shared.Helper do
       when state in ["executing", "retryable"],
       do: :embedding_running
 
-  # The parent GenerateEmbeddingsWorker has run and all the chunk children
+  # The parent EnqueueGenerateEmbeddingsWorker has run and all the chunk children
   # worker are now running
   def find_current_step(%{state: :embedding, job: %{state: "completed"}}),
     do: :chunks_embedding_running
@@ -46,7 +46,7 @@ defmodule ExmeraldaWeb.Shared.Helper do
 
   def find_current_step(%{
         state: :failed,
-        job: %{worker: "Exmeralda.Topics.GenerateEmbeddingsWorker"}
+        job: %{worker: "Exmeralda.Topics.EnqueueGenerateEmbeddingsWorker"}
       }),
       do: :failed_while_embedding
 

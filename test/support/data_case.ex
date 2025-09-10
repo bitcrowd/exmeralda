@@ -15,6 +15,7 @@ defmodule Exmeralda.DataCase do
   """
 
   use ExUnit.CaseTemplate
+  import Ecto.Query
 
   using do
     quote do
@@ -76,4 +77,11 @@ defmodule Exmeralda.DataCase do
   def test_model_config_provider_id, do: "9a21bfd3-cb0a-433c-a9b3-826143782c81"
   def test_system_prompt_id, do: "96123e4b-7d0a-4e14-82d4-63d68562e8f1"
   def test_generation_prompt_id, do: "a6dd3ab3-d57e-43d9-a39a-d1ce58a43cc0"
+
+  def retry_job do
+    {:ok, 1} =
+      Oban.Job
+      |> where([o], o.state in ["scheduled", "retryable"])
+      |> Oban.retry_all_jobs()
+  end
 end
