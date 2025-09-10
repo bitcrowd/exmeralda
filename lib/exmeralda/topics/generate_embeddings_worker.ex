@@ -39,7 +39,7 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorker do
   defp generate_embeddings(chunk_ids, ingestion, job) do
     try do
       embeddings =
-        from(c in Chunk, where: c.id in ^chunk_ids)
+        from(c in Chunk, where: c.id in ^chunk_ids and is_nil(c.embedding))
         |> Repo.all()
         |> Rag.generate_embeddings()
 

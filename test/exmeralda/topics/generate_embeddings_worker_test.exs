@@ -69,4 +69,20 @@ defmodule Exmeralda.Topics.GenerateEmbeddingsWorkerTest do
       assert Repo.reload(chunk).embedding
     end
   end
+
+  describe "perform/1 when the chunk already has embedding" do
+    setup [:insert_ingestion]
+
+    test "does not re-embed the chunk", %{ingestion: ingestion} do
+      chunk = insert(:chunk, ingestion: ingestion)
+      embedding = chunk.embedding
+
+      assert perform_job(GenerateEmbeddingsWorker, %{
+               chunk_ids: [chunk.id],
+               ingestion_id: ingestion.id
+             }) == :ok
+
+      assert Repo.reload(chunk).embedding == embedding
+    end
+  end
 end
