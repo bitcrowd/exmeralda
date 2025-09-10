@@ -434,7 +434,7 @@ defmodule ExmeraldaWeb.CoreComponents do
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} widht="24" />
+    <span class={[@name, @class]} />
     """
   end
 
