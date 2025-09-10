@@ -14,6 +14,7 @@ defmodule Exmeralda.Topics.Rag do
   @retrieval_weights %{fulltext_results: 1, semantic_results: 1}
   @pgvector_limit 3
   @fulltext_limit 3
+  @fulltext_min_rank 0.003
   @excluded_docs ~w(404.html)
   @excluded_code_types ~w(.map)
 
@@ -124,11 +125,29 @@ defmodule Exmeralda.Topics.Rag do
   end
 
   defp query_fulltext(%{query: query}, scope) do
+    ranked_subquery =
+      from(c in scope,
+        select: %{
+          id: c.id,
+          source: c.source,
+          content: c.content,
+          rank: fragment("ts_rank(search, plainto_tsquery('english', ?))", ^query)
+        }
+      )
+
     {:ok,
      Repo.all(
-       scope
-       |> order_by(fragment("search @@ websearch_to_tsquery(?)", ^query))
-       |> limit(@fulltext_limit)
+       from(r in subquery(ranked_subquery),
+         select: %{
+           id: r.id,
+           source: r.source,
+           rank: r.rank,
+           content: r.content
+         },
+         where: r.rank > ^@fulltext_min_rank,
+         order_by: [desc: r.rank],
+         limit: ^@fulltext_limit
+       )
      )}
   end
 
