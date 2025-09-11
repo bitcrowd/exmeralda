@@ -23,5 +23,33 @@ defmodule Exmeralda.Chats.GenerationEnvironmentTest do
                      )
                    end
     end
+
+    test "restrict on deletion of provider or model config" do
+      model_config = insert(:model_config)
+      provider = insert(:provider)
+
+      model_config_provider =
+        insert(:model_config_provider, model_config: model_config, provider: provider)
+
+      insert(:generation_environment, model_config_provider: model_config_provider)
+
+      assert_raise Ecto.ConstraintError,
+                   ~r/generation_environments_model_config_provider_id_fkey/,
+                   fn ->
+                     Repo.delete(provider)
+                   end
+
+      assert_raise Ecto.ConstraintError,
+                   ~r/generation_environments_model_config_provider_id_fkey/,
+                   fn ->
+                     Repo.delete(model_config)
+                   end
+
+      assert_raise Ecto.ConstraintError,
+                   ~r/generation_environments_model_config_provider_id_fkey/,
+                   fn ->
+                     Repo.delete(model_config_provider)
+                   end
+    end
   end
 end

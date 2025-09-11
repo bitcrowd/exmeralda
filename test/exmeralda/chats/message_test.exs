@@ -20,16 +20,9 @@ defmodule Exmeralda.Chats.MessageTest do
       refute message.incomplete
     end
 
-    test "restrict on deletion of provider or model config" do
+    test "restrict on deletion of generation environment" do
       session = insert(:chat_session)
-      model_config = insert(:model_config)
-      provider = insert(:provider)
-
-      model_config_provider =
-        insert(:model_config_provider, model_config: model_config, provider: provider)
-
-      generation_environment =
-        insert(:generation_environment, model_config_provider: model_config_provider)
+      generation_environment = insert(:generation_environment)
 
       insert(:message,
         session: session,
@@ -37,15 +30,7 @@ defmodule Exmeralda.Chats.MessageTest do
       )
 
       assert_raise Ecto.ConstraintError, ~r/chat_messages_generation_environment_id_fkey/, fn ->
-        Repo.delete(provider)
-      end
-
-      assert_raise Ecto.ConstraintError, ~r/chat_messages_generation_environment_id_fkey/, fn ->
-        Repo.delete(model_config)
-      end
-
-      assert_raise Ecto.ConstraintError, ~r/chat_messages_generation_environment_id_fkey/, fn ->
-        Repo.delete(model_config_provider)
+        Repo.delete(generation_environment)
       end
     end
   end
