@@ -172,18 +172,26 @@ defmodule Exmeralda.Regenerations do
     )
     |> Repo.all()
     |> Enum.map(fn message ->
-      params =
-        Map.take(message, [:index, :role, :content, :incomplete, :generation_environment_id])
-
-      params =
-        if params.index == index - 1 do
-          Map.put(params, :generation_environment_id, generation_environment_id)
-        else
-          params
-        end
-
-      Map.put(params, :sources, Enum.map(message.sources, &Map.take(&1, [:chunk_id])))
+      message
+      |> Map.take([:index, :role, :content, :incomplete, :generation_environment_id])
+      |> set_new_generation_environment_on_last_user_message(index, generation_environment_id)
+      |> Map.put(:sources, Enum.map(message.sources, &Map.take(&1, [:chunk_id])))
     end)
+  end
+
+  defp set_new_generation_environment_on_last_user_message(
+         params,
+         index,
+         generation_environment_id
+       ) do
+    # Old messages keep their original generation environment, as we are not regenerating them.
+    # However the user message for which we are regenerating an answer *should* get the requested
+    # generation_environment_id, as this attribute is used when generating the assistant answer.
+    if params.index == index - 1 do
+      Map.put(params, :generation_environment_id, generation_environment_id)
+    else
+      params
+    end
   end
 
   defp get_user_message(_, %{original_message: %{index: index}, session: session}) do
