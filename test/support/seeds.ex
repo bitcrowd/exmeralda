@@ -88,7 +88,7 @@ defmodule Exmeralda.Seeds do
         insert_idempotently(%Exmeralda.LLM.ModelConfig{
           id: "7420d870-b10b-46ba-b30b-5c4630ee3a99",
           name: "llama3.2:latest",
-          config: %{stream: true}
+          config: %{stream: true, num_ctx: 32768}
         })
 
       insert_idempotently(%Exmeralda.LLM.ModelConfigProvider{
@@ -108,7 +108,7 @@ defmodule Exmeralda.Seeds do
 
       qwen_25_32b_model_config =
         insert_idempotently(%Exmeralda.LLM.ModelConfig{
-          id: "eff70662-1576-491d-a1ef-1d025772e637",
+          id: "eff70662-1576-491d-a1ef-1d025772e638",
           name: "qwen25-coder-32b",
           config: %{stream: true}
         })
