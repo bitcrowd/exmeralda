@@ -10,7 +10,7 @@ defmodule Exmeralda.Chats.Session do
     belongs_to :user, User
     belongs_to :ingestion, Ingestion
     belongs_to :original_session, __MODULE__
-    belongs_to :copied_from_message, Message
+    belongs_to :copied_until_message, Message
     has_many :messages, Message, preload_order: [asc: :index]
     has_one :library, through: [:ingestion, :library]
 
@@ -20,7 +20,7 @@ defmodule Exmeralda.Chats.Session do
     timestamps()
   end
 
-  @duplicate_attrs [:ingestion_id, :title, :original_session_id, :copied_from_message_id]
+  @duplicate_attrs [:ingestion_id, :title, :original_session_id, :copied_until_message_id]
 
   @doc false
   def create_changeset(session, attrs) do

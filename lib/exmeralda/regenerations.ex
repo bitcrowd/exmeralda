@@ -159,7 +159,7 @@ defmodule Exmeralda.Regenerations do
     |> Map.take([:title, :ingestion_id])
     |> Map.merge(%{
       original_session_id: session.id,
-      copied_from_message_id: message_id,
+      copied_until_message_id: message_id,
       messages: get_previous_messages(original_message, generation_environment_id)
     })
     |> Session.duplicate_changeset()

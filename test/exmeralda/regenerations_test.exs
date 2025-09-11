@@ -513,7 +513,7 @@ defmodule Exmeralda.RegenerationsTest do
 
           duplicated_session = Repo.get!(Session, duplicated_session_id)
           assert duplicated_session.original_session_id == session.id
-          assert duplicated_session.copied_from_message_id == second_assistant_message.id
+          assert duplicated_session.copied_until_message_id == second_assistant_message.id
           assert duplicated_session.title == session.title
           assert duplicated_session.ingestion_id == ingestion.id
           refute duplicated_session.user_id
@@ -564,6 +564,7 @@ defmodule Exmeralda.RegenerationsTest do
           assert fourth_message.generation_environment_id == generation_environment.id
           assert length(fourth_message.sources) == 2
           assert fourth_message.id == assistant_message.id
+          assert fourth_message.regenerated_from_message_id == second_assistant_message.id
         end
       )
     end
@@ -585,7 +586,7 @@ defmodule Exmeralda.RegenerationsTest do
 
           duplicated_session = Repo.get!(Session, duplicated_session_id)
           assert duplicated_session.original_session_id == session.id
-          assert duplicated_session.copied_from_message_id == first_assistant_message.id
+          assert duplicated_session.copied_until_message_id == first_assistant_message.id
           assert duplicated_session.title == session.title
           assert duplicated_session.ingestion_id == ingestion.id
 
@@ -719,7 +720,7 @@ defmodule Exmeralda.RegenerationsTest do
 
           duplicated_session = Repo.get!(Session, duplicated_session_id)
           assert duplicated_session.original_session_id == session.id
-          assert duplicated_session.copied_from_message_id == second_assistant_message.id
+          assert duplicated_session.copied_until_message_id == second_assistant_message.id
           assert duplicated_session.title == session.title
           assert duplicated_session.ingestion_id == ingestion.id
 

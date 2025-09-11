@@ -4,26 +4,26 @@ defmodule Exmeralda.Repo.Migrations.AddRegenerationFieldsToChatSessions do
   def change do
     alter table(:chat_sessions) do
       add :original_session_id, references(:chat_sessions, on_delete: :restrict), null: true
-      add :copied_from_message_id, references(:chat_messages, on_delete: :restrict), null: true
+      add :copied_until_message_id, references(:chat_messages, on_delete: :restrict), null: true
     end
 
     create index(:chat_sessions, [:original_session_id])
-    create index(:chat_sessions, [:copied_from_message_id])
+    create index(:chat_sessions, [:copied_until_message_id])
 
     create(
       constraint(
         :chat_sessions,
         :user_id_null_when_regeneration_fields,
         check:
-          "NOT (original_session_id IS NOT NULL AND copied_from_message_id IS NOT NULL AND user_id IS NOT NULL)"
+          "NOT (original_session_id IS NOT NULL AND copied_until_message_id IS NOT NULL AND user_id IS NOT NULL)"
       )
     )
 
     create(
       constraint(
         :chat_sessions,
-        :original_session_when_copied_from_message,
-        check: "(original_session_id IS NULL) = (copied_from_message_id IS NULL)"
+        :original_session_when_copied_until_message,
+        check: "(original_session_id IS NULL) = (copied_until_message_id IS NULL)"
       )
     )
 

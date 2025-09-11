@@ -9,33 +9,37 @@ defmodule Exmeralda.Chats.SessionTest do
       user = insert(:user)
 
       chat_session =
-        insert(:chat_session, user: user, original_session: nil, copied_from_message: nil)
+        insert(:chat_session, user: user, original_session: nil, copied_until_message: nil)
 
       message = insert(:message, session: chat_session)
 
       %{user: user, chat_session: chat_session, message: message}
     end
 
-    test "original_session_when_copied_from_message constraint", %{
+    test "original_session_when_copied_until_message constraint", %{
       user: user,
       chat_session: chat_session,
       message: message
     } do
       # Works
-      insert(:chat_session, user: user, original_session: nil, copied_from_message: nil)
+      insert(:chat_session, user: user, original_session: nil, copied_until_message: nil)
 
       insert(:chat_session,
         user: nil,
         original_session: chat_session,
-        copied_from_message: message
+        copied_until_message: message
       )
 
-      assert_raise Ecto.ConstraintError, ~r/original_session_when_copied_from_message/, fn ->
-        insert(:chat_session, user: nil, original_session: chat_session, copied_from_message: nil)
+      assert_raise Ecto.ConstraintError, ~r/original_session_when_copied_until_message/, fn ->
+        insert(:chat_session,
+          user: nil,
+          original_session: chat_session,
+          copied_until_message: nil
+        )
       end
 
-      assert_raise Ecto.ConstraintError, ~r/original_session_when_copied_from_message/, fn ->
-        insert(:chat_session, user: nil, original_session: nil, copied_from_message: message)
+      assert_raise Ecto.ConstraintError, ~r/original_session_when_copied_until_message/, fn ->
+        insert(:chat_session, user: nil, original_session: nil, copied_until_message: message)
       end
     end
 
@@ -48,14 +52,14 @@ defmodule Exmeralda.Chats.SessionTest do
       insert(:chat_session,
         user: nil,
         original_session: chat_session,
-        copied_from_message: message
+        copied_until_message: message
       )
 
       assert_raise Ecto.ConstraintError, ~r/user_id_null_when_regeneration_fields/, fn ->
         insert(:chat_session,
           user: user,
           original_session: chat_session,
-          copied_from_message: message
+          copied_until_message: message
         )
       end
     end
@@ -128,7 +132,7 @@ defmodule Exmeralda.Chats.SessionTest do
       |> refute_changeset_valid()
       |> assert_required_error_on(:ingestion_id)
       |> assert_required_error_on(:original_session_id)
-      |> assert_required_error_on(:copied_from_message_id)
+      |> assert_required_error_on(:copied_until_message_id)
       |> assert_required_error_on(:title)
     end
 
@@ -138,7 +142,7 @@ defmodule Exmeralda.Chats.SessionTest do
       params = %{
         ingestion_id: uuid(),
         original_session_id: uuid(),
-        copied_from_message_id: uuid(),
+        copied_until_message_id: uuid(),
         title: "Foo",
         messages: [
           params_for(:message,
@@ -156,7 +160,7 @@ defmodule Exmeralda.Chats.SessionTest do
         |> Session.duplicate_changeset()
         |> assert_changeset_valid()
         |> assert_changes(:ingestion_id, params.ingestion_id)
-        |> assert_changes(:copied_from_message_id, params.copied_from_message_id)
+        |> assert_changes(:copied_until_message_id, params.copied_until_message_id)
         |> assert_changes(:original_session_id, params.original_session_id)
         |> assert_changes(:title, "Foo")
 
