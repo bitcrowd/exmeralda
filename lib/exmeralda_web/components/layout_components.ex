@@ -55,51 +55,53 @@ defmodule ExmeraldaWeb.LayoutComponents do
       <input id={@drawer_id} type="checkbox" class="drawer-toggle" />
       <div class={["drawer-side z-40", full_screen_height(assigns)]}>
         <label for={@drawer_id} aria-label="close sidebar" class="drawer-overlay"></label>
-        <nav class="bg-base-200 min-h-full flex flex-col place-content-between" aria-label="chats">
+        <nav class="bg-base-200 flex flex-col place-content-between" aria-label="chats">
           <div>
             {render_slot(@side)}
           </div>
-          <div>
-            <a
-              href="https://github.com/bitcrowd/exmeralda/"
-              class="p-4 m-2 rounded-lg flex items-center gap-2 text-gray-500 text-sm group hover:bg-white dark:bg-base-300"
-            >
-              <img
-                src={~p"/images/logo-github-light.svg"}
-                width="98"
-                height="96"
-                alt="github logo"
-                class="max-w-10 dark:hidden dark:group-hover:block"
-              />
-              <img
-                src={~p"/images/logo-github-dark.svg"}
-                width="98"
-                height="96"
-                alt="github logo"
-                class="max-w-10 hidden dark:block dark:group-hover:hidden"
-              /> Contribute on github
-            </a>
-            <hr class="mx-2 border-base-100" />
-            <a
-              href="https://bitcrowd.net"
-              class="p-4 m-2 rounded-lg flex flex-col gap-2 text-gray-500 text-sm group hover:bg-white dark:bg-base-300"
-            >
-              Built in Berlin with ♥ by <span class="sr-only">bitcrowd</span>
-              <img
-                src={~p"/images/logo-bitcrowd-light.svg"}
-                width="303"
-                height="93"
-                alt="bitcrowd logo, a dirigible airship flying amongst clouds"
-                class="max-w-32 dark:hidden dark:group-hover:block"
-              />
-              <img
-                src={~p"/images/logo-bitcrowd-dark.svg"}
-                width="303"
-                height="93"
-                alt="bitcrowd logo, a dirigible airship flying amongst clouds"
-                class="max-w-32 hidden dark:block dark:group-hover:hidden"
-              />
-            </a>
+          <div class="h-52 shadow-[0_0_15px_0_rgba(0,0,0,0.1)] z-10">
+            <div class="fixed w-full bottom-0 left-0">
+              <a
+                href="https://github.com/bitcrowd/exmeralda/"
+                class="p-4 m-2 rounded-lg flex items-center gap-2 text-gray-500 text-sm group hover:bg-white dark:bg-base-300"
+              >
+                <img
+                  src={~p"/images/logo-github-light.svg"}
+                  width="98"
+                  height="96"
+                  alt="github logo"
+                  class="max-w-10 dark:hidden dark:group-hover:block"
+                />
+                <img
+                  src={~p"/images/logo-github-dark.svg"}
+                  width="98"
+                  height="96"
+                  alt="github logo"
+                  class="max-w-10 hidden dark:block dark:group-hover:hidden"
+                /> Contribute on github
+              </a>
+              <hr class="mx-2 border-base-100" />
+              <a
+                href="https://bitcrowd.net"
+                class="p-4 m-2 rounded-lg flex flex-col gap-2 text-gray-500 text-sm group hover:bg-white dark:bg-base-300"
+              >
+                Built in Berlin with ♥ by <span class="sr-only">bitcrowd</span>
+                <img
+                  src={~p"/images/logo-bitcrowd-light.svg"}
+                  width="303"
+                  height="93"
+                  alt="bitcrowd logo, a dirigible airship flying amongst clouds"
+                  class="max-w-32 dark:hidden dark:group-hover:block"
+                />
+                <img
+                  src={~p"/images/logo-bitcrowd-dark.svg"}
+                  width="303"
+                  height="93"
+                  alt="bitcrowd logo, a dirigible airship flying amongst clouds"
+                  class="max-w-32 hidden dark:block dark:group-hover:hidden"
+                />
+              </a>
+            </div>
           </div>
         </nav>
       </div>
@@ -121,7 +123,9 @@ defmodule ExmeraldaWeb.LayoutComponents do
   end
 
   def full_screen_height(assigns) do
-    if Map.has_key?(assigns, :inside_navbar), do: "h-[calc(100vh-4rem)]", else: "h-screen"
+    if Map.has_key?(assigns, :inside_navbar),
+      do: "h-screen lg:h-[calc(100vh-4rem)]",
+      else: "h-screen"
   end
 
   def admin_nav_layout(assigns) do
