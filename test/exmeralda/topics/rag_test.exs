@@ -34,7 +34,7 @@ defmodule Exmeralda.Topics.RagTest do
           content: "Where is the cookie jar?"
         )
 
-      assert {[%{id: ^chunk_id}], %Rag.Generation{} = generation} =
+      assert {[%Chunk{id: ^chunk_id}], %Rag.Generation{} = generation} =
                build_generation(from(c in Chunk), message)
 
       assert generation.query == "Where is the cookie jar?"
@@ -51,11 +51,10 @@ defmodule Exmeralda.Topics.RagTest do
              """
 
       assert %{
-               fulltext_results: [%{id: ^chunk_id}],
-               semantic_results: [%{id: ^chunk_id}],
-               rrf_result: [%{id: ^chunk_id}]
-             } =
-               generation.retrieval_results
+               fulltext_results: [%Chunk{id: ^chunk_id}],
+               semantic_results: [%Chunk{id: ^chunk_id}],
+               rrf_result: [%Chunk{id: ^chunk_id}]
+             } = generation.retrieval_results
     end
   end
 end

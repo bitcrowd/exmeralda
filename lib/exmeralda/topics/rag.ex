@@ -126,23 +126,12 @@ defmodule Exmeralda.Topics.Rag do
   defp query_fulltext(%{query: query}, scope) do
     ranked_subquery =
       from(c in scope,
-        select: %{
-          id: c.id,
-          source: c.source,
-          content: c.content,
-          rank: fragment("ts_rank(search, plainto_tsquery('english', ?))", ^query)
-        }
+        select: %{c | rank: fragment("ts_rank(search, plainto_tsquery('english', ?))", ^query)}
       )
 
     {:ok,
      Repo.all(
        from(r in subquery(ranked_subquery),
-         select: %{
-           id: r.id,
-           source: r.source,
-           rank: r.rank,
-           content: r.content
-         },
          order_by: [desc: r.rank],
          limit: ^@fulltext_limit
        )

@@ -15,6 +15,8 @@ defmodule Exmeralda.Topics.Chunk do
     field(:embedding, Pgvector.Ecto.Vector)
     belongs_to(:ingestion, Ingestion)
     has_one :library, through: [:ingestion, :library]
+
+    field :rank, :float, virtual: true
   end
 
   def set_embedding(chunk, embedding) do
