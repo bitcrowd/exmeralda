@@ -314,12 +314,16 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
 
     cond do
       aggregate? ->
-        Enum.map(evaluation, fn {k, v} -> {k, aggregate_batch_evaluation(v)} end)
+        Map.new(evaluation, fn {k, v} -> {k, aggregate_batch_evaluation(v)} end)
 
       download? && Mix.env() != :prod ->
-        for {result_type, evaluation_result} <- evaluation do
-          evaluation_to_csv(evaluation_result, download_dir, evaluation_filename(result_type))
-        end
+        {:ok,
+         for {result_type, evaluation_result} <- evaluation do
+           {:ok, path} =
+             evaluation_to_csv(evaluation_result, download_dir, evaluation_filename(result_type))
+
+           path
+         end}
 
       true ->
         evaluation
