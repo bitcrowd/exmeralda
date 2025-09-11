@@ -541,7 +541,7 @@ defmodule Exmeralda.RegenerationsTest do
             other_chunk.id
           ])
 
-          # Copied message 2 -> The user message we want regenerate an answer for has the new generation environment set
+          # Copied message 2 -> The user message we want to regenerate an answer for has the new generation environment set
           assert %{
                    index: 2,
                    role: :user,
