@@ -43,7 +43,7 @@ defmodule Exmeralda.Chats.SessionTest do
       end
     end
 
-    test "user_id_null_when_regeneration_fields constraint", %{
+    test "user_id_null_when_original_session constraint", %{
       user: user,
       chat_session: chat_session,
       message: message
@@ -55,7 +55,12 @@ defmodule Exmeralda.Chats.SessionTest do
         copied_until_message: message
       )
 
-      assert_raise Ecto.ConstraintError, ~r/user_id_null_when_regeneration_fields/, fn ->
+      insert(:chat_session, user: user, original_session: nil)
+
+      # Session when deleted nilify the user
+      insert(:chat_session, user: nil, original_session: nil)
+
+      assert_raise Ecto.ConstraintError, ~r/user_id_null_when_original_session/, fn ->
         insert(:chat_session,
           user: user,
           original_session: chat_session,
