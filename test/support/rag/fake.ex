@@ -3,7 +3,7 @@ defmodule Exmeralda.Rag.Fake do
   @behaviour Rag.Ai.Provider
 
   @type t :: %__MODULE__{}
-  defstruct embeddings_model: "fake"
+  defstruct [:embeddings_model]
 
   @raise_for_chunk "please raise when running this embedding"
 

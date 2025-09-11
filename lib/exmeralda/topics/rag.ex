@@ -3,8 +3,8 @@ defmodule Exmeralda.Topics.Rag do
   alias Exmeralda.Repo
   import Ecto.Query
   import Pgvector.Ecto.Query
-  alias Exmeralda.Topics.{Hex, LineCheck}
-  alias Exmeralda.Chats.GenerationEnvironment
+  alias Exmeralda.Topics.{Hex, LineCheck, Chunk}
+  alias Exmeralda.Chats.{GenerationEnvironment, Message}
   alias Rag.{Embedding, Generation, Retrieval}
   alias LangChain.TextSplitter.{RecursiveCharacterTextSplitter, LanguageSeparators}
   require Logger
@@ -89,6 +89,8 @@ defmodule Exmeralda.Topics.Rag do
     |> RecursiveCharacterTextSplitter.split_text(content)
   end
 
+  @spec build_generation(Ecto.Query.t(), Message.t(), keyword()) ::
+          {[Chunk.t()], Rag.Generation.t()}
   def build_generation(scope, message, opts \\ []) do
     %{generation_environment_id: generation_environment_id, content: query} = message
 
@@ -100,13 +102,12 @@ defmodule Exmeralda.Topics.Rag do
       |> Retrieval.reciprocal_rank_fusion(@retrieval_weights, :rrf_result)
       |> Retrieval.deduplicate(:rrf_result, [:id])
 
-    result = Generation.get_retrieval_result(generation, :rrf_result)
-    context = Enum.map_join(result, "\n\n", & &1.content)
-    context_sources = Enum.map(result, & &1.source)
+    chunks = Generation.get_retrieval_result(generation, :rrf_result)
+    context_sources = Enum.map(chunks, & &1.source)
 
-    prompt = prompt(generation_environment_id, query, context)
+    {prompt, context} = prompt(generation_environment_id, query, chunks)
 
-    {result,
+    {chunks,
      generation
      |> Generation.put_context(context)
      |> Generation.put_context_sources(context_sources)
@@ -132,20 +133,46 @@ defmodule Exmeralda.Topics.Rag do
      )}
   end
 
-  defp prompt(generation_environment_id, query, context) do
+  defp prompt(generation_environment_id, query, chunks) do
     %{generation_prompt: generation_prompt} =
       Repo.get!(GenerationEnvironment, generation_environment_id)
       |> Repo.preload([:generation_prompt])
 
-    generation_prompt.prompt
-    |> String.replace("%{query}", query, global: true)
-    |> String.replace("%{context}", context, global: true)
+    full_prompt(generation_prompt, query, chunks)
+  end
+
+  def full_prompt(generation_prompt, query, chunks) do
+    context = Enum.map_join(chunks, "\n\n", & &1.content)
+
+    {generation_prompt.prompt
+     |> String.replace("%{query}", query, global: true)
+     |> String.replace("%{context}", context, global: true), context}
   end
 
   defp embedding_provider do
-    case Application.fetch_env!(:exmeralda, :embedding) do
-      embedding when is_struct(embedding) -> embedding
-      mod when is_atom(mod) -> mod.new(%{})
+    embedding = Application.fetch_env!(:exmeralda, :embedding_config)
+
+    attrs =
+      embedding.config
+      |> Map.put(:embeddings_model, embedding.model)
+      |> maybe_add_api_key(embedding)
+
+    embedding_mod(embedding).new(attrs)
+  end
+
+  defp embedding_mod(%{type: type}) do
+    case type do
+      :mock -> Exmeralda.Rag.Fake
+      :ollama -> Exmeralda.Rag.Ollama
+      :openai -> Rag.Ai.OpenAI
     end
   end
+
+  defp maybe_add_api_key(params, %{type: :openai, provider: provider}) do
+    api_keys = Application.fetch_env!(:exmeralda, :embedding_api_keys)
+
+    Map.put(params, :api_key, Map.get(api_keys, provider))
+  end
+
+  defp maybe_add_api_key(params, _type), do: params
 end

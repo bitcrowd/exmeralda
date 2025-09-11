@@ -10,6 +10,7 @@ defmodule Exmeralda.Chats.Message do
     field :incomplete, :boolean, default: false
     belongs_to :session, Session
     belongs_to :generation_environment, GenerationEnvironment
+    belongs_to :regenerated_from_message, __MODULE__
     has_many :sources, Source
 
     has_many :source_chunks,
@@ -22,10 +23,22 @@ defmodule Exmeralda.Chats.Message do
   end
 
   @attrs [:session_id, :generation_environment_id, :role, :index, :content, :incomplete]
+  @duplicate_attrs [:regenerated_from_message_id] ++ (@attrs -- [:session_id])
+
   @doc false
   def changeset(message \\ %__MODULE__{}, attrs) do
     message
     |> cast(attrs, @attrs)
     |> validate_required(@attrs)
+  end
+
+  def duplicate_changeset(struct, attrs) do
+    struct
+    |> cast(attrs, @duplicate_attrs)
+    # generation_environment_id was added later and its possible that past messages do not have one set
+    |> validate_required(
+      @duplicate_attrs -- [:generation_environment_id, :regenerated_from_message_id]
+    )
+    |> cast_assoc(:sources, with: &Source.duplicate_changeset/2)
   end
 end

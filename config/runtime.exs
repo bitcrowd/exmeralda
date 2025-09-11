@@ -124,22 +124,37 @@ end
 cond do
   config_env() == :prod || System.get_env("JINA_API_KEY") ->
     config :exmeralda,
-           :embedding,
-           Rag.Ai.OpenAI.new(%{
-             embeddings_url: "https://api.jina.ai/v1/embeddings",
-             api_key: System.fetch_env!("JINA_API_KEY"),
-             embeddings_model: "jina-embeddings-v2-base-code"
-           })
+      embedding_api_keys: %{
+        "jina" => System.fetch_env!("JINA_API_KEY")
+      },
+      embedding_config: %{
+        type: :openai,
+        model: "jina-embeddings-v2-base-code",
+        provider: "jina",
+        config: %{
+          embeddings_url: "https://api.jina.ai/v1/embeddings"
+        }
+      }
 
   config_env() == :dev ->
     config :exmeralda,
-           :embedding,
-           Exmeralda.Rag.Ollama.new(%{
-             embeddings_model: "unclemusclez/jina-embeddings-v2-base-code"
-           })
+      embedding_api_keys: %{},
+      embedding_config: %{
+        type: :ollama,
+        provider: "ollama_ai",
+        model: "unclemusclez/jina-embeddings-v2-base-code",
+        config: %{}
+      }
 
   true ->
-    config :exmeralda, :embedding, Exmeralda.Rag.Fake
+    config :exmeralda,
+      embedding_api_keys: %{},
+      embedding_config: %{
+        type: :mock,
+        provider: "mock",
+        model: "fake",
+        config: %{}
+      }
 end
 
 if config_env() == :prod do

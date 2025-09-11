@@ -203,6 +203,9 @@ defmodule Exmeralda.ChatsTest do
       system_prompt: system_prompt,
       generation_prompt: generation_prompt
     } do
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "regenerations")
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "user-#{user.id}")
+
       generation_environment =
         assert_count_differences(
           Repo,
@@ -247,6 +250,9 @@ defmodule Exmeralda.ChatsTest do
           end
         )
 
+      assert_received {:session_update, _, _}
+      refute_received {:message_regenerated, _}
+
       # Starting a session with the same generation environment does not create a new one
       assert_count_differences(
         Repo,
@@ -262,12 +268,17 @@ defmodule Exmeralda.ChatsTest do
           [message, assistant_message] = session.messages
           assert assistant_message.generation_environment_id == generation_environment.id
           assert message.generation_environment_id == generation_environment.id
+          refute message.regenerated_from_message_id
+          refute assistant_message.regenerated_from_message_id
 
           wait_for_generation_task()
         end
       )
 
       assert Repo.aggregate(GenerationEnvironment, :count) == 1
+
+      assert_received {:session_update, _, _}
+      refute_received {:message_regenerated, _}
     end
   end
 
@@ -329,11 +340,15 @@ defmodule Exmeralda.ChatsTest do
     end
 
     test "creates a message and upserts a generation environment", %{
+      user: user,
       session: session,
       model_config_provider: model_config_provider,
       system_prompt: system_prompt,
       generation_prompt: generation_prompt
     } do
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "regenerations")
+      Phoenix.PubSub.subscribe(Exmeralda.PubSub, "user-#{user.id}")
+
       assert Repo.aggregate(GenerationEnvironment, :count) == 2
 
       generation_environment =
@@ -356,6 +371,7 @@ defmodule Exmeralda.ChatsTest do
           assert message.content == "What's the recipe for cookies?"
           refute message.incomplete
           assert message.generation_environment_id == generation_environment.id
+          refute message.regenerated_from_message_id
 
           assert assistant_message.index == 3
           assert assistant_message.role == :assistant
@@ -363,12 +379,16 @@ defmodule Exmeralda.ChatsTest do
           assert assistant_message.incomplete
           assert assistant_message.sources == []
           assert assistant_message.generation_environment_id == generation_environment.id
+          refute assistant_message.regenerated_from_message_id
 
           wait_for_generation_task()
 
           refute Repo.reload(assistant_message).incomplete
           generation_environment
         end)
+
+      assert_received {:session_update, _, _}
+      refute_received {:message_regenerated, _}
 
       # Continuing with the same model config does not create a new generation environment
       assert_count_differences(Repo, [{Message, 2}, {GenerationEnvironment, 0}], fn ->
@@ -385,6 +405,9 @@ defmodule Exmeralda.ChatsTest do
       end)
 
       assert Repo.aggregate(GenerationEnvironment, :count) == 3
+
+      assert_received {:session_update, _, _}
+      refute_received {:message_regenerated, _}
     end
   end
 

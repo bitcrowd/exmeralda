@@ -88,7 +88,6 @@ defmodule Exmeralda.Chats do
         generation_environment_id: generation_environment.id
       }
     end)
-    |> Multi.put(:previous_messages, [])
     |> assistant_message()
     |> Repo.transaction()
     |> case do
@@ -113,7 +112,6 @@ defmodule Exmeralda.Chats do
   def continue_session(session, params) do
     Multi.new()
     |> Multi.put(:session, session)
-    |> Multi.put(:previous_messages, all_messages(session))
     |> upsert_generation_environment()
     |> Multi.insert(:message, fn %{
                                    session: session,
@@ -137,14 +135,6 @@ defmodule Exmeralda.Chats do
     end
   end
 
-  defp all_messages(%Session{id: session_id}) do
-    from(m in Message,
-      where: m.session_id == ^session_id,
-      order_by: [asc: :index]
-    )
-    |> Repo.all()
-  end
-
   defp upsert_generation_environment(multi) do
     generation_environment_params = current_llm_config()
 
@@ -162,9 +152,11 @@ defmodule Exmeralda.Chats do
     )
   end
 
-  defp assistant_message(multi) do
+  def assistant_message(multi, opts \\ %{}) do
     multi
     |> Multi.insert(:assistant_message, fn %{session: session, message: message} ->
+      extra_attrs = Map.take(opts, [:regenerated_from_message_id])
+
       %Message{
         role: :assistant,
         content: "",
@@ -173,17 +165,18 @@ defmodule Exmeralda.Chats do
         index: message.index + 1,
         incomplete: true
       }
+      |> Map.merge(extra_attrs)
     end)
     |> Multi.run(:request_generation, &request_generation/2)
   end
 
   defp request_generation(_, %{
-         previous_messages: previous_messages,
          message: message,
          assistant_message: assistant_message,
          session: session
        }) do
     session = Repo.preload(session, [:ingestion])
+    previous_messages = all_messages(session)
 
     handler = %{
       on_llm_new_delta: fn _model, %LangChain.MessageDelta{} = data ->
@@ -197,7 +190,11 @@ defmodule Exmeralda.Chats do
           )
           |> Repo.preload(@message_preload)
 
-        send_session_update(session, {:message_completed, assistant_message})
+        if session.user_id do
+          send_session_update(session, {:message_completed, assistant_message})
+        else
+          send_message_regenerated(assistant_message)
+        end
       end
     }
 
@@ -217,6 +214,14 @@ defmodule Exmeralda.Chats do
           raise "Error when building generation #{inspect(error)} - check the server logs!"
       end
     end)
+  end
+
+  defp all_messages(%Session{id: session_id}) do
+    from(m in Message,
+      where: m.session_id == ^session_id,
+      order_by: [asc: :index]
+    )
+    |> Repo.all()
   end
 
   def build_generation(message, ingestion_id) do
@@ -239,6 +244,14 @@ defmodule Exmeralda.Chats do
       Exmeralda.PubSub,
       "user-#{session.user_id}",
       {:session_update, session.id, payload}
+    )
+  end
+
+  defp send_message_regenerated(message) do
+    PubSub.broadcast(
+      Exmeralda.PubSub,
+      "regenerations",
+      {:message_regenerated, message.regenerated_from_message_id}
     )
   end
 

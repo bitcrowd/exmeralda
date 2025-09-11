@@ -3,6 +3,73 @@ defmodule Exmeralda.Chats.SessionTest do
 
   alias Exmeralda.Chats.Session
 
+  describe "table" do
+    setup do
+      # original session
+      user = insert(:user)
+
+      chat_session =
+        insert(:chat_session, user: user, original_session: nil, copied_until_message: nil)
+
+      message = insert(:message, session: chat_session)
+
+      %{user: user, chat_session: chat_session, message: message}
+    end
+
+    test "original_session_when_copied_until_message constraint", %{
+      user: user,
+      chat_session: chat_session,
+      message: message
+    } do
+      # Works
+      insert(:chat_session, user: user, original_session: nil, copied_until_message: nil)
+
+      insert(:chat_session,
+        user: nil,
+        original_session: chat_session,
+        copied_until_message: message
+      )
+
+      assert_raise Ecto.ConstraintError, ~r/original_session_when_copied_until_message/, fn ->
+        insert(:chat_session,
+          user: nil,
+          original_session: chat_session,
+          copied_until_message: nil
+        )
+      end
+
+      assert_raise Ecto.ConstraintError, ~r/original_session_when_copied_until_message/, fn ->
+        insert(:chat_session, user: nil, original_session: nil, copied_until_message: message)
+      end
+    end
+
+    test "user_id_null_when_original_session constraint", %{
+      user: user,
+      chat_session: chat_session,
+      message: message
+    } do
+      # Works
+      insert(:chat_session,
+        user: nil,
+        original_session: chat_session,
+        copied_until_message: message
+      )
+
+      insert(:chat_session, user: user, original_session: nil)
+
+      # Session when deleted nilify the user
+      insert(:chat_session, user: nil, original_session: nil)
+
+      assert_raise Ecto.ConstraintError, ~r/user_id_null_when_original_session/, fn ->
+        insert(:chat_session,
+          user: user,
+          original_session: chat_session,
+          copied_until_message: message
+        )
+      end
+    end
+  end
+
   describe "create_changeset/2" do
     test "errors with invalid params" do
       %Session{}
@@ -60,6 +127,59 @@ defmodule Exmeralda.Chats.SessionTest do
 
       assert Repo.reload(message)
       assert Repo.reload(reaction)
+    end
+  end
+
+  describe "duplicate_changeset/1" do
+    test "errors with invalid params" do
+      %{}
+      |> Session.duplicate_changeset()
+      |> refute_changeset_valid()
+      |> assert_required_error_on(:ingestion_id)
+      |> assert_required_error_on(:original_session_id)
+      |> assert_required_error_on(:copied_until_message_id)
+      |> assert_required_error_on(:title)
+    end
+
+    test "is valid with valid params" do
+      chunk_id = uuid()
+
+      params = %{
+        ingestion_id: uuid(),
+        original_session_id: uuid(),
+        copied_until_message_id: uuid(),
+        title: "Foo",
+        messages: [
+          params_for(:message,
+            generation_environment_id: uuid(),
+            content: "hello there!",
+            sources: [
+              %{chunk_id: chunk_id}
+            ]
+          )
+        ]
+      }
+
+      cs =
+        params
+        |> Session.duplicate_changeset()
+        |> assert_changeset_valid()
+        |> assert_changes(:ingestion_id, params.ingestion_id)
+        |> assert_changes(:copied_until_message_id, params.copied_until_message_id)
+        |> assert_changes(:original_session_id, params.original_session_id)
+        |> assert_changes(:title, "Foo")
+
+      [message_cs] = cs.changes.messages
+
+      message_cs
+      |> assert_changeset_valid()
+      |> assert_changes(:content, "hello there!")
+
+      [source_cs] = message_cs.changes.sources
+
+      source_cs
+      |> assert_changeset_valid()
+      |> assert_changes(:chunk_id, chunk_id)
     end
   end
 end
