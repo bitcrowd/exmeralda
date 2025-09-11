@@ -23,7 +23,7 @@ defmodule Exmeralda.Chats.Message do
   end
 
   @attrs [:session_id, :generation_environment_id, :role, :index, :content, :incomplete]
-  @duplicate_attrs ([:regenerated_from_message_id] ++ @attrs) -- [:session_id]
+  @duplicate_attrs [:regenerated_from_message_id] ++ (@attrs -- [:session_id])
 
   @doc false
   def changeset(message \\ %__MODULE__{}, attrs) do
