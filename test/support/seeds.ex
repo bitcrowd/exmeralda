@@ -88,7 +88,11 @@ defmodule Exmeralda.Seeds do
         insert_idempotently(%Exmeralda.LLM.ModelConfig{
           id: "7420d870-b10b-46ba-b30b-5c4630ee3a99",
           name: "llama3.2:latest",
-          config: %{stream: true, num_ctx: 32768}
+          # Ollama has a context window of 2048 by default, and this is also Langchain's default
+          # https://github.com/brainlid/langchain/blob/47de3e44e09c51a811e1e3262e161e1a92a4b77d/lib/chat_models/chat_ollama_ai.ex#L114
+          # This context window is likely too small for our prompts.
+          # Setting `num_ctx` allows to increase the context window.
+          config: %{stream: true, num_ctx: 32_768}
         })
 
       insert_idempotently(%Exmeralda.LLM.ModelConfigProvider{
