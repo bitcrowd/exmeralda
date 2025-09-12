@@ -205,8 +205,10 @@ defmodule ExmeraldaWeb.CoreComponents do
     <.form :let={f} for={@for} as={@as} {@rest}>
       <div class="space-y-8">
         {render_slot(@inner_block, f)}
-        <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
-          {render_slot(action, f)}
+        <div class="flex gap-2 mt-2">
+          <div :for={action <- @actions}>
+            {render_slot(action, f)}
+          </div>
         </div>
       </div>
     </.form>

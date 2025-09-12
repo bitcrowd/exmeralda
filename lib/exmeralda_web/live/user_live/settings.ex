@@ -49,6 +49,8 @@ defmodule ExmeraldaWeb.UserLive.Settings do
               <.input label={gettext("E-Mail")} type="email" field={f[:email]} />
               <:actions>
                 <a href={~p"/chat/start"} class="btn btn-soft">Back</a>
+              </:actions>
+              <:actions>
                 <.button class="btn-primary">Save</.button>
               </:actions>
             </.simple_form>

@@ -223,11 +223,11 @@ defmodule Exmeralda.RegenerationsTest do
                        "chunks" => [
                          %{
                            "content" => "I am a message",
-                           "source" => "file.ex"
+                           "source" => "lib/file.ex"
                          },
                          %{
                            "content" => "I am a message",
-                           "source" => "file.ex"
+                           "source" => "lib/file.ex"
                          }
                        ],
                        "full_user_prompt" =>
@@ -345,7 +345,7 @@ defmodule Exmeralda.RegenerationsTest do
                        "chunks" => [
                          %{
                            "content" => "I am a message",
-                           "source" => "file.ex"
+                           "source" => "lib/file.ex"
                          }
                        ],
                        "full_user_prompt" =>

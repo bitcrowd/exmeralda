@@ -25,9 +25,9 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <.navbar_layout user={@current_user}>
+    <.admin_nav_layout user={@current_user} current_path={@current_path}>
       <.breadcrumbs>
-        <:items title="Libraries" href={~p"/admin"} icon_name="hero-inbox-stack-micro" />
+        <:items title="Libraries" href={~p"/admin/library"} icon_name="hero-archive-box-micro" />
       </.breadcrumbs>
 
       <.header title="Libraries" />
@@ -66,7 +66,7 @@ defmodule ExmeraldaWeb.Admin.LibraryLive.Index do
       </Flop.Phoenix.table>
 
       <.pagination meta={@meta} path={~p"/admin"} />
-    </.navbar_layout>
+    </.admin_nav_layout>
     """
   end
 end

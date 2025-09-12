@@ -71,9 +71,9 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
     assigns = assign_new(assigns, :ingestion_deletable?, fn -> ingestion_deletable?(assigns) end)
 
     ~H"""
-    <.navbar_layout user={@current_user}>
+    <.admin_nav_layout user={@current_user} current_path={@current_path}>
       <.breadcrumbs>
-        <:items title="Libraries" href={~p"/admin"} icon_name="hero-inbox-stack-micro" />
+        <:items title="Libraries" href={~p"/admin/library"} icon_name="hero-archive-box-micro" />
         <:items title={library_title(@library)} href={~p"/admin/library/#{@library.id}"} />
         <:items
           title={"Ingestion ##{@ingestion.id}"}
@@ -203,7 +203,7 @@ defmodule ExmeraldaWeb.Admin.IngestionLive.Show do
           path={~p"/admin/library/#{@library.id}/ingestions/#{@ingestion.id}"}
         />
       </.section>
-    </.navbar_layout>
+    </.admin_nav_layout>
     """
   end
 
