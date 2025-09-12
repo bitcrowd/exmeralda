@@ -95,6 +95,9 @@ defmodule ExmeraldaWeb.Router do
 
         live "/system_prompts", SystemPromptLive.Index, :index
         live "/system_prompts/new", SystemPromptLive.New, :new
+
+        live "/generation_prompts", GenerationPromptLive.Index, :index
+        live "/generation_prompts/new", GenerationPromptLive.New, :new
       end
     end
   end

@@ -100,10 +100,7 @@ defmodule ExmeraldaWeb.Admin.Helper do
   def ingestion_active_badge(assigns) do
     ~H"""
     <div :if={@active} class="tooltip" data-tip={gettext("New chat sessions use this ingestion.")}>
-      <span class="badge badge-success mr-2 mt-2 lg:mt-0 lg:ml-4">
-        <.icon name="hero-check-circle-micro" class="scale-75" />
-        {gettext("Active")}
-      </span>
+      <.active_badge class="lg:mt-0 lg:ml-4" />
     </div>
     <div
       :if={!@active}
@@ -115,6 +112,17 @@ defmodule ExmeraldaWeb.Admin.Helper do
         {gettext("Inactive")}
       </span>
     </div>
+    """
+  end
+
+  attr :class, :string, default: ""
+
+  def active_badge(assigns) do
+    ~H"""
+    <span class={["badge badge-success block mt-2", @class]}>
+      <.icon name="hero-check-circle-micro" class="scale-75" />
+      {gettext("Active")}
+    </span>
     """
   end
 end
