@@ -125,11 +125,17 @@ defmodule Exmeralda.Topics.Rag do
   end
 
   defp query_fulltext(%{query: query}, scope) do
+    ranked_subquery =
+      from(c in scope,
+        select: %{c | rank: fragment("ts_rank(search, plainto_tsquery('english', ?))", ^query)}
+      )
+
     {:ok,
      Repo.all(
-       scope
-       |> order_by(fragment("search @@ websearch_to_tsquery(?)", ^query))
-       |> limit(@fulltext_limit)
+       from(r in subquery(ranked_subquery),
+         order_by: [desc: r.rank],
+         limit: ^@fulltext_limit
+       )
      )}
   end
 

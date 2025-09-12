@@ -83,7 +83,7 @@ defmodule Exmeralda.Factory do
       library: build(:library),
       content: "I am a message",
       embedding: Enum.map(1..768, fn _ -> :rand.uniform() end),
-      source: "file.ex",
+      source: "lib/file.ex",
       type: :code
     }
   end

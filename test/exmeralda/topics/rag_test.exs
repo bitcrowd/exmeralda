@@ -16,7 +16,7 @@ defmodule Exmeralda.Topics.RagTest do
       library = insert(:library)
       ingestion = insert(:ingestion, library: library)
 
-      chunk =
+      %{id: chunk_id} =
         insert(:chunk,
           ingestion: ingestion,
           library: library,
@@ -34,10 +34,8 @@ defmodule Exmeralda.Topics.RagTest do
           content: "Where is the cookie jar?"
         )
 
-      assert {[%Chunk{} = result], %Rag.Generation{} = generation} =
+      assert {[%Chunk{id: ^chunk_id}], %Rag.Generation{} = generation} =
                build_generation(from(c in Chunk), message)
-
-      assert result.id == chunk.id
 
       assert generation.query == "Where is the cookie jar?"
       assert generation.context == "The cookie jar does not exist"
@@ -52,8 +50,11 @@ defmodule Exmeralda.Topics.RagTest do
              Answer:
              """
 
-      assert %{fulltext_results: [%Chunk{}], semantic_results: [%Chunk{}], rrf_result: [%Chunk{}]} =
-               generation.retrieval_results
+      assert %{
+               fulltext_results: [%Chunk{id: ^chunk_id}],
+               semantic_results: [%Chunk{id: ^chunk_id}],
+               rrf_result: [%Chunk{id: ^chunk_id}]
+             } = generation.retrieval_results
     end
   end
 end

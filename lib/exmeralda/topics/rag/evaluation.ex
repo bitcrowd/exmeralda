@@ -19,12 +19,19 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
 
   ```
     Exmeralda.Topics.Rag.Evaluation.batch_evaluation(
-      <<< PATH TO QUESTION JSON FILE >>>,
-      download: true
+      <<< PATH TO QUESTION JSON FILE >>>
     )
   ```
-  That will save a csv file with the results of the evaluation in the default @download_dir
+  This will print the result to the console.
 
+  #### Options
+  - `download: true` -> That will save a csv file with the results of the evaluation in the default @download_dir.
+  - `download_dir` -> To specify the directory the csv is downloaded into.
+  - `aggregate: true` -> To return aggregated results. Per default aggregated results are returned for all the
+    steps of the retrieval strategy.
+  - `results` -> To get evaluations for specific steps of the retrieval strategy
+    (`rrf_result` -> final result, `semantic_results`, `fulltext_results`).
+    Default: `rrf_result`, for aggregate: all result types.
 
   ### Individual usage
 
@@ -52,7 +59,9 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
         ]
   @type batch_evaluation_opts :: [
           download: boolean(),
-          download_dir: filepath()
+          download_dir: filepath(),
+          aggregate: boolean(),
+          results: [result_type()]
         ]
   @type question_opts :: [content: String.t()]
   @type evaluation :: %{
@@ -64,6 +73,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
           chunk_was_found?: boolean(),
           chunk_rank: pos_integer() | nil
         }
+  @type result_type :: :rrf_result | :fulltext_results | :semantic_results
 
   @download_dir "./rag_evaluations"
 
@@ -95,7 +105,9 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
 
     results =
       from(c in Chunk,
-        where: c.ingestion_id == ^ingestion_id and not is_nil(c.embedding),
+        where:
+          c.ingestion_id == ^ingestion_id and not is_nil(c.embedding) and
+            fragment("? LIKE 'lib/%'", c.source),
         # TODO: Well this is random, ideally we don't want to reuse always the same chunks
         # But since the LLM request is so long, it could make sense to involve Oban in the mix
         # and save the questions in a DB table.
@@ -227,30 +239,40 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   Evaluates the retrieval for a given chunk, question and generation environment.
   Ideally, that should be used after generating questions with batch_generating_question.
   """
-  @spec evaluate(question()) :: evaluation()
-  def evaluate(%{
-        chunk_id: chunk_id,
-        question: question,
-        generation_environment_id: generation_environment_id
-      }) do
+  @spec evaluate(question()) :: %{result_type() => evaluation()}
+  @spec evaluate(question(), opts :: keyword()) :: %{result_type() => evaluation()}
+  def evaluate(
+        %{
+          chunk_id: chunk_id,
+          question: question,
+          generation_environment_id: generation_environment_id
+        } = question_map,
+        opts \\ []
+      ) do
+    results = Keyword.get(opts, :results, [:rrf_result])
     chunk = Repo.get!(Chunk, chunk_id)
 
-    {chunks, _generation} =
+    {_chunks, generation} =
       %{
         generation_environment_id: generation_environment_id,
         content: question
       }
       |> Chats.build_generation(chunk.ingestion_id)
 
+    generation.retrieval_results
+    |> Map.take(results)
+    |> Enum.reduce(%{}, fn {method, chunks}, acc ->
+      evaluation = do_evaluate(chunks, chunk, question_map)
+      Map.put(acc, method, evaluation)
+    end)
+  end
+
+  defp do_evaluate(chunks, chunk, question_map) do
     chunk_was_found = Enum.any?(chunks, &(&1.id == chunk.id))
     first_hit_id = if Enum.any?(chunks), do: Enum.at(chunks, 0).id, else: nil
 
     %{
-      question: %{
-        chunk_id: chunk_id,
-        generation_environment_id: generation_environment_id,
-        question: question
-      },
+      question: question_map,
       ingestion_id: chunk.ingestion_id,
       first_hit_correct?: first_hit_id == chunk.id,
       first_hit_id: first_hit_id,
@@ -265,8 +287,10 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   @spec batch_evaluation(String.t(), batch_evaluation_opts()) ::
           [evaluation()] | {:ok, filepath()}
   def batch_evaluation(question_json_file_path, opts \\ []) do
+    aggregate? = Keyword.get(opts, :aggregate, false)
     download? = Keyword.get(opts, :download, false)
     download_dir = Keyword.get(opts, :download_dir, @download_dir)
+    result_types = Keyword.get(opts, :results, default_result_types(aggregate?))
 
     evaluation =
       question_json_file_path
@@ -277,22 +301,42 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
                        "generation_environment_id" => generation_environment_id,
                        "question" => question
                      } ->
-        evaluate(%{
-          chunk_id: chunk_id,
-          question: question,
-          generation_environment_id: generation_environment_id
-        })
+        evaluate(
+          %{
+            chunk_id: chunk_id,
+            question: question,
+            generation_environment_id: generation_environment_id
+          },
+          results: result_types
+        )
       end)
+      |> map_evaluation_results(result_types)
 
-    if download? && Mix.env() != :prod do
-      evaluation_to_csv(evaluation, download_dir, evaluation_filename())
-    else
-      evaluation
+    cond do
+      aggregate? ->
+        Map.new(evaluation, fn {k, v} -> {k, aggregate_batch_evaluation(v)} end)
+
+      download? && Mix.env() != :prod ->
+        {:ok,
+         for {result_type, evaluation_result} <- evaluation do
+           {:ok, path} =
+             evaluation_to_csv(evaluation_result, download_dir, evaluation_filename(result_type))
+
+           path
+         end}
+
+      true ->
+        evaluation
     end
   end
 
-  defp evaluation_filename do
-    "evaluation_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.csv"
+  defp default_result_types(true = _aggregate?),
+    do: [:rrf_result, :fulltext_results, :semantic_results]
+
+  defp default_result_types(false), do: [:rrf_result]
+
+  defp evaluation_filename(result_type) do
+    "evaluation_#{result_type}_#{DateTime.to_iso8601(DateTime.utc_now(), :basic)}.csv"
   end
 
   defp evaluation_to_csv(evaluation, download_dir, filename) do
@@ -325,5 +369,42 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
       )
 
     download(download_dir, filename, NimbleCSV.RFC4180.dump_to_iodata([headers] ++ data))
+  end
+
+  defp aggregate_batch_evaluation(evaluation) do
+    total = length(evaluation)
+    to_ratio = fn count -> (count / total) |> Float.round(2) end
+
+    found_chunks_ranks =
+      Enum.filter(evaluation, & &1.chunk_was_found?) |> Enum.map(& &1.chunk_rank)
+
+    found_chunk_ratio = Enum.count(found_chunks_ranks) |> to_ratio.()
+    first_hits_ratio = Enum.count(evaluation, & &1.first_hit_correct?) |> to_ratio.()
+
+    %{
+      question_count: total,
+      first_hit_ratio: first_hits_ratio,
+      found_chunk_ratio: found_chunk_ratio,
+      avg_found_chunk_rank: avg(found_chunks_ranks),
+      median_found_chunk_rank: median(found_chunks_ranks)
+    }
+  end
+
+  defp avg(chunk_ranks) do
+    round(Enum.sum(chunk_ranks) / length(chunk_ranks))
+  end
+
+  defp median(chunk_ranks) do
+    middle_index = chunk_ranks |> length() |> div(2)
+
+    chunk_ranks
+    |> Enum.sort()
+    |> Enum.at(middle_index)
+  end
+
+  defp map_evaluation_results(evaluation_results, result_types) do
+    Enum.into(result_types, %{}, fn result_type ->
+      {result_type, Enum.map(evaluation_results, & &1[result_type])}
+    end)
   end
 end

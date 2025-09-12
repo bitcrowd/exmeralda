@@ -81,6 +81,8 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
       second_chunk = insert(:chunk, ingestion: ingestion)
       insert(:chunk, ingestion: insert(:ingestion))
       insert(:chunk, ingestion: ingestion, embedding: nil)
+      # This chunk does not get a question
+      insert(:chunk, ingestion: ingestion, source: "SomeModel.html")
 
       provider = insert(:provider, type: :mock)
       model_config_provider = insert(:model_config_provider, provider: provider)
@@ -171,7 +173,7 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
     end
   end
 
-  describe "evaluate/1" do
+  describe "evaluate/1,2" do
     test "raises if the chunk does not exist" do
       assert_raise Ecto.NoResultsError, fn ->
         Evaluation.evaluate(%{chunk_id: uuid(), generation_environment_id: uuid(), question: ""})
@@ -189,17 +191,74 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
                generation_environment_id: generation_environment.id,
                question: "Where is the cookie jar?"
              }) == %{
-               ingestion_id: ingestion.id,
-               question: %{
-                 question: "Where is the cookie jar?",
+               rrf_result: %{
+                 ingestion_id: ingestion.id,
+                 question: %{
+                   question: "Where is the cookie jar?",
+                   chunk_id: chunk.id,
+                   generation_environment_id: generation_environment.id
+                 },
+                 first_hit_correct?: true,
+                 first_hit_id: chunk.id,
+                 total_chunks_found: 1,
+                 chunk_was_found?: true,
+                 chunk_rank: 1
+               }
+             }
+    end
+
+    test "takes a result option" do
+      ingestion = insert(:ingestion)
+      chunk = insert(:chunk, ingestion: ingestion, content: "The cookie jar does not exist")
+      generation_environment = insert(:generation_environment)
+
+      assert Evaluation.evaluate(
+               %{
                  chunk_id: chunk.id,
-                 generation_environment_id: generation_environment.id
+                 generation_environment_id: generation_environment.id,
+                 question: "Where is the cookie jar?"
                },
-               first_hit_correct?: true,
-               first_hit_id: chunk.id,
-               total_chunks_found: 1,
-               chunk_was_found?: true,
-               chunk_rank: 1
+               results: [:rrf_result, :semantic_results, :fulltext_results]
+             ) == %{
+               rrf_result: %{
+                 ingestion_id: ingestion.id,
+                 question: %{
+                   question: "Where is the cookie jar?",
+                   chunk_id: chunk.id,
+                   generation_environment_id: generation_environment.id
+                 },
+                 first_hit_correct?: true,
+                 first_hit_id: chunk.id,
+                 total_chunks_found: 1,
+                 chunk_was_found?: true,
+                 chunk_rank: 1
+               },
+               semantic_results: %{
+                 ingestion_id: ingestion.id,
+                 question: %{
+                   question: "Where is the cookie jar?",
+                   chunk_id: chunk.id,
+                   generation_environment_id: generation_environment.id
+                 },
+                 first_hit_correct?: true,
+                 first_hit_id: chunk.id,
+                 total_chunks_found: 1,
+                 chunk_was_found?: true,
+                 chunk_rank: 1
+               },
+               fulltext_results: %{
+                 ingestion_id: ingestion.id,
+                 question: %{
+                   question: "Where is the cookie jar?",
+                   chunk_id: chunk.id,
+                   generation_environment_id: generation_environment.id
+                 },
+                 first_hit_correct?: true,
+                 first_hit_id: chunk.id,
+                 total_chunks_found: 1,
+                 chunk_was_found?: true,
+                 chunk_rank: 1
+               }
              }
     end
   end
@@ -216,41 +275,43 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
     end
 
     test "runs the evaluation for the questions in a json" do
-      assert [
-               %{
-                 question: %{
-                   question:
-                     "I’ve added a support notice to my README: `# support: available for a fee`. Can I offer a warranty or indemnity to customers under Apache 2.0, and what responsibilities do I need to assume to stay compliant?",
-                   chunk_id: "79c9dff1-322c-4ddc-94b5-be49c76931f2",
-                   generation_environment_id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5"
+      assert %{
+               rrf_result: [
+                 %{
+                   question: %{
+                     question:
+                       "I’ve added a support notice to my README: `# support: available for a fee`. Can I offer a warranty or indemnity to customers under Apache 2.0, and what responsibilities do I need to assume to stay compliant?",
+                     chunk_id: "79c9dff1-322c-4ddc-94b5-be49c76931f2",
+                     generation_environment_id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5"
+                   },
+                   ingestion_id: "db4e4dc9-43c5-44be-9521-58a8785071ab",
+                   first_hit_correct?: _,
+                   first_hit_id: _,
+                   total_chunks_found: 2,
+                   chunk_was_found?: true,
+                   chunk_rank: _
                  },
-                 ingestion_id: "db4e4dc9-43c5-44be-9521-58a8785071ab",
-                 first_hit_correct?: _,
-                 first_hit_id: _,
-                 total_chunks_found: 2,
-                 chunk_was_found?: true,
-                 chunk_rank: _
-               },
-               %{
-                 question: %{
-                   question:
-                     "I need to get Carbonite’s default audit trail prefix in my Phoenix app. I’ve called  \n`Carbonite.default_prefix()` but I’m not sure what it actually returns. How can I retrieve the default audit trail prefix?",
-                   chunk_id: "143b7836-d7a0-46df-8398-3d36894d8b58",
-                   generation_environment_id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5"
-                 },
-                 ingestion_id: "db4e4dc9-43c5-44be-9521-58a8785071ab",
-                 first_hit_correct?: _,
-                 first_hit_id: _,
-                 total_chunks_found: 2,
-                 chunk_was_found?: true,
-                 chunk_rank: _
-               }
-             ] = Evaluation.batch_evaluation(@fixture_file)
+                 %{
+                   question: %{
+                     question:
+                       "I need to get Carbonite’s default audit trail prefix in my Phoenix app. I’ve called  \n`Carbonite.default_prefix()` but I’m not sure what it actually returns. How can I retrieve the default audit trail prefix?",
+                     chunk_id: "143b7836-d7a0-46df-8398-3d36894d8b58",
+                     generation_environment_id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5"
+                   },
+                   ingestion_id: "db4e4dc9-43c5-44be-9521-58a8785071ab",
+                   first_hit_correct?: _,
+                   first_hit_id: _,
+                   total_chunks_found: 2,
+                   chunk_was_found?: true,
+                   chunk_rank: _
+                 }
+               ]
+             } = Evaluation.batch_evaluation(@fixture_file)
     end
 
     @tag :tmp_dir
     test "accepts a download optional parameter", %{tmp_dir: tmp_dir} do
-      assert {:ok, filepath} =
+      assert {:ok, [filepath]} =
                Evaluation.batch_evaluation(@fixture_file, download: true, download_dir: tmp_dir)
 
       assert String.ends_with?(filepath, ".csv")
@@ -258,6 +319,26 @@ defmodule Exmeralda.Topics.Rag.EvaluationTest do
 
       assert result =~
                "ingestion_id,generation_environment_id,chunk_id,question,first_hit_correct?,first_hit_id,total_chunks_found,chunk_was_found?,chunk_rank"
+    end
+
+    test "accepts an aggregate optional parameter" do
+      assert %{
+               rrf_result: %{
+                 question_count: 2,
+                 first_hit_ratio: _,
+                 found_chunk_ratio: _,
+                 avg_found_chunk_rank: _,
+                 median_found_chunk_rank: _
+               },
+               semantic_results: %{},
+               fulltext_results: %{}
+             } =
+               Evaluation.batch_evaluation(@fixture_file, aggregate: true)
+    end
+
+    test "accepts a results optional parameter" do
+      assert %{semantic_results: [%{}, %{}]} =
+               Evaluation.batch_evaluation(@fixture_file, results: [:semantic_results])
     end
   end
 end
