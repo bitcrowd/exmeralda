@@ -92,7 +92,10 @@ defmodule Exmeralda.Seeds do
           # https://github.com/brainlid/langchain/blob/47de3e44e09c51a811e1e3262e161e1a92a4b77d/lib/chat_models/chat_ollama_ai.ex#L114
           # This context window is likely too small for our prompts.
           # Setting `num_ctx` allows to increase the context window.
-          config: %{stream: true, num_ctx: 32_768}
+          #
+          # `num_predict: -2` means that the rest of the models context can be used to predit tokens for the response.
+          # The default is 128 and leads to truncated responses with the increased `num_ctx`.
+          config: %{stream: true, num_ctx: 32_768, num_predict: -2}
         })
 
       insert_idempotently(%Exmeralda.LLM.ModelConfigProvider{
