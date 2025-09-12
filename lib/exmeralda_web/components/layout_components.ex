@@ -146,7 +146,7 @@ defmodule ExmeraldaWeb.LayoutComponents do
     },
     %{
       href: "/admin/generation_prompts",
-      icon: "command-line-micro",
+      icon: "hero-command-line-micro",
       label: gettext("Generation Prompts")
     }
   ]
