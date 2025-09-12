@@ -138,10 +138,10 @@ defmodule ExmeraldaWeb.LayoutComponents do
   end
 
   @admin_nav_items [
-    %{href: "/admin/library", icon: "archive-box-micro", label: gettext("Libraries")},
+    %{href: "/admin/library", icon: "hero-archive-box-micro", label: gettext("Libraries")},
     %{
       href: "/admin/system_prompts",
-      icon: "chat-bubble-bottom-center-text-micro",
+      icon: "hero-chat-bubble-bottom-center-text-micro",
       label: gettext("System Prompts")
     }
   ]
@@ -151,22 +151,22 @@ defmodule ExmeraldaWeb.LayoutComponents do
     ~H"""
     <ul class="menu menu-vertical w-full">
       <li :for={item <- @admin_nav_items}>
-        <a
-          href={item.href}
+        <.link
+          navigate={item.href}
           class={[
             "btn btn-ghost justify-start gap-2",
-            current_nav?(item.href, @current_path) && "btn-active"
+            current_nav?(item, @current_path) && "btn-active"
           ]}
         >
-          <.icon name={"hero-#{item.icon}"} />
+          <.icon name={item.icon} />
           <span>{item.label}</span>
-        </a>
+        </.link>
       </li>
     </ul>
     """
   end
 
-  defp current_nav?(href, current_path) do
+  defp current_nav?(%{href: href}, current_path) do
     String.starts_with?(current_path, href)
   end
 end
