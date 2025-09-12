@@ -66,7 +66,7 @@ defmodule Exmeralda.MixProject do
       {:assent, "~> 0.3.0"},
       {:req, "~> 0.5"},
       {:req_hex, "~> 0.2.1"},
-      {:langchain, "~> 0.3.0"},
+      {:langchain, "~> 0.3.3"},
       {:mdex, "~> 0.2"},
       {:oban, "~> 2.19"},
       {:oban_web, "~> 2.11"},
