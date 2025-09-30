@@ -2,6 +2,17 @@ defmodule Exmeralda.LLM.SystemPromptTest do
   use Exmeralda.DataCase
   alias Exmeralda.LLM.SystemPrompt
 
+  describe "table" do
+    test "only one active system prompt" do
+      insert(:system_prompt, active: true)
+      insert(:system_prompt, active: false)
+
+      assert_raise Ecto.ConstraintError, ~r/system_prompts_active_index/, fn ->
+        insert(:system_prompt, active: true)
+      end
+    end
+  end
+
   describe "changeset/1" do
     test "is invalid for invalid attrs" do
       %{}

@@ -17,6 +17,7 @@ defmodule Exmeralda.LLM.SystemPrompt do
 
   schema "system_prompts" do
     field :prompt, :string
+    field :active, :boolean
     field :deletable, :boolean, virtual: true
 
     timestamps()
