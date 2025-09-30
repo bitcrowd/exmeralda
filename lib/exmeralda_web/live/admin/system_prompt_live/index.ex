@@ -61,7 +61,7 @@ defmodule ExmeraldaWeb.Admin.SystemPromptLive.Index do
       >
         <:col :let={system_prompt} label={gettext("ID")} field={:id}>
           <span>{system_prompt.id}</span>
-          <.active_badge :if={system_prompt.id == @current_system_prompt_id} />
+          <.active_badge :if={system_prompt.active} />
         </:col>
         <:col :let={system_prompt} label={gettext("Prompt")} field={:prompt}>
           {system_prompt.prompt}

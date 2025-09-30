@@ -119,7 +119,7 @@ defmodule ExmeraldaWeb.Admin.Helper do
 
   def active_badge(assigns) do
     ~H"""
-    <span class={["badge badge-success block mt-2", @class]}>
+    <span class={["badge badge-success block mt-2 e2e-active-badge", @class]}>
       <.icon name="hero-check-circle-micro" class="scale-75" />
       {gettext("Active")}
     </span>

@@ -33,6 +33,34 @@ defmodule ExmeraldaWeb.Admin.SystemPromptLiveTest do
       assert html =~ system_prompt.prompt
     end
 
+    test "shows the currently active prompt", %{
+      conn: conn,
+      user: user,
+      system_prompt: system_prompt
+    } do
+      conn = log_in_user(conn, user)
+
+      {:ok, index_live, html} = live(conn, ~p"/admin/system_prompts")
+
+      assert html =~ "System Prompts"
+      assert html =~ system_prompt.id
+      assert html =~ system_prompt.prompt
+
+      refute index_live |> has_element?(".e2e-active-badge")
+
+      active_system_prompt =
+        insert(:system_prompt, prompt: "You are skipping tests", active: true)
+
+      {:ok, index_live, html} = live(conn, ~p"/admin/system_prompts")
+
+      assert html =~ system_prompt.id
+      assert html =~ system_prompt.prompt
+      assert html =~ active_system_prompt.id
+      assert html =~ active_system_prompt.prompt
+
+      assert index_live |> has_element?(".e2e-active-badge")
+    end
+
     test "saves new system_prompt", %{conn: conn, user: user} do
       conn = log_in_user(conn, user)
 
