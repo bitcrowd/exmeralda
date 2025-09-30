@@ -46,7 +46,31 @@ defmodule Exmeralda.LLM.SystemPrompts do
     end
   end
 
+  @doc """
+  Activates the given system prompt and returns it. Any previously active system
+  prompt is deactivated.
+  """
+  @spec activate_system_prompt(SystemPrompt.id()) ::
+          {:ok, SystemPrompt.t()}
+          | {:error, {:not_found, SystemPrompt}}
+          | {:error, Ecto.Changeset.t()}
+  def activate_system_prompt(system_prompt_id) do
+    Repo.transact(fn ->
+      with {_, nil} <- maybe_deactivate_current_system_prompt(),
+           {:ok, system_prompt} <- Repo.fetch(SystemPrompt, system_prompt_id) do
+        system_prompt
+        |> SystemPrompt.activate_changeset()
+        |> Repo.update()
+      end
+    end)
+  end
+
   def change_system_prompt do
     Ecto.Changeset.change(%SystemPrompt{})
+  end
+
+  defp maybe_deactivate_current_system_prompt() do
+    from(s in SystemPrompt, where: s.active == true)
+    |> Repo.update_all(set: [active: false])
   end
 end

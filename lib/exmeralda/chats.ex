@@ -341,6 +341,7 @@ defmodule Exmeralda.Chats do
     |> Enum.group_by(& &1.ingestion_id, & &1.count)
   end
 
+  # TODO: Get system prompt ID from database instead
   defp current_llm_config do
     %{
       model_config_provider_id: model_config_provider_id,

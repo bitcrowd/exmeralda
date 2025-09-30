@@ -28,4 +28,24 @@ defmodule Exmeralda.LLM.SystemPromptTest do
       |> assert_changes(:prompt, "You are a duck")
     end
   end
+
+  describe "activate_changeset/1" do
+    test "sets active to true" do
+      %SystemPrompt{}
+      |> SystemPrompt.activate_changeset()
+      |> assert_changes(:active, true)
+    end
+
+    test "changes active to true" do
+      %SystemPrompt{active: false}
+      |> SystemPrompt.activate_changeset()
+      |> assert_changes(:active, true)
+    end
+
+    test "does not change already active prompts" do
+      %SystemPrompt{active: true}
+      |> SystemPrompt.activate_changeset()
+      |> refute_changes(:active)
+    end
+  end
 end

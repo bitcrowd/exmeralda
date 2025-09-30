@@ -12,7 +12,6 @@ defmodule ExmeraldaWeb.Admin.SystemPromptLive.Index do
       |> assign(:page_title, gettext("System Prompts"))
       |> assign(:system_prompts, system_prompts)
       |> assign(:meta, meta)
-      |> assign(:current_system_prompt_id, current_system_prompt_id())
 
     {:noreply, socket}
   end
@@ -29,6 +28,26 @@ defmodule ExmeraldaWeb.Admin.SystemPromptLive.Index do
        {:error, :system_prompt_used} ->
          socket
          |> put_flash(:error, gettext("System prompt is used and cannot be deleted."))
+         |> push_patch(to: ~p"/admin/system_prompts")
+     end}
+  end
+
+  def handle_event("activate", %{"system-prompt-id" => system_prompt_id}, socket) do
+    {:noreply,
+     case SystemPrompts.activate_system_prompt(system_prompt_id) do
+       {:ok, _} ->
+         socket
+         |> put_flash(:info, gettext("System prompt successfully activated."))
+         |> push_patch(to: ~p"/admin/system_prompts")
+
+       {:error, {:not_found, _}} ->
+         socket
+         |> put_flash(:error, gettext("System prompt does not exist."))
+         |> push_patch(to: ~p"/admin/system_prompts")
+
+       {:error, _} ->
+         socket
+         |> put_flash(:error, gettext("System prompt could not be activated."))
          |> push_patch(to: ~p"/admin/system_prompts")
      end}
   end
@@ -70,24 +89,29 @@ defmodule ExmeraldaWeb.Admin.SystemPromptLive.Index do
           {datetime(system_prompt.inserted_at)}
         </:col>
         <:col :let={system_prompt} label="Actions">
-          <.button
-            phx-click="delete"
-            phx-value-system-prompt-id={system_prompt.id}
-            class={"btn btn-error e2e-delete-system-prompt-#{system_prompt.id}"}
-            disabled={!system_prompt.deletable}
-          >
-            {gettext("Delete")}
-          </.button>
+          <div class="flex flex-row gap-2">
+            <.button
+              phx-click="activate"
+              phx-value-system-prompt-id={system_prompt.id}
+              class={"btn btn-primary e2e-activate-system-prompt-#{system_prompt.id}"}
+              disabled={system_prompt.active}
+            >
+              {gettext("Activate")}
+            </.button>
+            <.button
+              phx-click="delete"
+              phx-value-system-prompt-id={system_prompt.id}
+              class={"btn btn-error e2e-delete-system-prompt-#{system_prompt.id}"}
+              disabled={!system_prompt.deletable}
+            >
+              {gettext("Delete")}
+            </.button>
+          </div>
         </:col>
       </Flop.Phoenix.table>
 
       <.pagination meta={@meta} path={~p"/admin/system_prompts"} />
     </.admin_nav_layout>
     """
-  end
-
-  defp current_system_prompt_id do
-    %{system_prompt_id: system_prompt_id} = Application.fetch_env!(:exmeralda, :llm_config)
-    system_prompt_id
   end
 end

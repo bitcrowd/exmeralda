@@ -28,4 +28,8 @@ defmodule Exmeralda.LLM.SystemPrompt do
     |> cast(attrs, [:prompt])
     |> validate_required([:prompt])
   end
+
+  def activate_changeset(system_prompt) do
+    change(system_prompt, %{active: true})
+  end
 end
