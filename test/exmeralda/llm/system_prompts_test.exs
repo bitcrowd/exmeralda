@@ -28,6 +28,19 @@ defmodule Exmeralda.LLM.SystemPromptsTest do
     end
   end
 
+  describe "get_current_system_prompt/0" do
+    test "returns the current active system prompt" do
+      insert(:system_prompt, active: false)
+      current_system_prompt = insert(:system_prompt, active: true)
+      assert SystemPrompts.get_current_system_prompt() == current_system_prompt
+    end
+
+    test "returns nil when no active system prompt" do
+      insert(:system_prompt, active: false)
+      refute SystemPrompts.get_current_system_prompt()
+    end
+  end
+
   describe "create_system_prompt/1" do
     test "with valid data creates a system_prompt" do
       valid_attrs = %{prompt: "some prompt"}

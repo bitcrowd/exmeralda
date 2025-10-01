@@ -20,6 +20,14 @@ defmodule Exmeralda.LLM.SystemPrompts do
     |> Flop.validate_and_run(params, for: SystemPrompt)
   end
 
+  @doc """
+  Returns the current active system prompt.
+  """
+  @spec get_current_system_prompt() :: SystemPrompt.t() | nil
+  def get_current_system_prompt() do
+    Repo.get_by(SystemPrompt, active: true)
+  end
+
   @spec create_system_prompt(map()) :: {:ok, SystemPrompt.t()} | {:error, Ecto.Changeset.t()}
   def create_system_prompt(attrs \\ %{}) do
     attrs

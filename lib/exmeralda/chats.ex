@@ -10,7 +10,7 @@ defmodule Exmeralda.Chats do
 
   alias Exmeralda.Topics.{Rag, Chunk, Ingestion, Library, GenerationPrompt}
   alias Exmeralda.Chats.{LLM, Message, Reaction, Session, Source, GenerationEnvironment}
-  alias Exmeralda.LLM.{ModelConfigProvider, SystemPrompt}
+  alias Exmeralda.LLM.{ModelConfigProvider, SystemPrompts}
   alias Exmeralda.Accounts.User
 
   @message_preload [:source_chunks, :reaction]
@@ -341,27 +341,26 @@ defmodule Exmeralda.Chats do
     |> Enum.group_by(& &1.ingestion_id, & &1.count)
   end
 
-  # TODO: Get system prompt ID from database instead
   defp current_llm_config do
     %{
       model_config_provider_id: model_config_provider_id,
-      system_prompt_id: system_prompt_id,
       generation_prompt_id: generation_prompt_id
     } =
       Application.fetch_env!(:exmeralda, :llm_config)
 
+    system_prompt = SystemPrompts.get_current_system_prompt()
+
+    system_prompt || raise "Could not find the current LLM system prompt!"
+
     Repo.get(ModelConfigProvider, model_config_provider_id) ||
       raise "Could not find the current LLM model config provider!"
-
-    Repo.get(SystemPrompt, system_prompt_id) ||
-      raise "Could not find the current LLM system prompt!"
 
     Repo.get(GenerationPrompt, generation_prompt_id) ||
       raise "Could not find the current LLM generation prompt!"
 
     %{
       model_config_provider_id: model_config_provider_id,
-      system_prompt_id: system_prompt_id,
+      system_prompt_id: system_prompt.id,
       generation_prompt_id: generation_prompt_id
     }
   end
