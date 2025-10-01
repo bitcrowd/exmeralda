@@ -15,8 +15,7 @@ defmodule Exmeralda.Topics.GenerationPromptsTest do
       insert(:generation_environment, generation_prompt: non_deletable_generation_prompt)
       insert(:generation_environment, generation_prompt: non_deletable_generation_prompt)
 
-      assert {:ok,
-              {[_migration_generation_prompt, generation_prompt_a, generation_prompt_b], _meta}} =
+      assert {:ok, {[generation_prompt_a, generation_prompt_b], _meta}} =
                GenerationPrompts.list_generation_prompts(%{})
 
       assert generation_prompt_a.id == deletable_generation_prompt.id

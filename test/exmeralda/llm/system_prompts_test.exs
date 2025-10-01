@@ -17,7 +17,7 @@ defmodule Exmeralda.LLM.SystemPromptsTest do
       insert(:generation_environment, system_prompt: non_deletable_system_prompt)
       insert(:generation_environment, system_prompt: non_deletable_system_prompt)
 
-      assert {:ok, {[_migration_system_prompt, system_prompt_a, system_prompt_b], _meta}} =
+      assert {:ok, {[system_prompt_a, system_prompt_b], _meta}} =
                SystemPrompts.list_system_prompts(%{})
 
       assert system_prompt_a.id == deletable_system_prompt.id
