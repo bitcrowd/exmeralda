@@ -96,7 +96,6 @@ cond do
       llm_config: %{
         # The CURRENT_LLM_MODEL_CONFIG_PROVIDER_ID must match an existing ModelConfigProvider record in the database
         model_config_provider_id: System.fetch_env!("CURRENT_LLM_MODEL_CONFIG_PROVIDER_ID"),
-        system_prompt_id: System.fetch_env!("CURRENT_LLM_SYSTEM_PROMPT_ID"),
         generation_prompt_id: System.fetch_env!("CURRENT_RAG_GENERATION_PROMPT_ID")
       }
 
@@ -106,7 +105,6 @@ cond do
       # Points to the Ollama dev config set in the seeds
       llm_config: %{
         model_config_provider_id: "1f0e49ff-a985-4c03-a89b-fa443842fa95",
-        system_prompt_id: "c49195b4-daca-42af-835d-bdb928986d5c",
         generation_prompt_id: "3ef5b20b-bb71-467d-8364-898df9926a95"
       }
 
@@ -116,7 +114,6 @@ cond do
       llm_config: %{
         # Random IDs that is used in the tests!
         model_config_provider_id: "9a21bfd3-cb0a-433c-a9b3-826143782c81",
-        system_prompt_id: "96123e4b-7d0a-4e14-82d4-63d68562e8f1",
         generation_prompt_id: "a6dd3ab3-d57e-43d9-a39a-d1ce58a43cc0"
       }
 end
