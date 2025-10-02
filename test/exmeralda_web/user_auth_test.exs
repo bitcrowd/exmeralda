@@ -4,7 +4,7 @@ defmodule ExmeraldaWeb.UserAuthTest do
   alias Phoenix.LiveView
   alias ExmeraldaWeb.UserAuth
 
-  @invalid_id Ecto.UUID.generate()
+  @invalid_id uuid()
 
   setup %{conn: conn} do
     conn =

@@ -17,7 +17,7 @@ defmodule Exmeralda.AccountsTest do
     end
 
     test "get_user/1 returns nil when the id does not exist" do
-      refute Accounts.get_user(Ecto.UUID.generate())
+      refute Accounts.get_user(uuid())
     end
   end
 

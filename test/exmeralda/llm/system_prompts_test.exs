@@ -3,8 +3,6 @@ defmodule Exmeralda.LLM.SystemPromptsTest do
   alias Exmeralda.LLM.{SystemPrompts, SystemPrompt}
   alias Exmeralda.Repo
 
-  @invalid_id Ecto.UUID.generate()
-
   describe "list_system_prompts/1" do
     test "returns the lists of system prompts ordered by creation date" do
       deletable_system_prompt =
@@ -114,7 +112,7 @@ defmodule Exmeralda.LLM.SystemPromptsTest do
 
       assert Repo.reload(current_system_prompt).active
 
-      assert SystemPrompts.activate_system_prompt(@invalid_id) ==
+      assert SystemPrompts.activate_system_prompt(uuid()) ==
                {:error, {:not_found, SystemPrompt}}
 
       assert Repo.reload(current_system_prompt).active
