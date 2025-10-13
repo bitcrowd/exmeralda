@@ -16,7 +16,7 @@ defmodule ExmeraldaWeb.ChatLive.StartChat do
           alt="Exmeralda logo, with stylised circuit board tracks surrounding a central node"
           class="max-w-xs"
         />
-        <div class="max-w-md p-7">
+        <div class="max-w-md">
           <h1 class="text-5xl font-bold mb-4">Ask Exmeralda</h1>
           <p>
             {gettext("Choose a library, and ask me anything about it.")}

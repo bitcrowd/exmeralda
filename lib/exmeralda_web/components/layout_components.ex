@@ -53,7 +53,7 @@ defmodule ExmeraldaWeb.LayoutComponents do
     ~H"""
     <div class="drawer lg:drawer-open">
       <input id={@drawer_id} type="checkbox" class="drawer-toggle" />
-      <div class={["drawer-side z-40", full_screen_height(assigns)]}>
+      <div class={["drawer-side z-40 top-16", full_screen_height(assigns)]}>
         <label for={@drawer_id} aria-label="close sidebar" class="drawer-overlay"></label>
         <nav class="bg-base-200 flex flex-col place-content-between" aria-label="chats">
           <div>
@@ -124,7 +124,7 @@ defmodule ExmeraldaWeb.LayoutComponents do
 
   def full_screen_height(assigns) do
     if Map.has_key?(assigns, :inside_navbar),
-      do: "h-screen lg:h-[calc(100vh-4rem)]",
+      do: "h-[calc(100vh-4rem)]",
       else: "h-screen"
   end
 
