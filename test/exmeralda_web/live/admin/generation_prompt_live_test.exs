@@ -67,7 +67,7 @@ defmodule ExmeraldaWeb.Admin.GenerationPromptLiveTest do
              |> render_click()
 
       html = render(index_live)
-      assert html =~ generation_prompt.prompt
+      refute html =~ generation_prompt.prompt
     end
   end
 end

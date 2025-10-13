@@ -20,6 +20,14 @@ defmodule Exmeralda.LLM.SystemPrompts do
     |> Flop.validate_and_run(params, for: SystemPrompt)
   end
 
+  @doc """
+  Returns the current active system prompt.
+  """
+  @spec get_current_system_prompt() :: SystemPrompt.t() | nil
+  def get_current_system_prompt() do
+    Repo.get_by(SystemPrompt, active: true)
+  end
+
   @spec create_system_prompt(map()) :: {:ok, SystemPrompt.t()} | {:error, Ecto.Changeset.t()}
   def create_system_prompt(attrs \\ %{}) do
     attrs
@@ -46,7 +54,31 @@ defmodule Exmeralda.LLM.SystemPrompts do
     end
   end
 
+  @doc """
+  Activates the given system prompt and returns it. Any previously active system
+  prompt is deactivated.
+  """
+  @spec activate_system_prompt(SystemPrompt.id()) ::
+          {:ok, SystemPrompt.t()}
+          | {:error, {:not_found, SystemPrompt}}
+          | {:error, Ecto.Changeset.t()}
+  def activate_system_prompt(system_prompt_id) do
+    Repo.transact(fn ->
+      with {_, nil} <- maybe_deactivate_current_system_prompt(),
+           {:ok, system_prompt} <- Repo.fetch(SystemPrompt, system_prompt_id) do
+        system_prompt
+        |> SystemPrompt.activate_changeset()
+        |> Repo.update()
+      end
+    end)
+  end
+
   def change_system_prompt do
     Ecto.Changeset.change(%SystemPrompt{})
+  end
+
+  defp maybe_deactivate_current_system_prompt() do
+    from(s in SystemPrompt, where: s.active == true)
+    |> Repo.update_all(set: [active: false])
   end
 end

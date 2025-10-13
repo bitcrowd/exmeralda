@@ -17,6 +17,7 @@ defmodule Exmeralda.LLM.SystemPrompt do
 
   schema "system_prompts" do
     field :prompt, :string
+    field :active, :boolean
     field :deletable, :boolean, virtual: true
 
     timestamps()
@@ -26,5 +27,9 @@ defmodule Exmeralda.LLM.SystemPrompt do
     %__MODULE__{}
     |> cast(attrs, [:prompt])
     |> validate_required([:prompt])
+  end
+
+  def activate_changeset(system_prompt) do
+    change(system_prompt, %{active: true})
   end
 end

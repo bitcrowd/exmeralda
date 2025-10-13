@@ -39,7 +39,8 @@ defmodule Exmeralda.Seeds do
       _system_prompt =
         insert_idempotently(%Exmeralda.LLM.SystemPrompt{
           id: "c49195b4-daca-42af-835d-bdb928986d5c",
-          prompt: @default_system_prompt
+          prompt: @default_system_prompt,
+          active: true
         })
 
       generation_prompt =

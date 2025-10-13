@@ -15,7 +15,7 @@ defmodule Exmeralda.LLM.SystemPromptsTest do
       insert(:generation_environment, system_prompt: non_deletable_system_prompt)
       insert(:generation_environment, system_prompt: non_deletable_system_prompt)
 
-      assert {:ok, {[_migration_system_prompt, system_prompt_a, system_prompt_b], _meta}} =
+      assert {:ok, {[system_prompt_a, system_prompt_b], _meta}} =
                SystemPrompts.list_system_prompts(%{})
 
       assert system_prompt_a.id == deletable_system_prompt.id
@@ -23,6 +23,19 @@ defmodule Exmeralda.LLM.SystemPromptsTest do
 
       assert system_prompt_b.id == non_deletable_system_prompt.id
       refute system_prompt_b.deletable
+    end
+  end
+
+  describe "get_current_system_prompt/0" do
+    test "returns the current active system prompt" do
+      insert(:system_prompt, active: false)
+      current_system_prompt = insert(:system_prompt, active: true)
+      assert SystemPrompts.get_current_system_prompt() == current_system_prompt
+    end
+
+    test "returns nil when no active system prompt" do
+      insert(:system_prompt, active: false)
+      refute SystemPrompts.get_current_system_prompt()
     end
   end
 
@@ -60,6 +73,54 @@ defmodule Exmeralda.LLM.SystemPromptsTest do
       system_prompt = insert(:system_prompt)
       assert SystemPrompts.delete_system_prompt(system_prompt.id) == :ok
       refute Repo.reload(system_prompt)
+    end
+  end
+
+  describe "activate_system_prompt/1" do
+    test "activates the system prompt and deactivates the currently active one" do
+      active_system_prompt = insert(:system_prompt, active: true)
+      other_system_prompt = insert(:system_prompt, active: false)
+      system_prompt = insert(:system_prompt)
+
+      assert Repo.reload(active_system_prompt).active
+      refute Repo.reload(other_system_prompt).active
+      refute Repo.reload(system_prompt).active
+
+      assert {:ok, %SystemPrompt{active: true}} =
+               SystemPrompts.activate_system_prompt(system_prompt.id)
+
+      refute Repo.reload(active_system_prompt).active
+      refute Repo.reload(other_system_prompt).active
+      assert Repo.reload(system_prompt).active
+    end
+
+    test "activates system prompt when no other prompt was active" do
+      other_system_prompt = insert(:system_prompt, active: false)
+      system_prompt = insert(:system_prompt)
+
+      refute Repo.reload(other_system_prompt).active
+      refute Repo.reload(system_prompt).active
+
+      assert {:ok, _} = SystemPrompts.activate_system_prompt(system_prompt.id)
+
+      refute Repo.reload(other_system_prompt).active
+      assert Repo.reload(system_prompt).active
+    end
+
+    test "returns not found if the system prompt does not exist and keeps the current one" do
+      current_system_prompt = insert(:system_prompt, active: true)
+
+      assert Repo.reload(current_system_prompt).active
+
+      assert SystemPrompts.activate_system_prompt(uuid()) ==
+               {:error, {:not_found, SystemPrompt}}
+
+      assert Repo.reload(current_system_prompt).active
+    end
+
+    test "activates already active system prompt" do
+      system_prompt = insert(:system_prompt, active: true)
+      assert {:ok, _} = SystemPrompts.activate_system_prompt(system_prompt.id)
     end
   end
 end
