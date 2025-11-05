@@ -9,18 +9,14 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"ingestion_id" => ingestion_id}}) do
-    Repo.transact(fn ->
-      with {:ok, ingestion} <- fetch_ingestion(ingestion_id),
-           # TODO: Fetching the dependencies is redundant, we should do it once only
-           # when we create the library. The new worker should then enqueue this one.
-           {:ok, {chunks, dependencies}} <- get_chunks_and_dependencies(ingestion),
-           {:ok, _library} <- update_library(ingestion.library, dependencies),
-           :ok <- create_chunks(ingestion, chunks),
-           {:ok, job} <- schedule_embeddings_worker(ingestion),
-           {:ok, updated_ingestion} <- Topics.set_ingestion_job_id(ingestion, job) do
-        {:ok, Topics.update_ingestion_state!(updated_ingestion, :embedding)}
-      end
-    end)
+    with {:ok, ingestion} <- fetch_ingestion(ingestion_id),
+         # TODO: Fetching the dependencies is redundant, we should do it once only
+         # when we create the library. The new worker should then enqueue this one.
+         {:ok, {chunks, dependencies}} <- get_chunks_and_dependencies(ingestion),
+         {:ok, _library} <- update_library(ingestion.library, dependencies),
+         :ok <- create_chunks(ingestion, chunks) do
+      schedule_embeddings_worker_and_update_ingestion(ingestion)
+    end
     |> case do
       {:error, :ingestion_not_found} ->
         {:cancel, :ingestion_not_found}
@@ -79,5 +75,14 @@ defmodule Exmeralda.Topics.IngestLibraryWorker do
     end)
 
     :ok
+  end
+
+  defp schedule_embeddings_worker_and_update_ingestion(ingestion) do
+    Repo.transact(fn ->
+      with {:ok, job} <- schedule_embeddings_worker(ingestion),
+           {:ok, updated_ingestion} <- Topics.set_ingestion_job_id(ingestion, job) do
+        {:ok, Topics.update_ingestion_state!(updated_ingestion, :embedding)}
+      end
+    end)
   end
 end
