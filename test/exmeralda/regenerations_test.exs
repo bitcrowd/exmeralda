@@ -95,7 +95,7 @@ defmodule Exmeralda.RegenerationsTest do
           id: test_model_config_provider_id()
         )
 
-      system_prompt = insert(:system_prompt, id: test_system_prompt_id())
+      system_prompt = insert(:system_prompt, active: true)
       generation_prompt = insert(:generation_prompt, id: test_generation_prompt_id())
 
       generation_environment =
@@ -460,7 +460,7 @@ defmodule Exmeralda.RegenerationsTest do
           id: test_model_config_provider_id()
         )
 
-      system_prompt = insert(:system_prompt, id: test_system_prompt_id())
+      system_prompt = insert(:system_prompt, active: true)
       generation_prompt = insert(:generation_prompt, id: test_generation_prompt_id())
 
       generation_environment =
@@ -676,7 +676,7 @@ defmodule Exmeralda.RegenerationsTest do
           id: test_model_config_provider_id()
         )
 
-      system_prompt = insert(:system_prompt, id: test_system_prompt_id())
+      system_prompt = insert(:system_prompt, active: true)
       generation_prompt = insert(:generation_prompt, id: test_generation_prompt_id())
 
       generation_environment =
