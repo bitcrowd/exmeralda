@@ -1,0 +1,72 @@
+# Untitled notebook
+
+## Section
+
+```elixir
+Exmeralda.Repo.all(Exmeralda.Topics.Ingestion)
+```
+
+```elixir
+import Ecto.Query
+
+ingestion = Exmeralda.Repo.get(Exmeralda.Topics.Ingestion, "4138a54d-cc7a-4c66-afdd-12d003589667")
+the_id = "1667da4f-249a-4e23-ae13-85a4efa5d1f5"
+Exmeralda.Topics.Rag.Evaluation.batch_question_generation(ingestion.id, the_id)
+```
+
+```elixir
+Exmeralda.Topics.Rag.Evaluation.batch_evaluation "./rag_evaluations/4138a54d-cc7a-4c66-afdd-12d003589667_questions_20250925T085305.703696Z.json"
+```
+
+```elixir
+Exmeralda.Topics.Rag.Evaluation.batch_evaluation "./rag_evaluations/4138a54d-cc7a-4c66-afdd-12d003589667_questions_20250925T085305.703696Z.json", aggregate: true
+```
+
+-> change rag.ex
+
+```elixir
+Exmeralda.Topics.Rag.Evaluation.batch_evaluation "./rag_evaluations/4138a54d-cc7a-4c66-afdd-12d003589667_questions_20250925T085305.703696Z.json", aggregate: true
+```
+
+### Regenerating a message:
+
+```elixir
+alias Exmeralda.Repo
+ge_query = from ge in Exmeralda.Chats.GenerationEnvironment, preload: [model_config_provider: [:provider, :model_config]]
+ge = List.first Repo.all(ge_query)
+
+message_id="8a0e6a49-e62a-467f-b002-00b620b08eae"
+
+
+regeneration = Exmeralda.Regenerations.regenerate_messages [message_id], ge.id
+{source_msg, %{assistant_message_id: regenerated_msg_id}}= List.first regeneration.regenerated_messages
+
+```
+
+```elixir
+regenerated_msg_id = "4b404139-7e88-40db-b507-526517129011"
+original_content = Exmeralda.Repo.get(Exmeralda.Chats.Message, source_msg).content
+regenerated_content = Exmeralda.Repo.get(Exmeralda.Chats.Message, regenerated_msg_id).content
+
+IO.puts original_content
+```
+
+```elixir
+IO.puts regenerated_content
+```
+
+```elixir
+Exmeralda.Repo.get(Exmeralda.Chats.GenerationEnvironment, the_id)
+```
+
+```elixir
+Exmeralda.Repo.get(Exmeralda.LLM.ModelConfigProvider, "a66ddb78-cfab-4d6f-9f3e-f388da822ed1")
+```
+
+```elixir
+Exmeralda.Repo.get(Exmeralda.LLM.ModelConfig, "eff70662-1576-491d-a1ef-1d025772e637")
+```
+
+```elixir
+Exmeralda.Repo.get(Exmeralda.LLM.Provider, "1d7c3ee6-d189-4c85-ad59-116f92fdafd0")
+```
