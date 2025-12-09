@@ -39,8 +39,7 @@ defmodule Exmeralda.Seeds do
       _system_prompt =
         insert_idempotently(%Exmeralda.LLM.SystemPrompt{
           id: "c49195b4-daca-42af-835d-bdb928986d5c",
-          prompt: @default_system_prompt,
-          active: true
+          prompt: @default_system_prompt
         })
 
       generation_prompt =
@@ -107,10 +106,10 @@ defmodule Exmeralda.Seeds do
           config: %{endpoint: "https://api.together.xyz/v1/chat/completions"}
         })
 
-      qwen_25_32b_model_config =
+      qwen_25_7b_model_config =
         insert_idempotently(%Exmeralda.LLM.ModelConfig{
           id: "eff70662-1576-491d-a1ef-1d025772e637",
-          name: "qwen25-coder-32b",
+          name: "qwen25-7b-instruct-turbo",
           config: %{stream: true}
         })
 
@@ -123,9 +122,9 @@ defmodule Exmeralda.Seeds do
 
       insert_idempotently(%Exmeralda.LLM.ModelConfigProvider{
         id: "073a0faf-024b-4144-b0f0-e1f906968d08",
-        model_config_id: qwen_25_32b_model_config.id,
+        model_config_id: qwen_25_7b_model_config.id,
         provider_id: together_provider.id,
-        name: "Qwen/Qwen2.5-Coder-32B-Instruct"
+        name: "Qwen/Qwen2.5-7B-Instruct-Turbo"
       })
 
       rag_evaluation_model_config_provider =
