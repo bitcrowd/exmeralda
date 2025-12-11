@@ -18,7 +18,7 @@ defmodule Exmeralda.Repo.Migrations.CreateGenerationPrompts do
       timestamps()
     end
 
-    unless Mix.env() == :test do
+    unless Exmeralda.MigrationHelper.env() == :test do
       execute(
         """
           INSERT INTO generation_prompts (id, prompt, inserted_at, updated_at)

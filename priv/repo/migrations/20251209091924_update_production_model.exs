@@ -2,7 +2,7 @@ defmodule Exmeralda.Repo.Migrations.UpdateProductionModel do
   use Ecto.Migration
 
   def change do
-    unless Mix.env() == :test do
+    unless Exmeralda.MigrationHelper.env() == :test do
       execute(
         """
         INSERT INTO model_configs (id, name, config, inserted_at, updated_at)
