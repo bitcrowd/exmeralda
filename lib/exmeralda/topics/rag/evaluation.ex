@@ -70,7 +70,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
           first_hit_correct?: boolean(),
           first_hit_id: Chunk.id(),
           total_chunks_found: pos_integer(),
-          chunk_was_found?: boolean(),
+          chunk_found?: boolean(),
           chunk_rank: pos_integer() | nil
         }
   @type result_type :: :rrf_result | :fulltext_results | :semantic_results
@@ -268,18 +268,25 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   end
 
   defp do_evaluate(chunks, chunk, question_map) do
-    chunk_was_found = Enum.any?(chunks, &(&1.id == chunk.id))
-    first_hit_id = if Enum.any?(chunks), do: Enum.at(chunks, 0).id, else: nil
+    first_hit = if Enum.any?(chunks), do: Enum.at(chunks, 0), else: nil
+
+    chunk_found? = Enum.any?(chunks, &(&1.id == chunk.id))
+    source_found? = Enum.any?(chunks, &(&1.source == chunk.source))
+
+    chunk_rank = if(chunk_found?, do: Enum.find_index(chunks, &(&1.id == chunk.id)) + 1, else: nil)
+    source_rank = if(source_found?, do: Enum.find_index(chunks, &(&1.source == chunk.source)) + 1, else: nil)
 
     %{
       question: question_map,
       ingestion_id: chunk.ingestion_id,
-      first_hit_correct?: first_hit_id == chunk.id,
-      first_hit_id: first_hit_id,
+      first_hit_correct?: Map.get(first_hit, :id) == chunk.id,
+      first_hit_source_correct?: Map.get(first_hit, :source) == chunk.source,
+      source_found?: source_found?,
+      source_rank: source_rank,
+      first_hit_id: Map.get(first_hit, :id),
       total_chunks_found: length(chunks),
-      chunk_was_found?: chunk_was_found,
-      chunk_rank:
-        if(chunk_was_found, do: Enum.find_index(chunks, &(&1.id == chunk.id)) + 1, else: nil)
+      chunk_found?: chunk_found?,
+      chunk_rank: chunk_rank
     }
   end
 
@@ -348,7 +355,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
       "first_hit_correct?",
       "first_hit_id",
       "total_chunks_found",
-      "chunk_was_found?",
+      "chunk_found?",
       "chunk_rank"
     ]
 
@@ -363,7 +370,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
           &1.first_hit_correct?,
           &1.first_hit_id,
           &1.total_chunks_found,
-          &1.chunk_was_found?,
+          &1.chunk_found?,
           &1.chunk_rank
         ]
       )
@@ -376,17 +383,28 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
     to_ratio = fn count -> (count / total) |> Float.round(2) end
 
     found_chunks_ranks =
-      Enum.filter(evaluation, & &1.chunk_was_found?) |> Enum.map(& &1.chunk_rank)
+      Enum.filter(evaluation, & &1.chunk_found?) |> Enum.map(& &1.chunk_rank)
+
+    found_sources_ranks =
+      Enum.filter(evaluation, & &1.source_found?) |> Enum.map(& &1.source_rank)
 
     found_chunk_ratio = Enum.count(found_chunks_ranks) |> to_ratio.()
+    found_source_ratio = Enum.count(found_sources_ranks) |> to_ratio.()
+
     first_hits_ratio = Enum.count(evaluation, & &1.first_hit_correct?) |> to_ratio.()
+    first_hits_source_ratio = Enum.count(evaluation, & &1.first_hit_source_correct?) |> to_ratio.()
+
 
     %{
       question_count: total,
       first_hit_ratio: first_hits_ratio,
       found_chunk_ratio: found_chunk_ratio,
       avg_found_chunk_rank: avg(found_chunks_ranks),
-      median_found_chunk_rank: median(found_chunks_ranks)
+      median_found_chunk_rank: median(found_chunks_ranks),
+      first_hit_source_ratio: first_hits_source_ratio,
+      found_source_ratio: found_source_ratio,
+      avg_found_source_rank: avg(found_sources_ranks),
+      median_found_source_rank: median(found_sources_ranks)
     }
   end
 
