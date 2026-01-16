@@ -3,13 +3,15 @@ INSERT INTO providers (id, type, name, config, inserted_at, updated_at)
       (gen_random_uuid(), 'openai', 'lambda_ai', '{"endpoint": "https://api.lambda.ai/v1/chat/completions"}', NOW(), NOW()),
       (gen_random_uuid(), 'openai', 'groq_ai', '{"endpoint": "https://api.groq.com/openai/v1/chat/completions"}', NOW(), NOW()),
       (gen_random_uuid(), 'openai', 'hyperbolic_ai', '{"endpoint": "https://api.hyperbolic.xyz/v1/chat/completions"}', NOW(), NOW()),
-      (gen_random_uuid(), 'openai', 'together_ai', '{"endpoint": "https://api.together.xyz/v1/chat/completions"}', NOW(), NOW());
+      (gen_random_uuid(), 'openai', 'together_ai', '{"endpoint": "https://api.together.xyz/v1/chat/completions"}', NOW(), NOW())
+    ON CONFLICT (type, name) DO NOTHING;
 
 INSERT INTO model_configs (id, name, config, inserted_at, updated_at)
     VALUES
       (gen_random_uuid(), 'qwen25-coder-32b', '{"stream": true}', NOW(), NOW()),
       (gen_random_uuid(), 'llama-4-maverick-17b-128e', '{"stream": true}', NOW(), NOW());
-      (gen_random_uuid(), 'qwen25-7b-instruct-turbo', '{"stream": true}', NOW(), NOW());
+      (gen_random_uuid(), 'qwen25-7b-instruct-turbo', '{"stream": true}', NOW(), NOW())
+    ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO model_config_providers (id, model_config_id, provider_id, name, inserted_at, updated_at)
     VALUES
@@ -60,4 +62,5 @@ INSERT INTO model_config_providers (id, model_config_id, provider_id, name, inse
         'Qwen/Qwen2.5-7B-Instruct-Turbo',
         NOW(),
         NOW()
-      );
+      )
+    ON CONFLICT (model_config_id, proider_id) DO NOTHING;
