@@ -24,16 +24,6 @@ defmodule Exmeralda.Repo.Migrations.CreateSystemPrompts do
       timestamps()
     end
 
-    unless Mix.env() == :test do
-      execute(
-        """
-          INSERT INTO system_prompts (id, prompt, inserted_at, updated_at)
-          VALUES ('c8511eaf-d7e6-4fb6-b3f0-0ed8d8008d1b', '#{@default_prompt}', NOW(), NOW())
-        """,
-        ""
-      )
-    end
-
     alter table(:generation_environments) do
       add :system_prompt_id, references(:system_prompts, on_delete: :restrict), null: true
     end

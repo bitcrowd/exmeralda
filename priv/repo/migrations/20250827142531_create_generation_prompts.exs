@@ -18,16 +18,6 @@ defmodule Exmeralda.Repo.Migrations.CreateGenerationPrompts do
       timestamps()
     end
 
-    unless Mix.env() == :test do
-      execute(
-        """
-          INSERT INTO generation_prompts (id, prompt, inserted_at, updated_at)
-          VALUES ('56220820-142e-4811-9155-c4574f9b508e', '#{@default_prompt}', NOW(), NOW())
-        """,
-        ""
-      )
-    end
-
     alter table(:generation_environments) do
       add :generation_prompt_id, references(:generation_prompts, on_delete: :restrict), null: true
     end
