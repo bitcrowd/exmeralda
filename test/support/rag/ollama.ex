@@ -16,12 +16,14 @@ defmodule Exmeralda.Rag.Ollama do
     struct!(__MODULE__, attrs)
   end
 
+  @embedding_timeout :timer.minutes(5)
+
   @impl Rag.Ai.Provider
   def generate_embeddings(%__MODULE__{} = provider, texts, _opts \\ []) do
-    req_params =
-      [
-        json: %{"model" => provider.embeddings_model, "input" => texts}
-      ]
+    req_params = [
+      json: %{"model" => provider.embeddings_model, "input" => texts},
+      receive_timeout: @embedding_timeout
+    ]
 
     case Req.post(provider.embeddings_url, req_params) do
       {:ok, %Req.Response{status: 200} = response} ->

@@ -1,5 +1,9 @@
 defmodule Exmeralda.Seeds do
   alias Exmeralda.Repo
+  alias Exmeralda.Topics.{Library, Ingestion, Chunk, Dependency}
+  require Logger
+
+  @library_fixture_path "priv/repo/fixtures/library_fixture.json"
 
   @default_system_prompt """
     You are an expert in Elixir programming with in-depth knowledge of Elixir.
@@ -36,11 +40,13 @@ defmodule Exmeralda.Seeds do
 
   def run do
     if Mix.env() == :dev do
-      _system_prompt =
+      system_prompt =
         insert_idempotently(%Exmeralda.LLM.SystemPrompt{
           id: "c49195b4-daca-42af-835d-bdb928986d5c",
           prompt: @default_system_prompt
         })
+
+      Exmeralda.LLM.SystemPrompts.activate_system_prompt(system_prompt.id)
 
       generation_prompt =
         insert_idempotently(%Exmeralda.Topics.GenerationPrompt{
@@ -76,12 +82,14 @@ defmodule Exmeralda.Seeds do
         name: "Fake/Fake-model"
       })
 
+      ollama_host = System.get_env("OLLAMA_HOST", "http://localhost:11434")
+
       ollama_provider =
         insert_idempotently(%Exmeralda.LLM.Provider{
           id: "1d7c3ee6-d189-4c85-ad59-116f92fdafd0",
           type: :ollama,
           name: "ollama_ai",
-          config: %{}
+          config: %{"endpoint" => "#{ollama_host}/api/chat"}
         })
 
       ollama_model_config =
@@ -142,10 +150,90 @@ defmodule Exmeralda.Seeds do
           generation_prompt_id: generation_prompt.id,
           model_config_provider_id: rag_evaluation_model_config_provider.id
         })
+
+      seed_library()
     end
   end
 
-  defp insert_idempotently(schema, conflict_target \\ :id) do
-    Repo.insert!(schema, on_conflict: :replace_all, conflict_target: conflict_target)
+  defp seed_library do
+    if File.exists?(@library_fixture_path) do
+      Logger.info("Loading Library fixture from #{@library_fixture_path}...")
+
+      fixture =
+        @library_fixture_path
+        |> File.read!()
+        |> Jason.decode!()
+
+      chunks = fixture["chunks"] || []
+
+      if Enum.empty?(chunks) do
+        Logger.warning("Library fixture has no chunks - skipping")
+      else
+        import_library_fixture(fixture, chunks)
+      end
+    else
+      Logger.info("Library fixture not found at #{@library_fixture_path} - skipping")
+    end
+  end
+
+  defp import_library_fixture(fixture, chunks) do
+    library_data = fixture["library"]
+
+    dependencies =
+      Enum.map(library_data["dependencies"] || [], fn dep ->
+        %Dependency{
+          name: dep["name"],
+          optional: dep["optional"] || false,
+          version_requirement: dep["version_requirement"]
+        }
+      end)
+
+    library =
+      insert_idempotently(
+        %Library{
+          id: library_data["id"],
+          name: library_data["name"],
+          version: library_data["version"],
+          dependencies: dependencies
+        },
+        conflict_target: [:name, :version]
+      )
+
+    ingestion =
+      insert_idempotently(%Ingestion{
+        id: fixture["ingestion"]["id"],
+        library_id: library.id,
+        state: :ready,
+        active: true
+      })
+
+    chunk_records =
+      Enum.map(chunks, fn chunk_data ->
+        %{
+          id: chunk_data["id"],
+          ingestion_id: ingestion.id,
+          type: String.to_existing_atom(chunk_data["type"]),
+          source: chunk_data["source"],
+          content: chunk_data["content"],
+          embedding: Pgvector.new(chunk_data["embedding"])
+        }
+      end)
+
+    chunk_records
+    |> Enum.chunk_every(500)
+    |> Enum.with_index(1)
+    |> Enum.each(fn {batch, batch_num} ->
+      {inserted, _} = Repo.insert_all(Chunk, batch, on_conflict: :nothing)
+      Logger.info("Chunks batch #{batch_num}: #{inserted} inserted")
+    end)
+
+    Logger.info("Library fixture loaded - #{length(chunks)} chunks ready to chat!")
+  end
+
+  defp insert_idempotently(schema, opts \\ []) do
+    on_conflict = Keyword.get(opts, :on_conflict, :replace_all)
+    conflict_target = Keyword.get(opts, :conflict_target, :id)
+
+    Repo.insert!(schema, on_conflict: on_conflict, conflict_target: conflict_target)
   end
 end

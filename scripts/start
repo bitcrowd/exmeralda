@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+echo "=========================================="
+echo "Starting Ollama..."
+echo "=========================================="
+
+if command -v ollama >/dev/null 2>&1; then
+  echo "Ollama already installed, skipping..."
+else
+  echo "Installing Ollama..."
+
+  curl -fsSL https://ollama.com/install.sh | sh
+fi
+
+# Make sure the server is running before pulling
+if [[ "$(uname)" == "Darwin" ]]; then
+  open -a ollama
+fi
+
+echo "Waiting for Ollama server..."
+until curl -fsS http://localhost:11434/ >/dev/null 2>&1; do
+  sleep 1
+done
+
+echo "[1/2] Pulling llama3.2..."
+ollama pull llama3.2:latest
+
+echo "[2/2] Pulling jina-embeddings..."
+ollama pull unclemusclez/jina-embeddings-v2-base-code
+
+echo ""
+echo "=========================================="
+echo "Starting Exmeralda..."
+echo "=========================================="
+docker compose up

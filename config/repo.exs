@@ -12,9 +12,9 @@ config :exmeralda,
 
 if config_env() in [:dev, :test] do
   config :exmeralda, Exmeralda.Repo,
-    username: "postgres",
-    password: "postgres",
-    hostname: "localhost"
+    username: System.get_env("DB_USER", "postgres"),
+    password: System.get_env("DB_PASSWORD", "postgres"),
+    hostname: System.get_env("DB_HOST", "localhost")
 end
 
 if config_env() == :dev do

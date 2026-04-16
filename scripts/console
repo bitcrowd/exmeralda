@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+if [ -z "$(docker compose ps --quiet --status running app 2>/dev/null)" ]; then
+  echo "To use the console, first start exmeralda by running: scripts/start."
+  exit 1
+fi
+
+docker compose exec app bash -c "iex -S mix"

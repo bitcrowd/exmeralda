@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o pipefail
+set -o nounset
+
+if [ -z "$(docker compose ps --quiet --status running db 2>/dev/null)" ]; then
+  echo "To use psql, first start exmeralda by running: scripts/start."
+  exit 1
+fi
+
+PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d exmeralda_dev "$@"

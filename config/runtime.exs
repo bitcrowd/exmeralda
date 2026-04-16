@@ -134,13 +134,17 @@ cond do
       }
 
   config_env() == :dev ->
+    ollama_host = System.get_env("OLLAMA_HOST", "http://localhost:11434")
+
     config :exmeralda,
       embedding_api_keys: %{},
       embedding_config: %{
         type: :ollama,
         provider: "ollama_ai",
         model: "unclemusclez/jina-embeddings-v2-base-code",
-        config: %{}
+        config: %{
+          embeddings_url: "#{ollama_host}/api/embed"
+        }
       }
 
   true ->

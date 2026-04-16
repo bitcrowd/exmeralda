@@ -1,0 +1,46 @@
+ARG ELIXIR_VERSION=1.18.3
+ARG OTP_VERSION=27.3
+ARG DEBIAN_VERSION=bullseye-20250317-slim
+
+ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
+
+FROM ${BUILDER_IMAGE}
+
+RUN apt-get update -y && apt-get install -y \
+    build-essential \
+    git \
+    curl \
+    libc6 \
+    inotify-tools \
+    postgresql-client \
+    && apt-get clean && rm -f /var/lib/apt/lists/*_*
+
+RUN curl -fsSL https://deb.nodesource.com/setup_23.x -o nodesource_setup.sh \
+    && bash nodesource_setup.sh \
+    && apt-get install -y nodejs \
+    && rm nodesource_setup.sh
+
+WORKDIR /app
+
+RUN mix local.hex --force && \
+    mix local.rebar --force
+
+ENV MIX_ENV=dev
+
+COPY mix.exs mix.lock ./
+COPY config config
+
+RUN mix deps.get && mix deps.compile
+
+COPY lib lib
+COPY priv priv
+COPY assets assets
+
+RUN cd assets && npm install
+
+RUN mix compile
+
+RUN mix assets.setup
+
+EXPOSE 4000
+CMD ["mix", "phx.server"]
