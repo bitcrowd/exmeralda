@@ -38,6 +38,64 @@ defmodule Exmeralda.Seeds do
 
   """
 
+  @rag_judge_system_prompt """
+  You are an LLM judge. Follow the instructions in the user message exactly.
+  Output only the JSON object requested. No prose, no markdown fences.
+  """
+
+  @rag_judge_generation_prompt """
+  You are an LLM judge that is evaluating pairs of answers in terms of truthfulness and relevance, on a scale from 0.0 to 1.0.
+
+  Given the following user query:
+  ======= begin query =======
+  %{query}
+  ======= end query =======
+
+  and the retrieved context:
+  ======= begin context =======
+  %{context}
+  ======= end context =======
+
+  here are the two answers:
+  ======= begin first answer =======
+  %{first_answer}
+  ======= end first answer =======
+
+  ======= begin second answer =======
+  %{second_answer}
+  ======= end second answer =======
+
+  The scale for truthfulness is:
+  - 0.0 not truthful at all
+  - 1.0 fully truthful
+
+  The scale for relevance is:
+  - 0.0 not relevant at all
+  - 1.0 completely relevant
+
+  Which of the two answers would you choose? Give reasons for your answer.
+
+  Output a single JSON object with exactly this shape:
+
+  {
+    "first_answer": {
+      "relevance": 0.5,
+      "truthfulness": 0.0
+    },
+    "second_answer": {
+      "relevance": 0.5,
+      "truthfulness": 0.0
+    },
+    "choice": {
+      "answer": "first_answer",
+      "reason": "The reason behind my choice..."
+    }
+  }
+
+  The `choice.answer` field must be either "first_answer" or "second_answer".
+  Output only the JSON object. No prose, no markdown fences.
+  """
+
   def run do
     if Mix.env() == :dev do
       system_prompt =
@@ -148,6 +206,26 @@ defmodule Exmeralda.Seeds do
           id: "1667da4f-249a-4e23-ae13-85a4efa5d1f5",
           system_prompt_id: rag_evaluation_system_prompt.id,
           generation_prompt_id: generation_prompt.id,
+          model_config_provider_id: rag_evaluation_model_config_provider.id
+        })
+
+      rag_judge_system_prompt =
+        insert_idempotently(%Exmeralda.LLM.SystemPrompt{
+          id: "1db395e2-80d5-4417-9d19-a5fea9c48dc3",
+          prompt: @rag_judge_system_prompt
+        })
+
+      rag_judge_generation_prompt =
+        insert_idempotently(%Exmeralda.Topics.GenerationPrompt{
+          id: "c3d4e5f6-a7b8-4c9d-a0e1-f2a3b4c5d6e7",
+          prompt: @rag_judge_generation_prompt
+        })
+
+      _rag_judge_generation_environment =
+        insert_idempotently(%Exmeralda.Chats.GenerationEnvironment{
+          id: "a72fb346-f36d-4706-92f0-dc009980c435",
+          system_prompt_id: rag_judge_system_prompt.id,
+          generation_prompt_id: rag_judge_generation_prompt.id,
           model_config_provider_id: rag_evaluation_model_config_provider.id
         })
 

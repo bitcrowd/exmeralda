@@ -40,7 +40,7 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   """
   require Logger
   import Ecto.Query
-  alias Exmeralda.Chats.GenerationEnvironment
+  alias Exmeralda.Chats.{GenerationEnvironment, GenerationEnvironments}
   alias Exmeralda.Repo
   alias Exmeralda.Chats.LLM
   alias Exmeralda.Chats
@@ -183,6 +183,102 @@ defmodule Exmeralda.Topics.Rag.Evaluation do
   Do output only the question
   Output only the one selected Question
   """
+
+  @doc """
+  Runs an LLM judge against two answers to the same user query, using a given generation environment.
+
+  A judge specific generation environment is needed because `LLM.stream_responses/3`
+  prepends the generation environment's `system_prompt`.
+  """
+  @spec judge_generations(
+          String.t(),
+          String.t(),
+          String.t(),
+          String.t(),
+          GenerationEnvironment.id()
+        ) :: {:ok, map()} | {:error, term()}
+  def judge_generations(context, user_query, first_answer, second_answer, judge_environment_id) do
+    %{generation_prompt: %{prompt: prompt}} =
+      GenerationEnvironments.get_generation_environment!(judge_environment_id)
+
+    content =
+      prompt
+      |> String.replace("%{context}", context, global: true)
+      |> String.replace("%{query}", user_query, global: true)
+      |> String.replace("%{first_answer}", first_answer, global: true)
+      |> String.replace("%{second_answer}", second_answer, global: true)
+
+    case LLM.stream_responses([%{role: :user, content: content}], judge_environment_id, %{}) do
+      {:ok, %{last_message: %{content: content}}} ->
+        content
+        |> String.trim()
+        |> Jason.decode()
+
+      {:error, _chain, error} ->
+        {:error, error}
+    end
+  end
+
+  @doc """
+  Generates an answer pair for a given user query and ingestion, then judges the answers
+  and picks the best one.
+
+  The context passed to the judge is the one from the first generation environment
+  (assumes both generation envs for answers share the retrieval config).
+
+  Ready to use example with seeds IDs:
+
+    Exmeralda.Topics.Rag.Evaluation.generate_and_judge(
+      "How do I decode a JSON string into a map with Jason?",
+      "51ef61cb-65c3-42b2-95ed-0bf3fe1ccede",  # ingestion ID: jason@1.4.4
+      "768417b2-1f1b-4a8c-a936-eb5502146d05",  # env A: llama3.2:latest
+      "1667da4f-249a-4e23-ae13-85a4efa5d1f5",  # env B: gpt-oss:latest
+      "a72fb346-f36d-4706-92f0-dc009980c435"   # judge env: gpt-oss:latest
+    )
+  """
+  @spec generate_and_judge(
+          String.t(),
+          Ingestion.id(),
+          GenerationEnvironment.id(),
+          GenerationEnvironment.id(),
+          GenerationEnvironment.id()
+        ) :: {:ok, map()} | {:error, term()}
+  def generate_and_judge(query, ingestion_id, env_a_id, env_b_id, judge_env_id) do
+    {_, gen_a} =
+      Chats.build_generation(%{generation_environment_id: env_a_id, content: query}, ingestion_id)
+
+    {_, gen_b} =
+      Chats.build_generation(%{generation_environment_id: env_b_id, content: query}, ingestion_id)
+
+    Logger.info("⌛️ Generating answers in parallel...")
+
+    [result_a, result_b] =
+      [{gen_a.prompt, env_a_id}, {gen_b.prompt, env_b_id}]
+      |> Enum.map(fn {prompt, env_id} ->
+        Task.async(fn -> generate_answer(prompt, env_id) end)
+      end)
+      |> Task.await_many(:infinity)
+
+    with {:ok, answer_a} <- result_a,
+         {:ok, answer_b} <- result_b do
+      Logger.info("⌛️ Judging...")
+
+      case judge_generations(gen_a.context, query, answer_a, answer_b, judge_env_id) do
+        {:ok, verdict} ->
+          {:ok, %{first_answer: answer_a, second_answer: answer_b, verdict: verdict}}
+
+        error ->
+          error
+      end
+    end
+  end
+
+  defp generate_answer(prompt, env_id) do
+    case LLM.stream_responses([%{role: :user, content: prompt}], env_id, %{}) do
+      {:ok, %{last_message: %{content: content}}} -> {:ok, content}
+      {:error, _chain, error} -> {:error, error}
+    end
+  end
 
   @doc """
   Generates a question for a given chunk ID and generation environment.
