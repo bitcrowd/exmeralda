@@ -22,6 +22,11 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "4000:4000"
+    hostname: exmeralda.local
+    networks:
+      default:
+        aliases:
+          - exmeralda.local
     environment:
       DB_HOST: db
       DB_NAME: exmeralda_dev
@@ -30,6 +35,7 @@ services:
       MIX_ENV: dev
       HOST: "0.0.0.0"
       OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      RELEASE_COOKIE: exmeralda
     volumes:
       - .:/app
     depends_on:
@@ -59,8 +65,22 @@ services:
         echo 'Exmeralda app is starting...' &&
         echo 'Open http://localhost:4000' &&
         echo '=========================================='
-        iex -S mix phx.server
+        iex --name exmeralda@exmeralda.local --cookie exmeralda -S mix phx.server
       "
+
+  livebook:
+    image: ghcr.io/livebook-dev/livebook:0.17.2
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    environment:
+      LIVEBOOK_COOKIE: exmeralda
+      LIVEBOOK_TOKEN_ENABLED: "false"
+      LIVEBOOK_DEFAULT_RUNTIME: "attached:exmeralda@exmeralda.local:exmeralda"
+    volumes:
+      - .:/data
+    depends_on:
+      - app
 
   # OLLAMA_HOST=http://ollama:11434 docker compose --profile llm up
   ollama:
@@ -95,12 +115,16 @@ services:
         echo "=========================================="
 
         echo ""
-        echo "[1/2] Pulling llama3.2..."
+        echo "[1/3] Pulling llama3.2..."
         ollama pull llama3.2:latest
 
         echo ""
-        echo "[2/2] Pulling jina-embeddings..."
+        echo "[2/3] Pulling jina-embeddings..."
         ollama pull unclemusclez/jina-embeddings-v2-base-code
+
+        echo ""
+        echo "[2/3] Pulling gpt-oss:latest..."
+        ollama pull gpt-oss:latest
 
         echo ""
         echo "=========================================="

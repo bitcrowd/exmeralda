@@ -1,0 +1,63 @@
+# Exmeralda Attached Livebook
+
+## Setup
+
+Livebook runs attached to the Exmeralda app. Just start exmeralda and livebook via:
+
+```sh
+./scripts/start
+```
+
+Then, open http://localhost:8080 and load `/data/attached_livebook.livemd`.
+
+## Peek a code chunk
+
+Raw SQL:
+
+```elixir
+sql = """
+SELECT content, source, type
+FROM chunks
+WHERE type = 'code'
+LIMIT 1
+
+-- To peek a specific chunk by ID, use:
+-- SELECT content, source, type FROM chunks WHERE id = '<chunk-id>';
+"""
+
+%Postgrex.Result{columns: cols, rows: [row]} = Exmeralda.Repo.query!(sql, [])
+
+cols
+|> Enum.zip(row)
+|> Map.new()
+```
+
+Same thing via Ecto:
+
+```elixir
+import Ecto.Query
+alias Exmeralda.Repo
+alias Exmeralda.Topics.Chunk
+
+from(c in Chunk, where: c.type == :code, select: %{content: c.content, source: c.source, type: c.type}, limit: 1)
+|> Repo.one()
+```
+
+## Run generate_and_judge
+
+Edit the values below, then run the cell.
+
+```elixir
+alias Exmeralda.Topics.Rag.Evaluation
+
+query = "How do I decode a JSON string into a map with Jason?"
+ingestion_id = "51ef61cb-65c3-42b2-95ed-0bf3fe1ccede"
+env_a_id = "768417b2-1f1b-4a8c-a936-eb5502146d05"
+env_b_id = "1667da4f-249a-4e23-ae13-85a4efa5d1f5"
+judge_env_id = "a72fb346-f36d-4706-92f0-dc009980c435"
+
+{:ok, result} =
+  Evaluation.generate_and_judge(query, ingestion_id, env_a_id, env_b_id, judge_env_id)
+
+IO.inspect(result, label: "\nresult", pretty: true, limit: :infinity, printable_limit: :infinity)
+```
