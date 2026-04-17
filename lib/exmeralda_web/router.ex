@@ -98,6 +98,9 @@ defmodule ExmeraldaWeb.Router do
 
         live "/generation_prompts", GenerationPromptLive.Index, :index
         live "/generation_prompts/new", GenerationPromptLive.New, :new
+
+        live "/generation_environments", GenerationEnvironmentLive.Index, :index
+        live "/generation_environments/:id", GenerationEnvironmentLive.Show, :show
       end
     end
   end

@@ -7,6 +7,18 @@ defmodule Exmeralda.Chats.GenerationEnvironment do
   alias Exmeralda.LLM.{ModelConfigProvider, SystemPrompt}
   alias Exmeralda.Topics.GenerationPrompt
 
+  @derive {
+    Flop.Schema,
+    filterable: [],
+    sortable: [:inserted_at],
+    default_limit: 20,
+    max_limit: 100,
+    default_order: %{
+      order_by: [:inserted_at],
+      order_directions: [:desc]
+    }
+  }
+
   schema "generation_environments" do
     belongs_to :model_config_provider, ModelConfigProvider
     belongs_to :system_prompt, SystemPrompt

@@ -152,6 +152,11 @@ defmodule ExmeraldaWeb.LayoutComponents do
       href: "/admin/generation_prompts",
       icon: "hero-command-line-micro",
       label: gettext("Generation Prompts")
+    },
+    %{
+      href: "/admin/generation_environments",
+      icon: "hero-cube-transparent-micro",
+      label: gettext("Generation Environments")
     }
   ]
   def admin_nav(assigns) do
