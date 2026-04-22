@@ -20,12 +20,3 @@
 4. **Extend It** (30 min)
    Chage the code, re-run the evaluation and compare:
    - Tune a retrieval cutoff (`@pgvector_limit`, `@fulltext_limit`, or `@retrieval_weights`) and measure the impact
----
-
-## 1. Generate synthetic questions
-
-## 2. Evaluate the baseline
-
-## 3. Compare rankers
-
-## 4. Extend It

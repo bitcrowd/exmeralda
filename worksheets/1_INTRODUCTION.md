@@ -22,20 +22,6 @@
    - Via `/admin`: create a new SystemPrompt, activate it, re-ask the same 4 questions
    - Did the answers get better?
 
----
-
-## 1. Setup
-
-## 2. First contact: Chat
-
-## 3. Architecture & data model
-
-## 4. Trace one question end-to-end
-
-## 5. Tweak the generation environment
-
----
-
 ## Appendix A — Shared prompt bank (for the seeded `jason` library)
 
 | # | Category | Prompt |
