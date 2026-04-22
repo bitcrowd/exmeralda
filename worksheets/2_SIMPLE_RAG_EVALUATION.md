@@ -1,5 +1,7 @@
 # Simple RAG evaluation
 
+(also as a Livebook)
+
 Start an iex session attached to the app:
 
 ```sh
